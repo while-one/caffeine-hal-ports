@@ -355,14 +355,34 @@ port_spi_xfr_polling(cfn_hal_spi_t *driver, const cfn_hal_spi_transaction_t *xfr
 
 static cfn_hal_error_code_t port_spi_xfr_irq(cfn_hal_spi_t *driver, const cfn_hal_spi_transaction_t *xfr)
 {
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(xfr);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t          port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    HAL_StatusTypeDef status;
+
+    if (xfr->tx_payload && xfr->rx_payload)
+    {
+        status = HAL_SPI_TransmitReceive_IT(
+            &port_hspis[port_id], (uint8_t *) xfr->tx_payload, xfr->rx_payload, (uint16_t) xfr->nbr_of_bytes);
+    }
+    else if (xfr->tx_payload)
+    {
+        status = HAL_SPI_Transmit_IT(&port_hspis[port_id], (uint8_t *) xfr->tx_payload, (uint16_t) xfr->nbr_of_bytes);
+    }
+    else if (xfr->rx_payload)
+    {
+        status = HAL_SPI_Receive_IT(&port_hspis[port_id], xfr->rx_payload, (uint16_t) xfr->nbr_of_bytes);
+    }
+    else
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    return cfn_hal_stm32_map_error(status);
 }
+
 static cfn_hal_error_code_t port_spi_xfr_irq_abort(cfn_hal_spi_t *driver)
 {
-    CFN_HAL_UNUSED(driver);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    return cfn_hal_stm32_map_error(HAL_SPI_Abort_IT(&port_hspis[port_id]));
 }
 static cfn_hal_error_code_t port_spi_xfr_dma(cfn_hal_spi_t *driver, const cfn_hal_spi_transaction_t *xfr)
 {

@@ -363,14 +363,33 @@ port_i2c_mem_read(cfn_hal_i2c_t *driver, const cfn_hal_i2c_mem_transaction_t *me
 
 static cfn_hal_error_code_t port_i2c_xfr_irq(cfn_hal_i2c_t *driver, const cfn_hal_i2c_transaction_t *xfr)
 {
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(xfr);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t          port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    HAL_StatusTypeDef status = HAL_OK;
+
+    if (xfr->nbr_of_tx_bytes > 0)
+    {
+        status = HAL_I2C_Master_Transmit_IT(&port_hi2cs[port_id],
+                                            xfr->slave_address << 1,
+                                            (uint8_t *) xfr->tx_payload,
+                                            (uint16_t) xfr->nbr_of_tx_bytes);
+    }
+    else if (xfr->nbr_of_rx_bytes > 0)
+    {
+        status = HAL_I2C_Master_Receive_IT(
+            &port_hi2cs[port_id], xfr->slave_address << 1, xfr->rx_payload, (uint16_t) xfr->nbr_of_rx_bytes);
+    }
+    else
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    return cfn_hal_stm32_map_error(status);
 }
+
 static cfn_hal_error_code_t port_i2c_xfr_irq_abort(cfn_hal_i2c_t *driver)
 {
-    CFN_HAL_UNUSED(driver);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    return cfn_hal_stm32_map_error(HAL_I2C_Master_Abort_IT(&port_hi2cs[port_id], 0));
 }
 static cfn_hal_error_code_t port_i2c_xfr_dma(cfn_hal_i2c_t *driver, const cfn_hal_i2c_transaction_t *xfr)
 {

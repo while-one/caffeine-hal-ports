@@ -64,10 +64,15 @@ To verify your CMake logic, you must create a testable configuration in a modula
 ### Step 4: Implement the VMT Wrappers (C Code)
 Once the build system successfully fetches and links the Vendor SDK, begin implementing the generic Caffeine APIs in `src/stm32/<family>/cfn_hal_*_port.c`.
 
-**CRITICAL MANDATE - EXHAUSTIVE PERIPHERAL PORTING:** You MUST implement the VMT wrappers for **ALL** standard peripherals supported by the generic framework.
+**CRITICAL MANDATE - EXHAUSTIVE PERIPHERAL PORTING:** You MUST implement the VMT wrappers for **ALL** standard peripherals supported by the generic framework. Partial "MVP" stubs are FORBIDDEN.
 
 *   **Nested VMT Structure:** You MUST implement the VMT using the nested `.base` struct for generic functions.
-*   **Exhaustive Implementation:** You MUST fully implement every function in the Virtual Method Table. Do not create partial "MVP" stubs.
+*   **Exhaustive Implementation:** You MUST fully implement every function in the Virtual Method Table, including IRQ and DMA variants. Do not leave functions returning `NOT_SUPPORTED` if the hardware is capable.
+*   **Interrupt & Event Pipeline:** 
+    *   You MUST implement `event_enable`, `event_disable`, and `event_get` using vendor register macros (e.g., `__HAL_UART_ENABLE_IT`).
+    *   You MUST provide raw `_IRQHandler` functions for each peripheral instance.
+    *   You MUST implement static driver tracking (e.g., `static cfn_hal_uart_t * port_drivers[...]`) to map ST HAL C-style callbacks back to the Caffeine HAL driver instances.
+    *   You MUST use `// NOLINT(readability-identifier-naming)` on raw ISR handlers to pass static analysis while maintaining compatibility with the hardware vector table.
 *   **Exhaustive Hardware Superset:** Search the fetched vendor CMSIS headers to discover the **absolute maximum superset** of instances available across the entire target MCU family.
 *   **Enum Naming Rule:** You MUST name enum elements to match CMSIS definitions exactly (e.g., `CFN_HAL_UART_PORT_USART1`, `CFN_HAL_UART_PORT_UART4`, `CFN_HAL_UART_PORT_LPUART1`).
 *   **Hardware Instance Mapping:** Inside the `cfn_hal_<peripheral>_port.c` file, define a static mapping array that links the project's physical enum to the vendor's physical memory address using `#ifdef` guards for each element.

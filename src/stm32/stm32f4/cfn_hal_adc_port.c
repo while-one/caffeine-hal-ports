@@ -272,20 +272,18 @@ static cfn_hal_error_code_t port_adc_read(cfn_hal_adc_t *driver, uint32_t *data,
 
 static cfn_hal_error_code_t port_adc_start(cfn_hal_adc_t *driver)
 {
-    CFN_HAL_UNUSED(driver);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    return cfn_hal_stm32_map_error(HAL_ADC_Start_IT(&port_hadcs[port_id]));
 }
 static cfn_hal_error_code_t port_adc_stop(cfn_hal_adc_t *driver)
 {
-    CFN_HAL_UNUSED(driver);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    return cfn_hal_stm32_map_error(HAL_ADC_Stop_IT(&port_hadcs[port_id]));
 }
 static cfn_hal_error_code_t port_adc_read_dma(cfn_hal_adc_t *driver, uint32_t *data, size_t nbr_of_samples)
 {
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(data);
-    CFN_HAL_UNUSED(nbr_of_samples);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    return cfn_hal_stm32_map_error(HAL_ADC_Start_DMA(&port_hadcs[port_id], data, (uint32_t) nbr_of_samples));
 }
 
 /* API --------------------------------------------------------------*/

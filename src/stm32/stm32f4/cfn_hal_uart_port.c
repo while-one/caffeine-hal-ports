@@ -374,27 +374,27 @@ port_uart_rx_to_idle(cfn_hal_uart_t *driver, uint8_t *data, size_t max_bytes, si
 
 static cfn_hal_error_code_t port_uart_tx_irq(cfn_hal_uart_t *driver, const uint8_t *data, size_t nbr_of_bytes)
 {
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(data);
-    CFN_HAL_UNUSED(nbr_of_bytes);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    return cfn_hal_stm32_map_error(
+        HAL_UART_Transmit_IT(&port_huarts[port_id], (uint8_t *) data, (uint16_t) nbr_of_bytes));
 }
+
 static cfn_hal_error_code_t port_uart_tx_irq_abort(cfn_hal_uart_t *driver)
 {
-    CFN_HAL_UNUSED(driver);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    return cfn_hal_stm32_map_error(HAL_UART_AbortTransmit_IT(&port_huarts[port_id]));
 }
+
 static cfn_hal_error_code_t port_uart_rx_irq(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes)
 {
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(data);
-    CFN_HAL_UNUSED(nbr_of_bytes);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    return cfn_hal_stm32_map_error(HAL_UART_Receive_IT(&port_huarts[port_id], data, (uint16_t) nbr_of_bytes));
 }
+
 static cfn_hal_error_code_t port_uart_rx_irq_abort(cfn_hal_uart_t *driver)
 {
-    CFN_HAL_UNUSED(driver);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    return cfn_hal_stm32_map_error(HAL_UART_AbortReceive_IT(&port_huarts[port_id]));
 }
 static cfn_hal_error_code_t port_uart_tx_dma(cfn_hal_uart_t *driver, const uint8_t *data, size_t nbr_of_bytes)
 {
