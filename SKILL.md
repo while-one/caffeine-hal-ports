@@ -41,7 +41,7 @@ Port recipes define **what** to compile. They are organized by vendor subdirecto
 *   **Source Cherry-picking:** Only compile the specific `.c` files required from the vendor SDK into the `vendor_sdk` target.
 *   **Silicon Flags & Macros:** Apply `-mcpu`, `-march`, or specific HAL defines (via `CAFFEINE_MCU_MACRO`) to BOTH the `vendor_sdk` and `${PROJECT_NAME}` targets using `target_compile_options` and `target_compile_definitions`.
 *   **Encapsulation (CRITICAL):** Vendor include directories should be `SYSTEM PRIVATE` to the targets. Marking them as `SYSTEM` instructs `clang-tidy` and the compiler to ignore warnings originating from vendor headers.
-*   **Centralized Linking:** Do NOT link `caffeine-hal` or define the `caffeine::hal-ports` alias in the recipe. This is handled automatically by the root `CMakeLists.txt`.
+*   **Centralized Linking:** Do NOT link `caffeine::hal` or define the `caffeine::hal-ports` alias in the recipe. This is handled automatically by the root `CMakeLists.txt`.
 
 ### E. Local Development & Cross-Repo Testing
 Because `caffeine-hal-ports` dynamically fetches `caffeine-hal` from GitHub via `FetchContent`, testing local modifications to the core HAL headers requires a specific CMake override.

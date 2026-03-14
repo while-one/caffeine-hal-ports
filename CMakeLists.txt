@@ -29,7 +29,7 @@ include(FetchContent)
 FetchContent_Declare(
     caffeine-hal
     GIT_REPOSITORY https://github.com/while-one/caffeine-hal.git
-    GIT_TAG        v0.1.2
+    GIT_TAG        v0.3.1
 )
 FetchContent_MakeAvailable(caffeine-hal)
 
@@ -58,6 +58,9 @@ endif()
 
 # Create the standard generic alias for user applications
 add_library(caffeine::hal-ports ALIAS ${PROJECT_NAME})
+
+# Consistent naming for exported target
+set_target_properties(${PROJECT_NAME} PROPERTIES EXPORT_NAME hal-ports)
 
 # --- Unit Testing (CTest & GoogleTest) ---
 option(CAFFEINE_PORT_BUILD_TESTS "Build the unit tests (Requires host compiler)" OFF)
