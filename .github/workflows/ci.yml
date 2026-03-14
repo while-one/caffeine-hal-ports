@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Configure CMake (Dry Run Format)
-      run: cmake --preset linux-native -D FORMAT_DRY_RUN=ON -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+      run: cmake --preset linux-native -D FORMAT_DRY_RUN=ON -DFETCHCONTENT_FULLY_DISCONNECTED=OFF
 
     - name: Check Formatting
       run: cmake --build build/linux-native --target caffeine-hal-ports-format
@@ -34,7 +34,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Configure CMake
-      run: cmake --preset linux-native -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+      run: cmake --preset linux-native
 
     - name: Run Analysis
       run: cmake --build build/linux-native --target caffeine-hal-ports-analyze
@@ -57,7 +57,7 @@ jobs:
       run: apt-get update && apt-get install -y gcovr
 
     - name: Configure CMake (Host Mock Tests)
-      run: cmake --preset tests-native -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+      run: cmake --preset tests-native -DFETCHCONTENT_FULLY_DISCONNECTED=OFF
 
     - name: Build Tests
       run: cmake --build build/tests-native
@@ -96,7 +96,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Configure CMake (Template Compliance)
-      run: cmake --preset template-compliance -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+      run: cmake --preset template-compliance -DFETCHCONTENT_FULLY_DISCONNECTED=OFF
 
     - name: Build Template Check
       run: cmake --build build/template-compliance

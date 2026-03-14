@@ -23,4 +23,4 @@ docker pull "$IMAGE_NAME" || { echo "Failed to pull image $IMAGE_NAME. Please en
 
 # Run preset build in container
 docker run --rm -v "$(pwd)":/work -w /work "$IMAGE_NAME" \
-    bash -c "rm -rf build && cmake --preset $PRESET -DFETCHCONTENT_FULLY_DISCONNECTED=ON $EXTRA_ARGS && cmake --build build/$PRESET --target $CMAKE_TARGET"
+    bash -c "rm -rf build && cmake --preset $PRESET $EXTRA_ARGS && cmake --build build/$PRESET --target $CMAKE_TARGET"
