@@ -35,6 +35,7 @@ ST's HAL architecture strictly requires a `stm32<fam>xx_hal_conf.h` file. This f
 *   **Location:** Create this file in `src/stm32/<family>/` (e.g., `src/stm32h7/stm32h7xx_hal_conf.h`).
 *   **Content Strategy:** Do NOT guess the required macros. Locate the vendor's `stm32<fam>xx_hal_conf_template.h` file inside the fetched SDK's `Inc/` directory (e.g., in `build/<preset>/_deps/vendor_stm32cubef4-src/Drivers/STM32F4xx_HAL_Driver/Inc/`). Use its content as the absolute source of truth for all required macros (e.g., `TICK_INT_PRIORITY`, `HSE_STARTUP_TIMEOUT`, `LSI_VALUE`, etc.).
 *   **Module Selection:** You MUST ensure ALL peripheral modules are enabled by default (`HAL_UART_MODULE_ENABLED`, `HAL_SPI_MODULE_ENABLED`, etc.).
+*   **Legacy Modules (CRITICAL):** You MUST disable/comment out all legacy modules (e.g., `HAL_CAN_LEGACY_MODULE_ENABLED`, `HAL_ETH_LEGACY_MODULE_ENABLED`) to avoid missing header errors from the SDK.
 *   **Formatting:** Clean up the ST template code to match the project's coding style (indentation, spacing) while keeping the actual logic and macro values intact.
 
 ### Step 2: Update the Port Recipe (`cmake/ports/stm32/<family>.cmake`)
@@ -87,7 +88,8 @@ Once the build system successfully fetches and links the Vendor SDK, begin imple
 
 *   **Exhaustive Implementation (No MVPs):** You MUST fully implement every function in the Virtual Method Table. Do not create partial "Minimum Viable Product" stubs that return `CFN_HAL_ERROR_NOT_SUPPORTED` just to get the code to compile. Every capability defined in the generic configuration struct (e.g., data bits, parity, stop bits, flow control) must be mapped to the vendor struct. Every generic function (polling, IRQ, DMA, aborts) must be mapped to its corresponding vendor function. You may only return `CFN_HAL_ERROR_NOT_SUPPORTED` if the underlying physical silicon genuinely lacks the hardware capability.
 
-*   **Exhaustive Hardware Superset:** When defining the `cfn_hal_<peripheral>_port_t` enum, you MUST NOT guess the available instances. You MUST search the fetched vendor CMSIS headers (e.g., `grep -rhE "^#define (USART|UART)[0-9]+ .*_BASE" _deps/.../Include/`) to discover the **absolute maximum superset** of instances available across the entire target MCU family (e.g., UART1 through UART10 for STM32F4). The enum and mapping arrays must encompass this entire superset.
+*   **Exhaustive Hardware Superset:** When defining the `cfn_hal_<peripheral>_port_t` enum, you MUST NOT guess the available instances. You MUST search the fetched vendor CMSIS headers (e.g., `grep -rhE "^#define (USART|UART|LPUART)[0-9]+ .*_BASE" _deps/.../Include/`) to discover the **absolute maximum superset** of instances available across the entire target MCU family (e.g., USART1 through UART10 for STM32F4). The enum and mapping arrays must encompass this entire superset.
+*   **Enum Naming Rule:** You MUST name enum elements to match CMSIS definitions (e.g., `CFN_HAL_UART_PORT_USART1`, `CFN_HAL_UART_PORT_UART4`, `CFN_HAL_UART_PORT_LPUART1`).
 *   **Hardware Instance Mapping:** Inside the `cfn_hal_<peripheral>_port.c` file, define a static mapping array that links the project's physical enum to the vendor's physical memory address. You MUST use `#ifdef` guards (e.g., `#if defined(UART4)`) around every single element in this array. This ensures the library compiles safely even if a specific user's chip variant (e.g., STM32F401) is missing a peripheral from the superset (like UART4).
 *   **Global Clock Gating:** You MUST implement clock enablement via the centralized global helper `cfn_hal_port_clock_enable_gate()` defined in `cfn_hal_clock_port.c`. 
     1.  First, add the required enum definitions to `cfn_hal_port_peripheral_id_t` in `cfn_hal_clock_port.h` (mapping the exhaustive superset).
@@ -106,12 +108,7 @@ Once the build system successfully fetches and links the Vendor SDK, begin imple
                                                 const cfn_hal_uart_phy_t *phy);
     ```
 *   **Type Identity:** You MUST manually set `driver->base.type` and `driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;` in the `_construct` function.
-*   **Error Translation:** Use the centralized `cfn_hal_stm32_map_error()` utility from `src/stm32/cfn_hal_stm32_error.h` to translate ST's `HAL_StatusTypeDef` to `cfn_hal_error_code_t` before returning.
+*   **Exhaustive Error Translation:** Use the centralized `cfn_hal_stm32_map_error()` utility from `src/stm32/cfn_hal_stm32_error.h`.
+    *   **Rule:** The error header MUST provide a complete mapping of `HAL_StatusTypeDef` enums (`HAL_OK`, `HAL_ERROR`, `HAL_BUSY`, `HAL_TIMEOUT`) using a static array indexed by the actual vendor constants.
+    *   **Rule:** You MUST NOT redefine ST's internal enums; include the vendor headers and wrap your mapping array in `#ifdef` or `#ifndef` if necessary to prevent redeclaration.
 *   **Bootloader Awareness:** Do not interfere with VTOR logic. The CMake recipe handles injecting `USER_VECT_TAB_ADDRESS`; your initialization code must allow the ST HAL to process it.
-
-Example prompt
-based on @caffeine-hal-ports/src/stm32/PORT_ST_SKILL.md I want to port the code to a new STM32 MCU. Create a plan for this  
-port, you can prompt me to provide the information as metnioned in the skill file. You need to do a best effort to          
-implement for all peripherals, do a sanity check build after each port to make sure nothing was broken. If the MCU doesn't  
-support a given peripheral then you impleement it but all functions will return not supported. Make sure to adhere to the   
-coding standards and philosophy of this library   

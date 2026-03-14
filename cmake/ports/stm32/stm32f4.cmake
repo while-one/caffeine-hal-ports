@@ -80,9 +80,11 @@ target_compile_options(vendor_sdk PUBLIC
 )
 
 # --- 2. Main Port Library ---
+# Gather all Caffeine VMT Wrappers
+file(GLOB PORT_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/stm32/stm32f4/cfn_hal_*_port.c")
+
 add_library(${PROJECT_NAME} STATIC
-    # Caffeine VMT Wrappers
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/stm32/stm32f4/cfn_hal_uart_port.c
+    ${PORT_SOURCES}
 )
 
 # Absorb the isolated vendor SDK object files into our main port library

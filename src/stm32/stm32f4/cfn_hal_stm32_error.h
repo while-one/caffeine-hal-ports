@@ -13,17 +13,7 @@ extern "C"
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_types.h"
-
-/* STM32 HAL Status Type definition - Provided here as placeholder if not included */
-#ifndef HAL_OK
-typedef enum
-{
-  HAL_OK       = 0x00U,
-  HAL_ERROR    = 0x01U,
-  HAL_BUSY     = 0x02U,
-  HAL_TIMEOUT  = 0x03U
-} HAL_StatusTypeDef;
-#endif
+#include "stm32f4xx_hal.h"
 
 /* Defines ----------------------------------------------------------*/
 
@@ -42,7 +32,7 @@ static const cfn_hal_error_code_t stm32_error_map[CFN_HAL_STM32_ERROR_MAX] = {
     [HAL_OK] = CFN_HAL_ERROR_OK,
     [HAL_ERROR] = CFN_HAL_ERROR_FAIL,
     [HAL_BUSY] = CFN_HAL_ERROR_BUSY,
-    [HAL_TIMEOUT] = CFN_HAL_ERROR_TIMEOUT,
+    [HAL_TIMEOUT] = CFN_HAL_ERROR_TIMING_TIMEOUT,
 };
 
 /* Functions --------------------------------------------------------*/
@@ -52,9 +42,9 @@ static const cfn_hal_error_code_t stm32_error_map[CFN_HAL_STM32_ERROR_MAX] = {
  * @param status STM32 status code (HAL_StatusTypeDef).
  * @return Corresponding cfn_hal_error_code_t.
  */
-static inline cfn_hal_error_code_t cfn_hal_stm32_map_error(int status)
+static inline cfn_hal_error_code_t cfn_hal_stm32_map_error(HAL_StatusTypeDef status)
 {
-    if (status < 0 || status >= CFN_HAL_STM32_ERROR_MAX)
+    if ((uint32_t)status >= CFN_HAL_STM32_ERROR_MAX)
     {
         return CFN_HAL_ERROR_FAIL;
     }

@@ -14,7 +14,8 @@ else
 fi
 
 # The image is built and pushed by the caffeine-hal repository
-IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY_OWNER}/caffeine-hal/$STAGE:latest"
+REPO_OWNER=${GITHUB_REPOSITORY_OWNER:-while-one}
+IMAGE_NAME="ghcr.io/${REPO_OWNER}/caffeine-hal/$STAGE:latest"
 
 # Pull the image to ensure it's up-to-date
 echo "Pulling Docker image: $IMAGE_NAME"
