@@ -10,7 +10,8 @@ Checks: >
   readability-make-member-function-const,
   readability-static-definition-in-anonymous-namespace,
   google-readability-casting,
-  modernize-use-nullptr
+  modernize-use-nullptr,
+  -bugprone-easily-swappable-parameters
 
 # Warnings as errors ensures you don't ignore these in CI
 WarningsAsErrors: 'readability-identifier-naming,bugprone-narrowing-conversions'
@@ -20,6 +21,7 @@ CheckOptions:
   # Variable names shall be lowercase with underscores
   - { key: readability-identifier-naming.VariableCase,        value: lower_case }
   - { key: readability-identifier-naming.ParameterCase,       value: lower_case }
+  - { key: readability-identifier-naming.ConstantParameterCase, value: lower_case }
   - { key: readability-identifier-naming.FunctionCase,        value: lower_case }
 
   # Global variables: BARR-C doesn't mandate a prefix, but often 'g_' is used.

@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.21)
+file(GLOB_RECURSE PORT_SOURCES "caffeine-hal-ports/src/*.c" "caffeine-hal-ports/src/*.h")
+foreach(f ${PORT_SOURCES})
+    message(STATUS "Found: ${f}")
+endforeach()
