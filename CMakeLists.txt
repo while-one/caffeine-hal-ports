@@ -77,18 +77,21 @@ endif()
 # ==============================================================================
 # We use CONFIGURE_DEPENDS so CMake knows to re-run if we add or remove files.
 
-file(GLOB_RECURSE PORT_SOURCES_C CONFIGURE_DEPENDS "src/stm32/**/*.c")
+# Determine the correct source subdirectory for the current vendor
+if(CAFFEINE_VENDOR STREQUAL "linux")
+    set(ANALYSIS_SUBDIR "posix")
+else()
+    set(ANALYSIS_SUBDIR "${CAFFEINE_VENDOR}")
+endif()
 
-file(GLOB_RECURSE PORT_SOURCES_H CONFIGURE_DEPENDS "src/stm32/**/*.h")
+file(GLOB_RECURSE PORT_SOURCES_C CONFIGURE_DEPENDS "src/${ANALYSIS_SUBDIR}/**/*.c")
+file(GLOB_RECURSE PORT_SOURCES_H CONFIGURE_DEPENDS "src/${ANALYSIS_SUBDIR}/**/*.h")
 
 file(GLOB_RECURSE TEST_SOURCES_CPP CONFIGURE_DEPENDS "tests/**/*.cpp")
-
 file(GLOB_RECURSE TEST_SOURCES_H CONFIGURE_DEPENDS "tests/**/*.h")
 
 set(ALL_FORMAT_SOURCES ${PORT_SOURCES_C} ${PORT_SOURCES_H} ${TEST_SOURCES_CPP} ${TEST_SOURCES_H})
-
 set(PORT_SOURCES ${PORT_SOURCES_C}) # Only .c for clang-tidy
-
 set(ALL_ANALYSIS_SOURCES ${PORT_SOURCES_C} ${TEST_SOURCES_CPP})
 
 # 1. Code Formatting (clang-format)
@@ -131,7 +134,7 @@ if(CPPCHECK)
         --inline-suppr
         --check-level=exhaustive
         -D__GNUC__
-        --file-filter=${PROJECT_SOURCE_DIR}/src/stm32/*
+        --file-filter=${PROJECT_SOURCE_DIR}/src/${ANALYSIS_SUBDIR}/*
         COMMENT "Running cppcheck static analysis using compile_commands.json..."
     )
     if(NOT TARGET ${PROJECT_NAME}-analyze)
@@ -150,7 +153,7 @@ if(CLANG_TIDY)
         COMMAND ${CLANG_TIDY}
         -p=${CMAKE_BINARY_DIR}
         --config-file=${PROJECT_SOURCE_DIR}/config/coding/.clang-tidy
-        --header-filter="${PROJECT_SOURCE_DIR}/src/stm32/.*/cfn_hal_.*"
+        --header-filter="${PROJECT_SOURCE_DIR}/src/${ANALYSIS_SUBDIR}/.*/cfn_hal_.*"
         ${CAFFEINE_CLANG_TIDY_EXTRA_ARGS}
         ${PORT_SOURCES}
         COMMENT "Running clang-tidy static analysis using compile_commands.json..."

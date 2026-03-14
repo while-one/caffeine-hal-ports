@@ -24,7 +24,6 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#define _POSIX_C_SOURCE 200112L
 #include <pthread.h>
 #include <time.h>
 #include <stdlib.h>
@@ -234,7 +233,7 @@ static cfn_hal_error_code_t port_uart_rx_dma(cfn_hal_uart_t *driver, uint8_t *da
 }
 
 /* API --------------------------------------------------------------*/
-static const cfn_hal_uart_api_t uart_api = {
+static const cfn_hal_uart_api_t UART_API = {
     .base = {
         .init = port_base_init,
         .deinit = port_base_deinit,
@@ -284,7 +283,7 @@ cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_ha
     driver->base.lock_obj = mutex;
 #endif
 
-    driver->api = &uart_api;
+    driver->api = &UART_API;
     driver->base.type = CFN_HAL_PERIPHERAL_TYPE_UART;
     driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
     driver->config = config;

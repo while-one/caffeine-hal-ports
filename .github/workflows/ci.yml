@@ -39,6 +39,39 @@ jobs:
     - name: Run Analysis
       run: cmake --build build/linux-native --target caffeine-hal-ports-analyze
 
+  static-analysis-stm32f417:
+    name: Static Analysis (STM32F417)
+    runs-on: ubuntu-24.04
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/caffeine-hal/build-arm:latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure CMake
+      run: cmake --preset stm32f417vg-release -DFETCHCONTENT_FULLY_DISCONNECTED=OFF
+
+    - name: Run Analysis
+      run: cmake --build build/stm32f417vg-release --target caffeine-hal-ports-analyze
+
+  build-stm32f417:
+    name: Cross-Build (STM32F417)
+    runs-on: ubuntu-24.04
+    needs: [lint-format]
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/caffeine-hal/build-arm:latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure CMake
+      run: cmake --preset stm32f417vg-release -DFETCHCONTENT_FULLY_DISCONNECTED=OFF
+
+    - name: Build Library
+      run: cmake --build build/stm32f417vg-release --target caffeine-hal-ports
+
   build-and-test:
     name: Native Build & Mock Unit Tests
     runs-on: ubuntu-24.04
