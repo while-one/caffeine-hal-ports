@@ -179,7 +179,7 @@ The Continuous Integration (CI) and Continuous Deployment (CD) for this reposito
 The main CI workflow runs all checks (linting, static analysis, builds, tests) inside a pre-built Docker image. This eliminates the need for repeated `apt-get install` commands and ensures a consistent build environment identical to local Docker development.
 *   **Speed & Consistency:** Builds run significantly faster by pulling a pre-cached Docker image instead of installing dependencies.
 *   **Containerized Builds:** Jobs are configured with `container: image: ghcr.io/${{ github.repository }}/build-native:latest` (or `build-arm`, etc.) to execute within the specialized Docker environment.
-*   **Offline Builds:** CMake configuration steps include `-DFETCHCONTENT_FULLY_DISCONNECTED=ON` to prevent unintended network access for already-satisfied dependencies.
+*   **Dependency Management:** CI jobs allow `FetchContent` to download code dependencies (like `caffeine-hal`) while preferring pre-installed tools (like GoogleTest) from the Docker image for maximum performance.
 
 ### B. Docker Image Management (`.github/workflows/docker-publish.yml`)
 A dedicated workflow handles the building and publishing of the Docker images used by the CI.

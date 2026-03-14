@@ -14,7 +14,7 @@ This repository employs a clean, target-based CMake architecture driven by modul
 - **Global Constraints:** Strict warnings (`-Werror` by default), `-Os` size optimization, and dead-code elimination preparation are applied globally.
 - **Modular Presets (`cmake/presets/`):** MCU and board profiles are isolated by vendor and family (e.g., `cmake/presets/stm32/stm32f4.json`), allowing clean, conflict-free scalability.
 - **Toolchains (`cmake/toolchains/`):** Purely configure executable paths and generic embedded linking specs (e.g., `newlib-nano` and syscall stubs for ARM).
-- **Port Recipes (`cmake/ports/`):** Define the silicon-specific flags (e.g., `-mcpu`, `-march`), fetch vendor SDKs via `FetchContent` (no submodules), and compile the VMT wrappers.
+- **Port Recipes (`cmake/ports/`):** Define the silicon-specific flags (e.g., `-mcpu`, `-march`), fetch vendor SDKs via `FetchContent` (no submodules), and compile the VMT wrappers. Vendor SDK headers are isolated as `SYSTEM` to ensure static analysis targets (Clang-Tidy/Cppcheck) focus exclusively on project code.
 
 ---
 
