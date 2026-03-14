@@ -242,7 +242,7 @@ static cfn_hal_error_code_t port_gpio_port_read(cfn_hal_gpio_t *port, uint32_t *
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    *port_value = (uint32_t) PORT_INSTANCES[port_id]->IDR;
+    *port_value =  PORT_INSTANCES[port_id]->IDR;
     return CFN_HAL_ERROR_OK;
 }
 

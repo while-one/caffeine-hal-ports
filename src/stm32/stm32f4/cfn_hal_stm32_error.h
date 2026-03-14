@@ -28,7 +28,7 @@ extern "C"
  * @brief Internal mapping array from STM32 HAL_StatusTypeDef to cfn_hal_error_code_t.
  * The array is indexed by the actual HAL_StatusTypeDef enum constants.
  */
-static const cfn_hal_error_code_t stm32_error_map[CFN_HAL_STM32_ERROR_MAX] = {
+static const cfn_hal_error_code_t STM32_ERROR_MAP[CFN_HAL_STM32_ERROR_MAX] = {
     [HAL_OK] = CFN_HAL_ERROR_OK,
     [HAL_ERROR] = CFN_HAL_ERROR_FAIL,
     [HAL_BUSY] = CFN_HAL_ERROR_BUSY,
@@ -48,7 +48,7 @@ static inline cfn_hal_error_code_t cfn_hal_stm32_map_error(HAL_StatusTypeDef sta
     {
         return CFN_HAL_ERROR_FAIL;
     }
-    return stm32_error_map[status];
+    return STM32_ERROR_MAP[status];
 }
 
 #ifdef __cplusplus

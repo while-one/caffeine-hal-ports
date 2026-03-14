@@ -44,7 +44,13 @@ You must refactor the existing generated `.cmake` file to properly fetch and com
 
 1.  **FetchContent Configuration:** Update the `FetchContent_Declare` block with the GitHub URL and Tag provided by the user.
 2.  **Validation Guard:** You MUST add a `FATAL_ERROR` check ensuring `CAFFEINE_MCU_MACRO` is defined.
-3.  **Include Paths:** Ensure the recipe includes both the Vendor SDK's `Inc/` directories and the `src/stm32/<family>/` directory (so the SDK can find the `hal_conf.h` you just created).
+3.  **Include Paths (CRITICAL):** Ensure the recipe includes both the Vendor SDK's `Inc/` directories and the `src/stm32/<family>/` directory. You MUST mark Vendor SDK directories as `SYSTEM` to prevent `clang-tidy` from reporting warnings in vendor code.
+    ```cmake
+    target_include_directories(vendor_sdk SYSTEM PRIVATE
+        ${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc
+        # ... other vendor paths ...
+    )
+    ```
 4.  **Dynamic Startup Assembly:** Bare-metal STM32 requires a specific `.s` startup file. Use CMake string manipulation to dynamically locate it.
 5.  **Isolate Vendor Sources:** Create a separate `add_library(vendor_sdk OBJECT ...)` target to compile the vendor SDK. Apply `target_compile_options(vendor_sdk PRIVATE -w)` to relax strict project warnings.
 6.  **Main Port Target:** Link the isolated vendor target to the main project: `target_link_libraries(${PROJECT_NAME} PRIVATE $<TARGET_OBJECTS:vendor_sdk>)`.
@@ -82,4 +88,4 @@ All new port implementations MUST pass the project's strict quality checks befor
     `cmake --build build/<preset> --target caffeine-hal-ports-format`
 2.  **Analyze:** Run the full static analysis suite (Cppcheck & Clang-Tidy) and resolve ALL warnings and errors:
     `cmake --build build/<preset> --target caffeine-hal-ports-analyze`
-    *Note: The analyzer is configured to ignore vendor configuration headers (`_hal_conf.h`), but all wrapper logic (`cfn_hal_*_port.c`) is strictly analyzed.*
+    *Note: The analyzer is configured to ignore vendor configuration headers (`_hal_conf.h`) and uses a strict header filter (`--header-filter="cfn_hal_.*"`) to ensure it only analyzes project-compliant headers.*

@@ -60,10 +60,12 @@ add_library(vendor_sdk OBJECT
 target_compile_options(vendor_sdk PRIVATE -w)
 
 # Include Vendor SDK headers AND our local directory containing stm32f4xx_hal_conf.h
-target_include_directories(vendor_sdk PRIVATE
+target_include_directories(vendor_sdk SYSTEM PRIVATE
     ${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc
     ${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Include
     ${SDK_DIR}/Drivers/CMSIS/Include
+)
+target_include_directories(vendor_sdk PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/stm32/stm32f4
 )
 
@@ -91,10 +93,12 @@ add_library(${PROJECT_NAME} STATIC
 target_link_libraries(${PROJECT_NAME} PRIVATE $<TARGET_OBJECTS:vendor_sdk>)
 
 # Include directories needed by our VMT wrappers
-target_include_directories(${PROJECT_NAME} PRIVATE
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
     ${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc
     ${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Include
     ${SDK_DIR}/Drivers/CMSIS/Include
+)
+target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/stm32/stm32f4
 )
 

@@ -25,3 +25,30 @@ find_program(CMAKE_RANLIB arm-none-eabi-ranlib REQUIRED)
 
 # Bypass compile checks that require a fully linked executable
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+# --- Clang-Tidy Support ---
+# Detect the system include paths of the cross-compiler to help Clang-based tools find headers like time.h
+execute_process(
+    COMMAND ${CMAKE_C_COMPILER} -E -x c -v /dev/null
+    ERROR_VARIABLE _COMPILER_OUTPUT
+    OUTPUT_QUIET
+)
+
+# Parse the compiler output to find the system include search paths
+string(REPLACE "\n" ";" _OUTPUT_LINES "${_COMPILER_OUTPUT}")
+set(_IS_SEARCH_PATH FALSE)
+set(_EXTRA_ARGS "-extra-arg=--target=arm-none-eabi")
+foreach(_LINE IN LISTS _OUTPUT_LINES)
+    if(_LINE MATCHES "#include <...> search starts here:")
+        set(_IS_SEARCH_PATH TRUE)
+    elseif(_LINE MATCHES "End of search list.")
+        set(_IS_SEARCH_PATH FALSE)
+    elseif(_IS_SEARCH_PATH)
+        string(STRIP "${_LINE}" _PATH)
+        if(EXISTS "${_PATH}")
+            list(APPEND _EXTRA_ARGS "-extra-arg=-isystem" "-extra-arg=${_PATH}")
+        endif()
+    endif()
+endforeach()
+
+set(CAFFEINE_CLANG_TIDY_EXTRA_ARGS ${_EXTRA_ARGS} CACHE INTERNAL "Clang-Tidy extra arguments for cross-compilation")
