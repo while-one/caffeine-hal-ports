@@ -10,6 +10,7 @@
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
+#include <string.h>
 
 /* Private Data -----------------------------------------------------*/
 
@@ -216,38 +217,69 @@ static cfn_hal_error_code_t port_eth_transmit_frame(cfn_hal_eth_t *driver, const
 static cfn_hal_error_code_t
 port_eth_receive_frame(cfn_hal_eth_t *driver, uint8_t *buffer, size_t max_length, size_t *received_length)
 {
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(buffer);
-    CFN_HAL_UNUSED(max_length);
-    CFN_HAL_UNUSED(received_length);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    ETH_HandleTypeDef *heth = &port_heths[port_id];
+    void              *p_buffer = NULL;
+
+    if (HAL_ETH_ReadData(heth, &p_buffer) != HAL_OK)
+    {
+        return CFN_HAL_ERROR_FAIL;
+    }
+
+    uint32_t frame_length = heth->RxDescList.RxDataLength;
+    if (frame_length > max_length)
+    {
+        frame_length = (uint32_t) max_length;
+    }
+
+    memcpy(buffer, p_buffer, frame_length);
+    if (received_length != NULL)
+    {
+        *received_length = frame_length;
+    }
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t
 port_eth_read_phy_reg(cfn_hal_eth_t *driver, uint16_t phy_addr, uint16_t reg_addr, uint16_t *value)
 {
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(phy_addr);
-    CFN_HAL_UNUSED(reg_addr);
-    CFN_HAL_UNUSED(value);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    uint32_t temp_val = 0;
+    if (HAL_ETH_ReadPHYRegister(&port_heths[port_id], phy_addr, reg_addr, &temp_val) != HAL_OK)
+    {
+        return CFN_HAL_ERROR_FAIL;
+    }
+    *value = (uint16_t) temp_val;
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t
 port_eth_write_phy_reg(cfn_hal_eth_t *driver, uint16_t phy_addr, uint16_t reg_addr, uint16_t value)
 {
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(phy_addr);
-    CFN_HAL_UNUSED(reg_addr);
-    CFN_HAL_UNUSED(value);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (HAL_ETH_WritePHYRegister(&port_heths[port_id], (uint32_t) phy_addr, (uint32_t) reg_addr, (uint32_t) value) !=
+        HAL_OK)
+    {
+        return CFN_HAL_ERROR_FAIL;
+    }
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_eth_get_link_status(cfn_hal_eth_t *driver, cfn_hal_eth_link_status_t *status)
 {
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(status);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint16_t bsr = 0;
+    /* PHY Address is usually 0 or 1. We assume 1. */
+    if (port_eth_read_phy_reg(driver, 1, 1, &bsr) != CFN_HAL_ERROR_OK)
+    {
+        return CFN_HAL_ERROR_FAIL;
+    }
+
+    status->is_up = (bsr & 0x0004) != 0;
+    status->speed = CFN_HAL_ETH_LINK_SPEED_100M;   /* Simplified */
+    status->duplex = CFN_HAL_ETH_LINK_DUPLEX_FULL; /* Simplified */
+
+    return CFN_HAL_ERROR_OK;
 }
 
 /* API --------------------------------------------------------------*/

@@ -1,10 +1,10 @@
 /**
  * @file cfn_hal_i2s_port.h
- * @brief I2S HAL Template Implementation Header.
+ * @brief STM32F4 I2S HAL Port Implementation Header.
  */
 
-#ifndef CAFFEINE_HAL_PORT_I2S_H
-#define CAFFEINE_HAL_PORT_I2S_H
+#ifndef CAFFEINE_HAL_PORT_I2S_STM32F4_H
+#define CAFFEINE_HAL_PORT_I2S_STM32F4_H
 
 #ifdef __cplusplus
 extern "C"
@@ -14,29 +14,27 @@ extern "C"
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_i2s.h"
 
-/* Functions prototypes ---------------------------------------------*/
+/* Types Enums ------------------------------------------------------*/
 
 /**
- * @brief Construct the i2s driver.
- *
- * @param driver Pointer to the peripheral driver instance.
- * @param config Pointer to the configuration structure.
- * @param phy Pointer to the physical mapping structure.
- * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ * @brief STM32F4 Physical I2S instances.
  */
+typedef enum
+{
+    CFN_HAL_I2S_PORT_2,
+    CFN_HAL_I2S_PORT_3,
+    CFN_HAL_I2S_PORT_MAX
+} cfn_hal_i2s_port_t;
+
+/* Functions prototypes ---------------------------------------------*/
+
 cfn_hal_error_code_t
 cfn_hal_i2s_construct(cfn_hal_i2s_t *driver, const cfn_hal_i2s_config_t *config, const cfn_hal_i2s_phy_t *phy);
 
-/**
- * @brief Destruct the i2s driver.
- *
- * @param driver Pointer to the peripheral driver instance.
- * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
- */
 cfn_hal_error_code_t cfn_hal_i2s_destruct(cfn_hal_i2s_t *driver);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* CAFFEINE_HAL_PORT_I2S_H */
+#endif /* CAFFEINE_HAL_PORT_I2S_STM32F4_H */

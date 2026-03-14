@@ -19,6 +19,21 @@ static RTC_TypeDef *const PORT_INSTANCES[CFN_HAL_RTC_PORT_MAX] = {
 };
 
 static RTC_HandleTypeDef port_hrtcs[CFN_HAL_RTC_PORT_MAX];
+static cfn_hal_rtc_t    *port_drivers[CFN_HAL_RTC_PORT_MAX];
+
+/* Internal Helpers -------------------------------------------------*/
+
+static int32_t get_port_id_from_handle(RTC_HandleTypeDef *hrtc)
+{
+    for (uint32_t i = 0; i < CFN_HAL_RTC_PORT_MAX; i++)
+    {
+        if (&port_hrtcs[i] == hrtc)
+        {
+            return (int32_t) i;
+        }
+    }
+    return -1;
+}
 
 /* VMT Implementations ----------------------------------------------*/
 
@@ -58,7 +73,6 @@ static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
     return cfn_hal_stm32_map_error(HAL_RTC_DeInit(&port_hrtcs[port_id]));
 }
 
-/* ... base stubs ... */
 static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
 {
     CFN_HAL_UNUSED(base);
@@ -94,7 +108,7 @@ static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
     CFN_HAL_UNUSED(base);
-    if (event_mask)
+    if (event_mask != NULL)
     {
         *event_mask = 0;
     }
@@ -115,11 +129,46 @@ static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
 {
     CFN_HAL_UNUSED(base);
-    if (error_mask)
+    if (error_mask != NULL)
     {
         *error_mask = 0;
     }
     return CFN_HAL_ERROR_OK;
+}
+
+/* ST HAL Callback Overrides ----------------------------------------*/
+
+void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc)
+{
+    int32_t port_id = get_port_id_from_handle(hrtc);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_rtc_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, 0, 0, 0, driver->cb_user_arg); /* id 0 for Alarm A */
+        }
+    }
+}
+
+void HAL_RTCEx_AlarmBEventCallback(RTC_HandleTypeDef *hrtc)
+{
+    int32_t port_id = get_port_id_from_handle(hrtc);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_rtc_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, 0, 0, 1, driver->cb_user_arg); /* id 1 for Alarm B */
+        }
+    }
+}
+
+/* Raw ISR Handlers -------------------------------------------------*/
+
+void RTC_Alarm_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_RTC_AlarmIRQHandler(&port_hrtcs[CFN_HAL_RTC_PORT_RTC1]);
 }
 
 /* RTC Specific Functions */
@@ -177,25 +226,58 @@ static cfn_hal_error_code_t port_rtc_get_time(cfn_hal_rtc_t *driver, cfn_hal_rtc
 
 static cfn_hal_error_code_t port_rtc_set_alarm(cfn_hal_rtc_t *driver, uint32_t id, cfn_hal_rtc_time_t *time)
 {
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(id);
-    CFN_HAL_UNUSED(time);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t         port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    RTC_AlarmTypeDef s_alarm = { 0 };
+
+    s_alarm.AlarmTime.Hours = (uint8_t) time->tm_hour;
+    s_alarm.AlarmTime.Minutes = (uint8_t) time->tm_min;
+    s_alarm.AlarmTime.Seconds = (uint8_t) time->tm_sec;
+    s_alarm.AlarmTime.SubSeconds = 0;
+    s_alarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+    s_alarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
+    s_alarm.AlarmMask = RTC_ALARMMASK_NONE;
+    s_alarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
+    s_alarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
+    s_alarm.AlarmDateWeekDay = (uint8_t) time->tm_mday;
+    s_alarm.Alarm = (id == 0) ? RTC_ALARM_A : RTC_ALARM_B;
+
+    return cfn_hal_stm32_map_error(HAL_RTC_SetAlarm_IT(&port_hrtcs[port_id], &s_alarm, RTC_FORMAT_BIN));
 }
+
 static cfn_hal_error_code_t
 port_rtc_get_alarm(cfn_hal_rtc_t *driver, uint32_t id, bool *elapsed, cfn_hal_rtc_time_t *time)
 {
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(id);
-    CFN_HAL_UNUSED(elapsed);
-    CFN_HAL_UNUSED(time);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t         port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    RTC_AlarmTypeDef s_alarm = { 0 };
+    uint32_t         alarm_id = (id == 0) ? RTC_ALARM_A : RTC_ALARM_B;
+
+    if (HAL_RTC_GetAlarm(&port_hrtcs[port_id], &s_alarm, alarm_id, RTC_FORMAT_BIN) != HAL_OK)
+    {
+        return CFN_HAL_ERROR_FAIL;
+    }
+
+    if (time != NULL)
+    {
+        time->tm_hour = s_alarm.AlarmTime.Hours;
+        time->tm_min = s_alarm.AlarmTime.Minutes;
+        time->tm_sec = s_alarm.AlarmTime.Seconds;
+        time->tm_mday = s_alarm.AlarmDateWeekDay;
+    }
+
+    if (elapsed != NULL)
+    {
+        /* On STM32F4, we check the alarm flag in the status register */
+        *elapsed = __HAL_RTC_ALARM_GET_FLAG(&port_hrtcs[port_id], (id == 0) ? RTC_FLAG_ALRAF : RTC_FLAG_ALRBF);
+    }
+
+    return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_rtc_stop_alarm(cfn_hal_rtc_t *driver, uint32_t id)
 {
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(id);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    uint32_t alarm_id = (id == 0) ? RTC_ALARM_A : RTC_ALARM_B;
+    return cfn_hal_stm32_map_error(HAL_RTC_DeactivateAlarm(&port_hrtcs[port_id], alarm_id));
 }
 
 /* API --------------------------------------------------------------*/
@@ -243,6 +325,7 @@ cfn_hal_rtc_construct(cfn_hal_rtc_t *driver, const cfn_hal_rtc_config_t *config,
     driver->phy = phy;
 
     port_hrtcs[port_id].Instance = PORT_INSTANCES[port_id];
+    port_drivers[port_id] = driver;
 
     return CFN_HAL_ERROR_OK;
 }
@@ -252,6 +335,12 @@ cfn_hal_error_code_t cfn_hal_rtc_destruct(cfn_hal_rtc_t *driver)
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id < CFN_HAL_RTC_PORT_MAX)
+    {
+        port_drivers[port_id] = NULL;
     }
 
     driver->api = NULL;

@@ -300,6 +300,21 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     }
 }
 
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
+{
+    int32_t port_id = get_port_id_from_handle(huart);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_uart_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            /* Notify RX READY with the actual size received */
+            driver->cb(
+                driver, CFN_HAL_UART_EVENT_RX_READY, CFN_HAL_UART_ERROR_NONE, NULL, (size_t) size, driver->cb_user_arg);
+        }
+    }
+}
+
 /* Raw ISR Handlers -------------------------------------------------*/
 
 #if defined(USART1)
@@ -364,12 +379,12 @@ port_uart_rx_polling(cfn_hal_uart_t *driver, uint8_t *buffer, size_t length, uin
 static cfn_hal_error_code_t
 port_uart_rx_to_idle(cfn_hal_uart_t *driver, uint8_t *data, size_t max_bytes, size_t *received_bytes, uint32_t timeout)
 {
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(data);
-    CFN_HAL_UNUSED(max_bytes);
-    CFN_HAL_UNUSED(received_bytes);
+    uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    UART_HandleTypeDef *huart = &port_huarts[port_id];
     CFN_HAL_UNUSED(timeout);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    CFN_HAL_UNUSED(received_bytes);
+
+    return cfn_hal_stm32_map_error(HAL_UARTEx_ReceiveToIdle_IT(huart, data, (uint16_t) max_bytes));
 }
 
 static cfn_hal_error_code_t port_uart_tx_irq(cfn_hal_uart_t *driver, const uint8_t *data, size_t nbr_of_bytes)

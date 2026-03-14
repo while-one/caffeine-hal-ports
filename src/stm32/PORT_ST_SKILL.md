@@ -54,6 +54,7 @@ You must refactor the existing generated `.cmake` file to properly fetch and com
 4.  **Dynamic Startup Assembly:** Bare-metal STM32 requires a specific `.s` startup file. Use CMake string manipulation to dynamically locate it.
 5.  **Isolate Vendor Sources:** Create a separate `add_library(vendor_sdk OBJECT ...)` target to compile the vendor SDK. Apply `target_compile_options(vendor_sdk PRIVATE -w)` to relax strict project warnings.
 6.  **Main Port Target:** Link the isolated vendor target to the main project: `target_link_libraries(${PROJECT_NAME} PRIVATE $<TARGET_OBJECTS:vendor_sdk>)`.
+7.  **Flag Propagation (CRITICAL):** You MUST ensure silicon-specific CPU architecture flags (e.g., `-mcpu=cortex-m4 -mthumb`) are applied to BOTH the `vendor_sdk` and the `${PROJECT_NAME}` targets to ensure inline assembly and ISR instructions compile correctly.
 
 ### Step 3: Create a Build Preset
 To verify your CMake logic, you must create a testable configuration in a modular preset file.
@@ -72,7 +73,16 @@ Once the build system successfully fetches and links the Vendor SDK, begin imple
     *   You MUST implement `event_enable`, `event_disable`, and `event_get` using vendor register macros (e.g., `__HAL_UART_ENABLE_IT`).
     *   You MUST provide raw `_IRQHandler` functions for each peripheral instance.
     *   You MUST implement static driver tracking (e.g., `static cfn_hal_uart_t * port_drivers[...]`) to map ST HAL C-style callbacks back to the Caffeine HAL driver instances.
-    *   You MUST use `// NOLINT(readability-identifier-naming)` on raw ISR handlers to pass static analysis while maintaining compatibility with the hardware vector table.
+    *   **Rule (Static Analysis):** You MUST use `// NOLINT(readability-identifier-naming)` on raw ISR handlers.
+    *   **Rule (Callback Registration):** `callback_register` returning `OK` is acceptable if no hardware-specific setup is needed, as core `caffeine-hal` handles pointer storage.
+    *   **Rule (Handle Qualifiers):** You MUST NOT declare handle parameters as `const` in ST HAL callback overrides (e.g., `HAL_UART_RxCpltCallback`), as it conflicts with ST's non-const signatures.
+*   **Memory-Mapped Operations:** 
+    *   Use `(uintptr_t)` casts for addresses.
+    *   Suppress `integer to pointer cast` warnings for hardware addresses using `// NOLINT(performance-no-int-to-ptr)`.
+*   **Variant Flexibility:** 
+    *   Peripherals not present on all variants (e.g., `QUADSPI`, `CAN3`) MUST be wrapped in `#if defined(...)` guards in both the construction and implementation logic.
+*   **Flash (NVM) Mapping:** 
+    *   Microcontrollers with irregular sector sizes (like STM32F4) MUST implement a robust `get_sector` helper mapping addresses to indices.
 *   **Exhaustive Hardware Superset:** Search the fetched vendor CMSIS headers to discover the **absolute maximum superset** of instances available across the entire target MCU family.
 *   **Enum Naming Rule:** You MUST name enum elements to match CMSIS definitions exactly (e.g., `CFN_HAL_UART_PORT_USART1`, `CFN_HAL_UART_PORT_UART4`, `CFN_HAL_UART_PORT_LPUART1`).
 *   **Hardware Instance Mapping:** Inside the `cfn_hal_<peripheral>_port.c` file, define a static mapping array that links the project's physical enum to the vendor's physical memory address using `#ifdef` guards for each element.

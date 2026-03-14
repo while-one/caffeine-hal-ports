@@ -3,8 +3,13 @@
  * @brief STM32F4 COMP HAL Port Implementation.
  */
 
+/* Includes ---------------------------------------------------------*/
+#include "stm32f4xx_hal.h"
 #include "cfn_hal_comp.h"
 #include "cfn_hal_comp_port.h"
+
+#if defined(COMP1) || defined(COMP2) || defined(COMP3) || defined(COMP4) || defined(COMP5) || defined(COMP6) ||        \
+    defined(COMP7)
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
@@ -153,3 +158,24 @@ cfn_hal_error_code_t cfn_hal_comp_destruct(cfn_hal_comp_t *driver)
     driver->phy = NULL;
     return CFN_HAL_ERROR_OK;
 }
+
+#else
+
+/* Stub implementation for variants without COMP */
+
+cfn_hal_error_code_t
+cfn_hal_comp_construct(cfn_hal_comp_t *driver, const cfn_hal_comp_config_t *config, const cfn_hal_comp_phy_t *phy)
+{
+    CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(config);
+    CFN_HAL_UNUSED(phy);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+}
+
+cfn_hal_error_code_t cfn_hal_comp_destruct(cfn_hal_comp_t *driver)
+{
+    CFN_HAL_UNUSED(driver);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+}
+
+#endif
