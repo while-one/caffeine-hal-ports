@@ -184,7 +184,7 @@ port_i2c_mem_write(cfn_hal_i2c_t *driver, const cfn_hal_i2c_mem_transaction_t *m
                                                      mem_xfr->dev_addr << 1,
                                                      mem_xfr->mem_addr,
                                                      st_mem_size,
-                                                      mem_xfr->data,
+                                                     mem_xfr->data,
                                                      (uint16_t) mem_xfr->size,
                                                      timeout));
 }

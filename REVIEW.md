@@ -20,7 +20,7 @@ However, as a pedantic reviewer, I have identified several architectural, implem
 
 ### The Good
 *   **Preset-Driven:** The modular `CMakePresets.json` architecture (e.g., `cmake/presets/stm32/stm32f4.json`) is the gold standard for cross-compilation matrixes. It avoids messy `if(VENDOR STREQUAL ...)` logic in the main `CMakeLists.txt`.
-*   **Target Scope Isolation:** Compiling the vendor SDK as an isolated `OBJECT` library with relaxed warnings (`-w`) and linking it privately to the main port library protects the rigorous BARR-C/MISRA CI checks from sloppy vendor code.
+*   **Target Scope Isolation:** Compiling the vendor SDK as an isolated `OBJECT` library with relaxed warnings (`-w`) and marking its include directories as `SYSTEM` protects the rigorous BARR-C/MISRA CI checks from sloppy vendor code and reduces `clang-tidy` noise. Linking it privately to the main port library ensures perfect encapsulation.
 
 ### The Bad & Needs Improvement
 *   **Missing `template-compliance` in Main CI:** While we just added the `-template` CMake target to ensure the templates match the upstream HAL, this pattern needs to be rigorously maintained. If `caffeine-hal` adds a new API parameter, the build MUST fail here first.

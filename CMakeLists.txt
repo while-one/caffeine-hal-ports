@@ -120,11 +120,13 @@ if(CPPCHECK)
         COMMAND ${CPPCHECK}
         --project=${CMAKE_BINARY_DIR}/compile_commands.json
         --enable=all
+        --suppress=missingInclude
         --suppress=missingIncludeSystem
         --suppress=unusedFunction
         --suppress=*:*/_deps/*
         --suppress=*:*/caffeine-hal/*
         --inline-suppr
+        --check-level=exhaustive
         -D__GNUC__
         --file-filter=${PROJECT_SOURCE_DIR}/src/stm32/*
         COMMENT "Running cppcheck static analysis using compile_commands.json..."

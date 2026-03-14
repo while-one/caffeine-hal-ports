@@ -40,7 +40,7 @@ Port recipes define **what** to compile. They are organized by vendor subdirecto
 *   **Vendor Target Isolation:** Create a separate `vendor_sdk` OBJECT library for the vendor SDK files. Apply `target_compile_options(vendor_sdk PRIVATE -w)` to relax strict project warnings, then link it privately to `${PROJECT_NAME}`. This prevents sloppy vendor code from breaking our CI.
 *   **Source Cherry-picking:** Only compile the specific `.c` files required from the vendor SDK into the `vendor_sdk` target.
 *   **Silicon Flags & Macros:** Apply `-mcpu`, `-march`, or specific HAL defines (via `CAFFEINE_MCU_MACRO`) to BOTH the `vendor_sdk` and `${PROJECT_NAME}` targets using `target_compile_options` and `target_compile_definitions`.
-*   **Encapsulation:** Vendor include directories should be `PRIVATE` to the targets. 
+*   **Encapsulation (CRITICAL):** Vendor include directories should be `SYSTEM PRIVATE` to the targets. Marking them as `SYSTEM` instructs `clang-tidy` and the compiler to ignore warnings originating from vendor headers.
 *   **Centralized Linking:** Do NOT link `caffeine-hal` or define the `caffeine::hal-ports` alias in the recipe. This is handled automatically by the root `CMakeLists.txt`.
 
 ### E. Local Development & Cross-Repo Testing
