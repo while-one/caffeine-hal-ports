@@ -60,7 +60,8 @@ static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const v
     return CFN_HAL_ERROR_OK;
 }
 
-static cfn_hal_error_code_t port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg)
+static cfn_hal_error_code_t
+port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(callback);
@@ -85,7 +86,8 @@ static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
     CFN_HAL_UNUSED(base);
-    if (event_mask) {
+    if (event_mask)
+    {
         *event_mask = 0;
     }
     return CFN_HAL_ERROR_OK;
@@ -108,7 +110,8 @@ static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
 {
     CFN_HAL_UNUSED(base);
-    if (error_mask) {
+    if (error_mask)
+    {
         *error_mask = 0;
     }
     return CFN_HAL_ERROR_OK;
@@ -117,30 +120,39 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 #if (CFN_HAL_USE_LOCK == 1)
 static cfn_hal_error_code_t port_base_lock(cfn_hal_driver_t *base, uint32_t timeout)
 {
-    if (!base || !base->lock_obj) {
+    if (!base || !base->lock_obj)
+    {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    pthread_mutex_t *mutex = (pthread_mutex_t *)base->lock_obj;
+    pthread_mutex_t *mutex = (pthread_mutex_t *) base->lock_obj;
 
-    if (timeout == CFN_HAL_MAX_DELAY) {
-        if (pthread_mutex_lock(mutex) == 0) {
+    if (timeout == CFN_HAL_MAX_DELAY)
+    {
+        if (pthread_mutex_lock(mutex) == 0)
+        {
             return CFN_HAL_ERROR_OK;
         }
-    } else {
+    }
+    else
+    {
         struct timespec ts;
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec += timeout / 1000;
         ts.tv_nsec += (timeout % 1000) * 1000000;
-        if (ts.tv_nsec >= 1000000000) {
+        if (ts.tv_nsec >= 1000000000)
+        {
             ts.tv_sec++;
             ts.tv_nsec -= 1000000000;
         }
 
         int res = pthread_mutex_timedlock(mutex, &ts);
-        if (res == 0) {
+        if (res == 0)
+        {
             return CFN_HAL_ERROR_OK;
-        } else if (res == ETIMEDOUT) {
+        }
+        else if (res == ETIMEDOUT)
+        {
             return CFN_HAL_ERROR_BUSY;
         }
     }
@@ -150,10 +162,11 @@ static cfn_hal_error_code_t port_base_lock(cfn_hal_driver_t *base, uint32_t time
 
 static cfn_hal_error_code_t port_base_unlock(cfn_hal_driver_t *base)
 {
-    if (!base || !base->lock_obj) {
+    if (!base || !base->lock_obj)
+    {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    pthread_mutex_unlock((pthread_mutex_t *)base->lock_obj);
+    pthread_mutex_unlock((pthread_mutex_t *) base->lock_obj);
     return CFN_HAL_ERROR_OK;
 }
 #endif
@@ -188,7 +201,8 @@ static cfn_hal_error_code_t port_uart_rx_irq_abort(cfn_hal_uart_t *driver)
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
 
-static cfn_hal_error_code_t port_uart_tx_polling(cfn_hal_uart_t *driver, const uint8_t *data, size_t nbr_of_bytes, uint32_t timeout)
+static cfn_hal_error_code_t
+port_uart_tx_polling(cfn_hal_uart_t *driver, const uint8_t *data, size_t nbr_of_bytes, uint32_t timeout)
 {
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(data);
@@ -197,7 +211,8 @@ static cfn_hal_error_code_t port_uart_tx_polling(cfn_hal_uart_t *driver, const u
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
 
-static cfn_hal_error_code_t port_uart_rx_polling(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes, uint32_t timeout)
+static cfn_hal_error_code_t
+port_uart_rx_polling(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes, uint32_t timeout)
 {
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(data);
@@ -206,7 +221,8 @@ static cfn_hal_error_code_t port_uart_rx_polling(cfn_hal_uart_t *driver, uint8_t
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
 
-static cfn_hal_error_code_t port_uart_rx_to_idle(cfn_hal_uart_t *driver, uint8_t *data, size_t max_bytes, size_t *received_bytes, uint32_t timeout)
+static cfn_hal_error_code_t
+port_uart_rx_to_idle(cfn_hal_uart_t *driver, uint8_t *data, size_t max_bytes, size_t *received_bytes, uint32_t timeout)
 {
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(data);
@@ -264,7 +280,8 @@ static const cfn_hal_uart_api_t UART_API = {
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *config, const cfn_hal_uart_phy_t *phy)
+cfn_hal_error_code_t
+cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *config, const cfn_hal_uart_phy_t *phy)
 {
     if ((driver == NULL) || (phy == NULL))
     {
@@ -273,10 +290,12 @@ cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_ha
 
 #if (CFN_HAL_USE_LOCK == 1)
     pthread_mutex_t *mutex = malloc(sizeof(pthread_mutex_t));
-    if (mutex == NULL) {
+    if (mutex == NULL)
+    {
         return CFN_HAL_ERROR_MEMORY_ALLOC;
     }
-    if (pthread_mutex_init(mutex, NULL) != 0) {
+    if (pthread_mutex_init(mutex, NULL) != 0)
+    {
         free(mutex);
         return CFN_HAL_ERROR_EXTERNAL;
     }
@@ -300,8 +319,9 @@ cfn_hal_error_code_t cfn_hal_uart_destruct(cfn_hal_uart_t *driver)
     }
 
 #if (CFN_HAL_USE_LOCK == 1)
-    if (driver->base.lock_obj) {
-        pthread_mutex_destroy((pthread_mutex_t *)driver->base.lock_obj);
+    if (driver->base.lock_obj)
+    {
+        pthread_mutex_destroy((pthread_mutex_t *) driver->base.lock_obj);
         free(driver->base.lock_obj);
         driver->base.lock_obj = NULL;
     }
