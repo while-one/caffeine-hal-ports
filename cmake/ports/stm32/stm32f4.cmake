@@ -76,10 +76,8 @@ target_compile_definitions(vendor_sdk PUBLIC
 )
 
 # Propagate Silicon-specific CPU architecture flags
-target_compile_options(vendor_sdk PUBLIC
-    -mcpu=${CAFFEINE_MCU_CORE}
-    -mthumb
-)
+set(CPU_FLAGS -mcpu=${CAFFEINE_MCU_CORE} -mthumb)
+target_compile_options(vendor_sdk PUBLIC ${CPU_FLAGS})
 
 # --- 2. Main Port Library ---
 # Gather all Caffeine VMT Wrappers
@@ -88,6 +86,9 @@ file(GLOB PORT_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/stm32/stm32f4/cfn_hal_*_
 add_library(${PROJECT_NAME} STATIC
     ${PORT_SOURCES}
 )
+
+# Apply CPU flags to the main library as well
+target_compile_options(${PROJECT_NAME} PUBLIC ${CPU_FLAGS})
 
 # Absorb the isolated vendor SDK object files into our main port library
 target_link_libraries(${PROJECT_NAME} PRIVATE $<TARGET_OBJECTS:vendor_sdk>)

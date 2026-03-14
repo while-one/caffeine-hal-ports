@@ -26,6 +26,21 @@ static SPI_TypeDef *const PORT_INSTANCES[CFN_HAL_SPI_PORT_MAX] = {
 };
 
 static SPI_HandleTypeDef port_hspis[CFN_HAL_SPI_PORT_MAX];
+static cfn_hal_spi_t    *port_drivers[CFN_HAL_SPI_PORT_MAX];
+
+/* Internal Helpers -------------------------------------------------*/
+
+static int32_t get_port_id_from_handle(SPI_HandleTypeDef *hspi)
+{
+    for (uint32_t i = 0; i < CFN_HAL_SPI_PORT_MAX; i++)
+    {
+        if (&port_hspis[i] == hspi)
+        {
+            return (int32_t) i;
+        }
+    }
+    return -1;
+}
 
 /* VMT Implementations ----------------------------------------------*/
 
@@ -89,7 +104,6 @@ static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
     return cfn_hal_stm32_map_error(HAL_SPI_DeInit(&port_hspis[port_id]));
 }
 
-/* ... base stubs ... */
 static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
 {
     CFN_HAL_UNUSED(base);
@@ -110,48 +124,204 @@ port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback,
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
+    cfn_hal_spi_t     *driver = (cfn_hal_spi_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    SPI_HandleTypeDef *hspi = &port_hspis[port_id];
+
+    if (event_mask & CFN_HAL_SPI_EVENT_TX_COMPLETE)
+    {
+        __HAL_SPI_ENABLE_IT(hspi, SPI_IT_TXE);
+    }
+    if (event_mask & CFN_HAL_SPI_EVENT_RX_READY)
+    {
+        __HAL_SPI_ENABLE_IT(hspi, SPI_IT_RXNE);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
+    cfn_hal_spi_t     *driver = (cfn_hal_spi_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    SPI_HandleTypeDef *hspi = &port_hspis[port_id];
+
+    if (event_mask & CFN_HAL_SPI_EVENT_TX_COMPLETE)
+    {
+        __HAL_SPI_DISABLE_IT(hspi, SPI_IT_TXE);
+    }
+    if (event_mask & CFN_HAL_SPI_EVENT_RX_READY)
+    {
+        __HAL_SPI_DISABLE_IT(hspi, SPI_IT_RXNE);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    if (event_mask)
+    cfn_hal_spi_t     *driver = (cfn_hal_spi_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    SPI_HandleTypeDef *hspi = &port_hspis[port_id];
+    uint32_t           mask = 0;
+
+    if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_TXE))
     {
-        *event_mask = 0;
+        mask |= CFN_HAL_SPI_EVENT_TX_COMPLETE;
+    }
+    if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_RXNE))
+    {
+        mask |= CFN_HAL_SPI_EVENT_RX_READY;
+    }
+
+    if (event_mask != NULL)
+    {
+        *event_mask = mask;
     }
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
+    cfn_hal_spi_t     *driver = (cfn_hal_spi_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    SPI_HandleTypeDef *hspi = &port_hspis[port_id];
+
+    if (error_mask & (CFN_HAL_SPI_ERROR_CRC | CFN_HAL_SPI_ERROR_FRAMING | CFN_HAL_SPI_ERROR_OVERRUN))
+    {
+        __HAL_SPI_ENABLE_IT(hspi, SPI_IT_ERR);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
+    cfn_hal_spi_t     *driver = (cfn_hal_spi_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    SPI_HandleTypeDef *hspi = &port_hspis[port_id];
+
+    if (error_mask & (CFN_HAL_SPI_ERROR_CRC | CFN_HAL_SPI_ERROR_FRAMING | CFN_HAL_SPI_ERROR_OVERRUN))
+    {
+        __HAL_SPI_DISABLE_IT(hspi, SPI_IT_ERR);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    if (error_mask)
+    cfn_hal_spi_t     *driver = (cfn_hal_spi_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    SPI_HandleTypeDef *hspi = &port_hspis[port_id];
+    uint32_t           mask = 0;
+
+    if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_CRCERR))
     {
-        *error_mask = 0;
+        mask |= CFN_HAL_SPI_ERROR_CRC;
+    }
+    if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_FRE))
+    {
+        mask |= CFN_HAL_SPI_ERROR_FRAMING;
+    }
+    if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_OVR))
+    {
+        mask |= CFN_HAL_SPI_ERROR_OVERRUN;
+    }
+
+    if (error_mask != NULL)
+    {
+        *error_mask = mask;
     }
     return CFN_HAL_ERROR_OK;
 }
+
+/* ST HAL Callback Overrides ----------------------------------------*/
+
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    int32_t port_id = get_port_id_from_handle(hspi);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_spi_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_SPI_EVENT_TX_COMPLETE, CFN_HAL_SPI_ERROR_NONE, NULL, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    int32_t port_id = get_port_id_from_handle(hspi);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_spi_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_SPI_EVENT_RX_READY, CFN_HAL_SPI_ERROR_NONE, NULL, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    int32_t port_id = get_port_id_from_handle(hspi);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_spi_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver,
+                       CFN_HAL_SPI_EVENT_TX_COMPLETE | CFN_HAL_SPI_EVENT_RX_READY,
+                       CFN_HAL_SPI_ERROR_NONE,
+                       NULL,
+                       0,
+                       driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
+{
+    int32_t port_id = get_port_id_from_handle(hspi);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_spi_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            uint32_t error_mask = 0;
+            (void) port_base_error_get(&driver->base, &error_mask);
+            driver->cb(driver, CFN_HAL_SPI_EVENT_NONE, error_mask, NULL, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+/* Raw ISR Handlers -------------------------------------------------*/
+
+#if defined(SPI1)
+void SPI1_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_SPI_IRQHandler(&port_hspis[CFN_HAL_SPI_PORT_1]);
+}
+#endif
+
+#if defined(SPI2)
+void SPI2_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_SPI_IRQHandler(&port_hspis[CFN_HAL_SPI_PORT_2]);
+}
+#endif
+
+#if defined(SPI3)
+void SPI3_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_SPI_IRQHandler(&port_hspis[CFN_HAL_SPI_PORT_3]);
+}
+#endif
 
 /* SPI Specific Functions */
 
@@ -245,6 +415,7 @@ cfn_hal_spi_construct(cfn_hal_spi_t *driver, const cfn_hal_spi_config_t *config,
     driver->phy = phy;
 
     port_hspis[port_id].Instance = PORT_INSTANCES[port_id];
+    port_drivers[port_id] = driver;
 
     return CFN_HAL_ERROR_OK;
 }
@@ -254,6 +425,12 @@ cfn_hal_error_code_t cfn_hal_spi_destruct(cfn_hal_spi_t *driver)
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id < CFN_HAL_SPI_PORT_MAX)
+    {
+        port_drivers[port_id] = NULL;
     }
 
     driver->api = NULL;

@@ -1,36 +1,39 @@
 /**
  * @file cfn_hal_irq_port.c
- * @brief IRQ HAL Template Implementation.
+ * @brief STM32F4 IRQ HAL Port Implementation.
  */
 
 /* Includes ---------------------------------------------------------*/
+#include "stm32f4xx_hal.h"
 #include "cfn_hal_irq.h"
 #include "cfn_hal_irq_port.h"
+
+/* VMT Implementations ----------------------------------------------*/
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
     CFN_HAL_UNUSED(base);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 {
     CFN_HAL_UNUSED(base);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(state);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(config);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t
@@ -39,90 +42,97 @@ port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback,
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(callback);
     CFN_HAL_UNUSED(user_arg);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(event_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(event_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
     CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    if (event_mask != NULL)
+    {
+        *event_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(error_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(error_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
 {
     CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    if (error_mask != NULL)
+    {
+        *error_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_irq_global_enable(cfn_hal_irq_t *driver)
 {
     CFN_HAL_UNUSED(driver);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    __enable_irq();
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_irq_global_disable(cfn_hal_irq_t *driver)
 {
     CFN_HAL_UNUSED(driver);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    __disable_irq();
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_irq_enable_vector(cfn_hal_irq_t *driver, uint32_t irq_id)
 {
     CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(irq_id);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    HAL_NVIC_EnableIRQ((IRQn_Type) irq_id);
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_irq_disable_vector(cfn_hal_irq_t *driver, uint32_t irq_id)
 {
     CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(irq_id);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    HAL_NVIC_DisableIRQ((IRQn_Type) irq_id);
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_irq_set_priority(cfn_hal_irq_t *driver, uint32_t irq_id, uint32_t priority)
 {
     CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(irq_id);
-    CFN_HAL_UNUSED(priority);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    HAL_NVIC_SetPriority((IRQn_Type) irq_id, priority, 0);
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_irq_clear_pending(cfn_hal_irq_t *driver, uint32_t irq_id)
 {
     CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(irq_id);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    HAL_NVIC_ClearPendingIRQ((IRQn_Type) irq_id);
+    return CFN_HAL_ERROR_OK;
 }
 
 /* API --------------------------------------------------------------*/

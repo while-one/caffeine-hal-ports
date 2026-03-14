@@ -58,6 +58,21 @@ static TIM_TypeDef *const PORT_INSTANCES[CFN_HAL_TIMER_PORT_MAX] = {
 };
 
 static TIM_HandleTypeDef port_htims[CFN_HAL_TIMER_PORT_MAX];
+static cfn_hal_timer_t  *port_drivers[CFN_HAL_TIMER_PORT_MAX];
+
+/* Internal Helpers -------------------------------------------------*/
+
+static int32_t get_port_id_from_handle(TIM_HandleTypeDef *htim)
+{
+    for (uint32_t i = 0; i < CFN_HAL_TIMER_PORT_MAX; i++)
+    {
+        if (&port_htims[i] == htim)
+        {
+            return (int32_t) i;
+        }
+    }
+    return -1;
+}
 
 /* VMT Implementations ----------------------------------------------*/
 
@@ -94,7 +109,6 @@ static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
     return cfn_hal_stm32_map_error(HAL_TIM_Base_DeInit(&port_htims[port_id]));
 }
 
-/* ... standard base stubs ... */
 static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
 {
     CFN_HAL_UNUSED(base);
@@ -115,61 +129,217 @@ port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback,
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
+    cfn_hal_timer_t   *driver = (cfn_hal_timer_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim = &port_htims[port_id];
+
+    if (event_mask & CFN_HAL_TIMER_EVENT_UPDATE)
+    {
+        __HAL_TIM_ENABLE_IT(htim, TIM_IT_UPDATE);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
+    cfn_hal_timer_t   *driver = (cfn_hal_timer_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim = &port_htims[port_id];
+
+    if (event_mask & CFN_HAL_TIMER_EVENT_UPDATE)
+    {
+        __HAL_TIM_DISABLE_IT(htim, TIM_IT_UPDATE);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    if (event_mask)
+    cfn_hal_timer_t   *driver = (cfn_hal_timer_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim = &port_htims[port_id];
+    uint32_t           mask = 0;
+
+    if (__HAL_TIM_GET_FLAG(htim, TIM_FLAG_UPDATE))
     {
-        *event_mask = 0;
+        mask |= CFN_HAL_TIMER_EVENT_UPDATE;
+    }
+
+    if (event_mask != NULL)
+    {
+        *event_mask = mask;
     }
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
+    cfn_hal_timer_t   *driver = (cfn_hal_timer_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim = &port_htims[port_id];
+
+    if (error_mask & CFN_HAL_TIMER_ERROR_BREAK)
+    {
+        __HAL_TIM_ENABLE_IT(htim, TIM_IT_BREAK);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
+    cfn_hal_timer_t   *driver = (cfn_hal_timer_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim = &port_htims[port_id];
+
+    if (error_mask & CFN_HAL_TIMER_ERROR_BREAK)
+    {
+        __HAL_TIM_DISABLE_IT(htim, TIM_IT_BREAK);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    if (error_mask)
+    cfn_hal_timer_t   *driver = (cfn_hal_timer_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim = &port_htims[port_id];
+    uint32_t           mask = 0;
+
+    if (__HAL_TIM_GET_FLAG(htim, TIM_FLAG_BREAK))
     {
-        *error_mask = 0;
+        mask |= CFN_HAL_TIMER_ERROR_BREAK;
+    }
+
+    if (error_mask != NULL)
+    {
+        *error_mask = mask;
     }
     return CFN_HAL_ERROR_OK;
 }
+
+/* ST HAL Callback Overrides ----------------------------------------*/
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    int32_t port_id = get_port_id_from_handle(htim);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_timer_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_TIMER_EVENT_UPDATE, CFN_HAL_TIMER_ERROR_NONE, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_TIM_ErrorCallback(TIM_HandleTypeDef *htim)
+{
+    int32_t port_id = get_port_id_from_handle(htim);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_timer_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            uint32_t error_mask = 0;
+            (void) port_base_error_get(&driver->base, &error_mask);
+            driver->cb(driver, CFN_HAL_TIMER_EVENT_NONE, error_mask, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+/* Raw ISR Handlers -------------------------------------------------*/
+
+#if defined(TIM1)
+void TIM1_UP_TIM10_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM1]);
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM10]);
+}
+void TIM1_BRK_TIM9_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM1]);
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM9]);
+}
+void TIM1_TRG_COM_TIM11_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM1]);
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM11]);
+}
+#endif
+
+#if defined(TIM2)
+void TIM2_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM2]);
+}
+#endif
+#if defined(TIM3)
+void TIM3_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM3]);
+}
+#endif
+#if defined(TIM4)
+void TIM4_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM4]);
+}
+#endif
+#if defined(TIM5)
+void TIM5_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM5]);
+}
+#endif
+#if defined(TIM6)
+void TIM6_DAC_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM6]);
+}
+#endif
+#if defined(TIM7)
+void TIM7_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM7]);
+}
+#endif
+#if defined(TIM8)
+void TIM8_UP_TIM13_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM8]);
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM13]);
+}
+void TIM8_BRK_TIM12_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM8]);
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM12]);
+}
+void TIM8_TRG_COM_TIM14_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM8]);
+    HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM14]);
+}
+#endif
 
 /* Timer Specific Functions */
 
 static cfn_hal_error_code_t port_timer_start(cfn_hal_timer_t *driver)
 {
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    return cfn_hal_stm32_map_error(HAL_TIM_Base_Start(&port_htims[port_id]));
+    return cfn_hal_stm32_map_error(HAL_TIM_Base_Start_IT(&port_htims[port_id]));
 }
 
 static cfn_hal_error_code_t port_timer_stop(cfn_hal_timer_t *driver)
 {
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    return cfn_hal_stm32_map_error(HAL_TIM_Base_Stop(&port_htims[port_id]));
+    return cfn_hal_stm32_map_error(HAL_TIM_Base_Stop_IT(&port_htims[port_id]));
 }
 
 static cfn_hal_error_code_t port_timer_get_ticks(cfn_hal_timer_t *driver, uint32_t ch, uint32_t *ticks)
@@ -247,6 +417,7 @@ cfn_hal_timer_construct(cfn_hal_timer_t *driver, const cfn_hal_timer_config_t *c
     driver->phy = phy;
 
     port_htims[port_id].Instance = PORT_INSTANCES[port_id];
+    port_drivers[port_id] = driver;
 
     return CFN_HAL_ERROR_OK;
 }
@@ -256,6 +427,12 @@ cfn_hal_error_code_t cfn_hal_timer_destruct(cfn_hal_timer_t *driver)
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id < CFN_HAL_TIMER_PORT_MAX)
+    {
+        port_drivers[port_id] = NULL;
     }
 
     driver->api = NULL;

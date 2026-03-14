@@ -26,6 +26,21 @@ static I2C_TypeDef *const PORT_INSTANCES[CFN_HAL_I2C_PORT_MAX] = {
 };
 
 static I2C_HandleTypeDef port_hi2cs[CFN_HAL_I2C_PORT_MAX];
+static cfn_hal_i2c_t    *port_drivers[CFN_HAL_I2C_PORT_MAX];
+
+/* Internal Helpers -------------------------------------------------*/
+
+static int32_t get_port_id_from_handle(I2C_HandleTypeDef *hi2c)
+{
+    for (uint32_t i = 0; i < CFN_HAL_I2C_PORT_MAX; i++)
+    {
+        if (&port_hi2cs[i] == hi2c)
+        {
+            return (int32_t) i;
+        }
+    }
+    return -1;
+}
 
 /* VMT Implementations ----------------------------------------------*/
 
@@ -81,7 +96,6 @@ static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
     return cfn_hal_stm32_map_error(HAL_I2C_DeInit(&port_hi2cs[port_id]));
 }
 
-/* ... base stubs ... */
 static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
 {
     CFN_HAL_UNUSED(base);
@@ -102,48 +116,192 @@ port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback,
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
+    cfn_hal_i2c_t     *driver = (cfn_hal_i2c_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    I2C_HandleTypeDef *hi2c = &port_hi2cs[port_id];
+
+    if (event_mask & (CFN_HAL_I2C_EVENT_TX_COMPLETE | CFN_HAL_I2C_EVENT_RX_READY))
+    {
+        __HAL_I2C_ENABLE_IT(hi2c, I2C_IT_EVT);
+        __HAL_I2C_ENABLE_IT(hi2c, I2C_IT_BUF);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
+    cfn_hal_i2c_t     *driver = (cfn_hal_i2c_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    I2C_HandleTypeDef *hi2c = &port_hi2cs[port_id];
+
+    if (event_mask & (CFN_HAL_I2C_EVENT_TX_COMPLETE | CFN_HAL_I2C_EVENT_RX_READY))
+    {
+        __HAL_I2C_DISABLE_IT(hi2c, I2C_IT_EVT);
+        __HAL_I2C_DISABLE_IT(hi2c, I2C_IT_BUF);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    if (event_mask)
+    cfn_hal_i2c_t     *driver = (cfn_hal_i2c_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    I2C_HandleTypeDef *hi2c = &port_hi2cs[port_id];
+    uint32_t           mask = 0;
+
+    if (__HAL_I2C_GET_FLAG(hi2c, I2C_FLAG_TXE))
     {
-        *event_mask = 0;
+        mask |= CFN_HAL_I2C_EVENT_TX_COMPLETE;
+    }
+    if (__HAL_I2C_GET_FLAG(hi2c, I2C_FLAG_RXNE))
+    {
+        mask |= CFN_HAL_I2C_EVENT_RX_READY;
+    }
+
+    if (event_mask != NULL)
+    {
+        *event_mask = mask;
     }
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
+    cfn_hal_i2c_t     *driver = (cfn_hal_i2c_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    I2C_HandleTypeDef *hi2c = &port_hi2cs[port_id];
+
+    if (error_mask != 0)
+    {
+        __HAL_I2C_ENABLE_IT(hi2c, I2C_IT_ERR);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
+    cfn_hal_i2c_t     *driver = (cfn_hal_i2c_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    I2C_HandleTypeDef *hi2c = &port_hi2cs[port_id];
+
+    if (error_mask != 0)
+    {
+        __HAL_I2C_DISABLE_IT(hi2c, I2C_IT_ERR);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    if (error_mask)
+    cfn_hal_i2c_t     *driver = (cfn_hal_i2c_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    I2C_HandleTypeDef *hi2c = &port_hi2cs[port_id];
+    uint32_t           mask = 0;
+
+    if (__HAL_I2C_GET_FLAG(hi2c, I2C_FLAG_AF))
     {
-        *error_mask = 0;
+        mask |= CFN_HAL_I2C_ERROR_ACK;
+    }
+    if (__HAL_I2C_GET_FLAG(hi2c, I2C_FLAG_BERR))
+    {
+        mask |= CFN_HAL_I2C_ERROR_SMB;
+    }
+    if (__HAL_I2C_GET_FLAG(hi2c, I2C_FLAG_ARLO))
+    {
+        mask |= CFN_HAL_I2C_ERROR_ARBITRATION;
+    }
+
+    if (error_mask != NULL)
+    {
+        *error_mask = mask;
     }
     return CFN_HAL_ERROR_OK;
 }
+
+/* ST HAL Callback Overrides ----------------------------------------*/
+
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+    int32_t port_id = get_port_id_from_handle(hi2c);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_i2c_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_I2C_EVENT_TX_COMPLETE, CFN_HAL_I2C_ERROR_NONE, NULL, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+    int32_t port_id = get_port_id_from_handle(hi2c);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_i2c_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_I2C_EVENT_RX_READY, CFN_HAL_I2C_ERROR_NONE, NULL, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
+{
+    int32_t port_id = get_port_id_from_handle(hi2c);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_i2c_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            uint32_t error_mask = 0;
+            (void) port_base_error_get(&driver->base, &error_mask);
+            driver->cb(driver, CFN_HAL_I2C_EVENT_NONE, error_mask, NULL, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+/* Raw ISR Handlers -------------------------------------------------*/
+
+#if defined(I2C1)
+void I2C1_EV_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_I2C_EV_IRQHandler(&port_hi2cs[CFN_HAL_I2C_PORT_I2C1]);
+}
+void I2C1_ER_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_I2C_ER_IRQHandler(&port_hi2cs[CFN_HAL_I2C_PORT_I2C1]);
+}
+#endif
+
+#if defined(I2C2)
+void I2C2_EV_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_I2C_EV_IRQHandler(&port_hi2cs[CFN_HAL_I2C_PORT_I2C2]);
+}
+void I2C2_ER_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_I2C_ER_IRQHandler(&port_hi2cs[CFN_HAL_I2C_PORT_I2C2]);
+}
+#endif
+
+#if defined(I2C3)
+void I2C3_EV_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_I2C_EV_IRQHandler(&port_hi2cs[CFN_HAL_I2C_PORT_I2C3]);
+}
+void I2C3_ER_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_I2C_ER_IRQHandler(&port_hi2cs[CFN_HAL_I2C_PORT_I2C3]);
+}
+#endif
 
 /* I2C Specific Functions */
 
@@ -267,6 +425,7 @@ cfn_hal_i2c_construct(cfn_hal_i2c_t *driver, const cfn_hal_i2c_config_t *config,
     driver->phy = phy;
 
     port_hi2cs[port_id].Instance = PORT_INSTANCES[port_id];
+    port_drivers[port_id] = driver;
 
     return CFN_HAL_ERROR_OK;
 }
@@ -276,6 +435,12 @@ cfn_hal_error_code_t cfn_hal_i2c_destruct(cfn_hal_i2c_t *driver)
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id < CFN_HAL_I2C_PORT_MAX)
+    {
+        port_drivers[port_id] = NULL;
     }
 
     driver->api = NULL;

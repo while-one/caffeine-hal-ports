@@ -26,6 +26,21 @@ static CAN_TypeDef *const PORT_INSTANCES[CFN_HAL_CAN_PORT_MAX] = {
 };
 
 static CAN_HandleTypeDef port_hcans[CFN_HAL_CAN_PORT_MAX];
+static cfn_hal_can_t    *port_drivers[CFN_HAL_CAN_PORT_MAX];
+
+/* Internal Helpers -------------------------------------------------*/
+
+static int32_t get_port_id_from_handle(CAN_HandleTypeDef *hcan)
+{
+    for (uint32_t i = 0; i < CFN_HAL_CAN_PORT_MAX; i++)
+    {
+        if (&port_hcans[i] == hcan)
+        {
+            return (int32_t) i;
+        }
+    }
+    return -1;
+}
 
 /* VMT Implementations ----------------------------------------------*/
 
@@ -79,7 +94,6 @@ static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
     return cfn_hal_stm32_map_error(HAL_CAN_DeInit(&port_hcans[port_id]));
 }
 
-/* ... base stubs ... */
 static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
 {
     CFN_HAL_UNUSED(base);
@@ -100,48 +114,196 @@ port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback,
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
+    cfn_hal_can_t     *driver = (cfn_hal_can_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    CAN_HandleTypeDef *hcan = &port_hcans[port_id];
+
+    if (event_mask & CFN_HAL_CAN_EVENT_TX_COMPLETE)
+    {
+        __HAL_CAN_ENABLE_IT(hcan, CAN_IT_TX_MAILBOX_EMPTY);
+    }
+    if (event_mask & CFN_HAL_CAN_EVENT_RX_READY)
+    {
+        __HAL_CAN_ENABLE_IT(hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
+    cfn_hal_can_t     *driver = (cfn_hal_can_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    CAN_HandleTypeDef *hcan = &port_hcans[port_id];
+
+    if (event_mask & CFN_HAL_CAN_EVENT_TX_COMPLETE)
+    {
+        __HAL_CAN_DISABLE_IT(hcan, CAN_IT_TX_MAILBOX_EMPTY);
+    }
+    if (event_mask & CFN_HAL_CAN_EVENT_RX_READY)
+    {
+        __HAL_CAN_DISABLE_IT(hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    if (event_mask)
+    cfn_hal_can_t     *driver = (cfn_hal_can_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    CAN_HandleTypeDef *hcan = &port_hcans[port_id];
+    uint32_t           mask = 0;
+
+    if (__HAL_CAN_GET_FLAG(hcan, CAN_FLAG_TME0) || __HAL_CAN_GET_FLAG(hcan, CAN_FLAG_TME1) ||
+        __HAL_CAN_GET_FLAG(hcan, CAN_FLAG_TME2))
     {
-        *event_mask = 0;
+        mask |= CFN_HAL_CAN_EVENT_TX_COMPLETE;
+    }
+    if (HAL_CAN_GetRxFifoFillLevel(hcan, CAN_RX_FIFO0) > 0)
+    {
+        mask |= CFN_HAL_CAN_EVENT_RX_READY;
+    }
+
+    if (event_mask != NULL)
+    {
+        *event_mask = mask;
     }
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
+    cfn_hal_can_t     *driver = (cfn_hal_can_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    CAN_HandleTypeDef *hcan = &port_hcans[port_id];
+
+    if (error_mask != 0)
+    {
+        __HAL_CAN_ENABLE_IT(hcan, CAN_IT_ERROR);
+        __HAL_CAN_ENABLE_IT(hcan, CAN_IT_BUSOFF);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
+    cfn_hal_can_t     *driver = (cfn_hal_can_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    CAN_HandleTypeDef *hcan = &port_hcans[port_id];
+
+    if (error_mask != 0)
+    {
+        __HAL_CAN_DISABLE_IT(hcan, CAN_IT_ERROR);
+        __HAL_CAN_DISABLE_IT(hcan, CAN_IT_BUSOFF);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    if (error_mask)
+    cfn_hal_can_t     *driver = (cfn_hal_can_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    CAN_HandleTypeDef *hcan = &port_hcans[port_id];
+    uint32_t           mask = 0;
+
+    if (__HAL_CAN_GET_FLAG(hcan, CAN_FLAG_BOF))
     {
-        *error_mask = 0;
+        mask |= CFN_HAL_CAN_ERROR_BUS_OFF;
+    }
+    if (HAL_CAN_GetError(hcan) != HAL_CAN_ERROR_NONE)
+    {
+        mask |= CFN_HAL_CAN_ERROR_GENERAL;
+    }
+
+    if (error_mask != NULL)
+    {
+        *error_mask = mask;
     }
     return CFN_HAL_ERROR_OK;
 }
+
+/* ST HAL Callback Overrides ----------------------------------------*/
+
+void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan)
+{
+    int32_t port_id = get_port_id_from_handle(hcan);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_can_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_CAN_EVENT_TX_COMPLETE, CFN_HAL_CAN_ERROR_NONE, NULL, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+{
+    int32_t port_id = get_port_id_from_handle(hcan);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_can_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            /* Note: In a real implementation, we might want to read the message here
+               or let the user call receive(). For simplicity, we just notify. */
+            driver->cb(driver, CFN_HAL_CAN_EVENT_RX_READY, CFN_HAL_CAN_ERROR_NONE, NULL, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
+{
+    int32_t port_id = get_port_id_from_handle(hcan);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_can_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            uint32_t error_mask = 0;
+            (void) port_base_error_get(&driver->base, &error_mask);
+            driver->cb(driver, CFN_HAL_CAN_EVENT_NONE, error_mask, NULL, driver->cb_user_arg);
+        }
+    }
+}
+
+/* Raw ISR Handlers -------------------------------------------------*/
+
+#if defined(CAN1)
+void CAN1_TX_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_CAN_IRQHandler(&port_hcans[CFN_HAL_CAN_PORT_CAN1]);
+}
+void CAN1_RX0_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_CAN_IRQHandler(&port_hcans[CFN_HAL_CAN_PORT_CAN1]);
+}
+void CAN1_SCE_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_CAN_IRQHandler(&port_hcans[CFN_HAL_CAN_PORT_CAN1]);
+}
+#endif
+
+#if defined(CAN2)
+void CAN2_TX_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_CAN_IRQHandler(&port_hcans[CFN_HAL_CAN_PORT_CAN2]);
+}
+void CAN2_RX0_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_CAN_IRQHandler(&port_hcans[CFN_HAL_CAN_PORT_CAN2]);
+}
+void CAN2_SCE_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_CAN_IRQHandler(&port_hcans[CFN_HAL_CAN_PORT_CAN2]);
+}
+#endif
 
 /* CAN Specific Functions */
 
@@ -261,6 +423,7 @@ cfn_hal_can_construct(cfn_hal_can_t *driver, const cfn_hal_can_config_t *config,
     driver->phy = phy;
 
     port_hcans[port_id].Instance = PORT_INSTANCES[port_id];
+    port_drivers[port_id] = driver;
 
     return CFN_HAL_ERROR_OK;
 }
@@ -270,6 +433,12 @@ cfn_hal_error_code_t cfn_hal_can_destruct(cfn_hal_can_t *driver)
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id < CFN_HAL_CAN_PORT_MAX)
+    {
+        port_drivers[port_id] = NULL;
     }
 
     driver->api = NULL;

@@ -20,6 +20,21 @@ static ETH_TypeDef *const PORT_INSTANCES[CFN_HAL_ETH_PORT_MAX] = {
 };
 
 static ETH_HandleTypeDef port_heths[CFN_HAL_ETH_PORT_MAX];
+static cfn_hal_eth_t    *port_drivers[CFN_HAL_ETH_PORT_MAX];
+
+/* Internal Helpers -------------------------------------------------*/
+
+static int32_t get_port_id_from_handle(ETH_HandleTypeDef *heth)
+{
+    for (uint32_t i = 0; i < CFN_HAL_ETH_PORT_MAX; i++)
+    {
+        if (&port_heths[i] == heth)
+        {
+            return (int32_t) i;
+        }
+    }
+    return -1;
+}
 
 /* VMT Implementations ----------------------------------------------*/
 
@@ -74,48 +89,105 @@ port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback,
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
+    /* Note: STM32F4 ETH interrupts are enabled during HAL_ETH_Start */
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(event_mask);
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(event_mask);
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
     CFN_HAL_UNUSED(base);
-    if (event_mask)
+    if (event_mask != NULL)
     {
         *event_mask = 0;
     }
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(error_mask);
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(error_mask);
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
 {
     CFN_HAL_UNUSED(base);
-    if (error_mask)
+    if (error_mask != NULL)
     {
         *error_mask = 0;
     }
     return CFN_HAL_ERROR_OK;
 }
+
+/* ST HAL Callback Overrides ----------------------------------------*/
+
+void HAL_ETH_RxCpltCallback(ETH_HandleTypeDef *heth)
+{
+    int32_t port_id = get_port_id_from_handle(heth);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_eth_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_ETH_EVENT_RX_COMPLETE, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_ETH_TxCpltCallback(ETH_HandleTypeDef *heth)
+{
+    int32_t port_id = get_port_id_from_handle(heth);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_eth_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_ETH_EVENT_TX_COMPLETE, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_ETH_ErrorCallback(ETH_HandleTypeDef *heth)
+{
+    int32_t port_id = get_port_id_from_handle(heth);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_eth_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_ETH_EVENT_NONE, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+/* Raw ISR Handlers -------------------------------------------------*/
+
+#if defined(ETH)
+void ETH_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_ETH_IRQHandler(&port_heths[CFN_HAL_ETH_PORT_ETH1]);
+}
+#endif
 
 /* ETH Specific Functions */
 
@@ -225,6 +297,7 @@ cfn_hal_eth_construct(cfn_hal_eth_t *driver, const cfn_hal_eth_config_t *config,
     driver->phy = phy;
 
     port_heths[port_id].Instance = PORT_INSTANCES[port_id];
+    port_drivers[port_id] = driver;
 
     return CFN_HAL_ERROR_OK;
 }
@@ -234,6 +307,12 @@ cfn_hal_error_code_t cfn_hal_eth_destruct(cfn_hal_eth_t *driver)
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id < CFN_HAL_ETH_PORT_MAX)
+    {
+        port_drivers[port_id] = NULL;
     }
 
     driver->api = NULL;

@@ -25,6 +25,21 @@ static ADC_TypeDef *const PORT_INSTANCES[CFN_HAL_ADC_PORT_MAX] = {
 };
 
 static ADC_HandleTypeDef port_hadcs[CFN_HAL_ADC_PORT_MAX];
+static cfn_hal_adc_t    *port_drivers[CFN_HAL_ADC_PORT_MAX];
+
+/* Internal Helpers -------------------------------------------------*/
+
+static int32_t get_port_id_from_handle(ADC_HandleTypeDef *hadc)
+{
+    for (uint32_t i = 0; i < CFN_HAL_ADC_PORT_MAX; i++)
+    {
+        if (&port_hadcs[i] == hadc)
+        {
+            return (int32_t) i;
+        }
+    }
+    return -1;
+}
 
 /* VMT Implementations ----------------------------------------------*/
 
@@ -66,7 +81,6 @@ static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
     return cfn_hal_stm32_map_error(HAL_ADC_DeInit(&port_hadcs[port_id]));
 }
 
-/* ... standard base stubs ... */
 static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
 {
     CFN_HAL_UNUSED(base);
@@ -87,48 +101,148 @@ port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback,
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
+    cfn_hal_adc_t     *driver = (cfn_hal_adc_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    ADC_HandleTypeDef *hadc = &port_hadcs[port_id];
+
+    if (event_mask & CFN_HAL_ADC_EVENT_EOC)
+    {
+        __HAL_ADC_ENABLE_IT(hadc, ADC_IT_EOC);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
+    cfn_hal_adc_t     *driver = (cfn_hal_adc_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    ADC_HandleTypeDef *hadc = &port_hadcs[port_id];
+
+    if (event_mask & CFN_HAL_ADC_EVENT_EOC)
+    {
+        __HAL_ADC_DISABLE_IT(hadc, ADC_IT_EOC);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
-    CFN_HAL_UNUSED(base);
-    if (event_mask)
+    cfn_hal_adc_t     *driver = (cfn_hal_adc_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    ADC_HandleTypeDef *hadc = &port_hadcs[port_id];
+    uint32_t           mask = 0;
+
+    if (__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOC))
     {
-        *event_mask = 0;
+        mask |= CFN_HAL_ADC_EVENT_EOC;
+    }
+
+    if (event_mask != NULL)
+    {
+        *event_mask = mask;
     }
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
+    cfn_hal_adc_t     *driver = (cfn_hal_adc_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    ADC_HandleTypeDef *hadc = &port_hadcs[port_id];
+
+    if (error_mask & CFN_HAL_ADC_ERROR_OVERRUN)
+    {
+        __HAL_ADC_ENABLE_IT(hadc, ADC_IT_OVR);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
+    cfn_hal_adc_t     *driver = (cfn_hal_adc_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    ADC_HandleTypeDef *hadc = &port_hadcs[port_id];
+
+    if (error_mask & CFN_HAL_ADC_ERROR_OVERRUN)
+    {
+        __HAL_ADC_DISABLE_IT(hadc, ADC_IT_OVR);
+    }
+
     return CFN_HAL_ERROR_OK;
 }
+
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
 {
-    CFN_HAL_UNUSED(base);
-    if (error_mask)
+    cfn_hal_adc_t     *driver = (cfn_hal_adc_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    ADC_HandleTypeDef *hadc = &port_hadcs[port_id];
+    uint32_t           mask = 0;
+
+    if (__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_OVR))
     {
-        *error_mask = 0;
+        mask |= CFN_HAL_ADC_ERROR_OVERRUN;
+    }
+
+    if (error_mask != NULL)
+    {
+        *error_mask = mask;
     }
     return CFN_HAL_ERROR_OK;
 }
+
+/* ST HAL Callback Overrides ----------------------------------------*/
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
+{
+    int32_t port_id = get_port_id_from_handle(hadc);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_adc_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            uint32_t val = HAL_ADC_GetValue(hadc);
+            driver->cb(driver, CFN_HAL_ADC_EVENT_EOC, CFN_HAL_ADC_ERROR_NONE, val, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc)
+{
+    int32_t port_id = get_port_id_from_handle(hadc);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_adc_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            uint32_t error_mask = 0;
+            (void) port_base_error_get(&driver->base, &error_mask);
+            driver->cb(driver, CFN_HAL_ADC_EVENT_NONE, error_mask, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+/* Raw ISR Handlers -------------------------------------------------*/
+
+#if defined(ADC1) || defined(ADC2) || defined(ADC3)
+void ADC_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+#if defined(ADC1)
+    HAL_ADC_IRQHandler(&port_hadcs[CFN_HAL_ADC_PORT_ADC1]);
+#endif
+#if defined(ADC2)
+    HAL_ADC_IRQHandler(&port_hadcs[CFN_HAL_ADC_PORT_ADC2]);
+#endif
+#if defined(ADC3)
+    HAL_ADC_IRQHandler(&port_hadcs[CFN_HAL_ADC_PORT_ADC3]);
+#endif
+}
+#endif
 
 /* ADC Specific Functions */
 
@@ -218,6 +332,7 @@ cfn_hal_adc_construct(cfn_hal_adc_t *driver, const cfn_hal_adc_config_t *config,
     driver->phy = phy;
 
     port_hadcs[port_id].Instance = PORT_INSTANCES[port_id];
+    port_drivers[port_id] = driver;
 
     return CFN_HAL_ERROR_OK;
 }
@@ -227,6 +342,12 @@ cfn_hal_error_code_t cfn_hal_adc_destruct(cfn_hal_adc_t *driver)
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id < CFN_HAL_ADC_PORT_MAX)
+    {
+        port_drivers[port_id] = NULL;
     }
 
     driver->api = NULL;
