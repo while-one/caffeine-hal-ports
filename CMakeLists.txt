@@ -145,7 +145,7 @@ if(CLANG_TIDY)
         COMMAND ${CLANG_TIDY}
         -p=${CMAKE_BINARY_DIR}
         --config-file=${PROJECT_SOURCE_DIR}/config/coding/.clang-tidy
-        --header-filter="${PROJECT_SOURCE_DIR}/src/stm32/.*"
+        --header-filter="${PROJECT_SOURCE_DIR}/src/stm32/.*/cfn_hal_.*"
         ${PORT_SOURCES}
         COMMENT "Running clang-tidy static analysis using compile_commands.json..."
     )

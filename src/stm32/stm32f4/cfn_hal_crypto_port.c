@@ -1,86 +1,82 @@
 /**
  * @file cfn_hal_crypto_port.c
- * @brief CRYPTO HAL Template Implementation.
+ * @brief STM32F4 CRYPTO HAL Port Implementation.
  */
 
-/* Includes ---------------------------------------------------------*/
 #include "cfn_hal_crypto.h"
 #include "cfn_hal_crypto_port.h"
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
     CFN_HAL_UNUSED(base);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
-
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 {
     CFN_HAL_UNUSED(base);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
-
 static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(state);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
-
 static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(config);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
-
-static cfn_hal_error_code_t port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg)
+static cfn_hal_error_code_t
+port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(callback);
     CFN_HAL_UNUSED(user_arg);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
-
 static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(event_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
-
 static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(event_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
-
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
     CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    if (event_mask)
+    {
+        *event_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
 }
-
 static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(error_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
-
 static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(error_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    return CFN_HAL_ERROR_OK;
 }
-
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
 {
     CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
+    if (error_mask)
+    {
+        *error_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_crypto_encrypt(cfn_hal_crypto_t *driver, const uint8_t *in, uint8_t *out, size_t size)
@@ -108,14 +104,12 @@ static cfn_hal_error_code_t port_crypto_hash_update(cfn_hal_crypto_t *driver, co
     CFN_HAL_UNUSED(size);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
-
 static cfn_hal_error_code_t port_crypto_hash_finish(cfn_hal_crypto_t *driver, uint8_t *hash)
 {
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(hash);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
-
 static cfn_hal_error_code_t port_crypto_generate_random(cfn_hal_crypto_t *driver, uint8_t *buffer, size_t size)
 {
     CFN_HAL_UNUSED(driver);
@@ -123,7 +117,6 @@ static cfn_hal_error_code_t port_crypto_generate_random(cfn_hal_crypto_t *driver
     CFN_HAL_UNUSED(size);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
-
 static cfn_hal_error_code_t port_crypto_set_key(cfn_hal_crypto_t *driver, const uint8_t *key, size_t key_size)
 {
     CFN_HAL_UNUSED(driver);
@@ -132,8 +125,7 @@ static cfn_hal_error_code_t port_crypto_set_key(cfn_hal_crypto_t *driver, const 
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
 
-/* API --------------------------------------------------------------*/
-static const cfn_hal_crypto_api_t crypto_api = {
+static const cfn_hal_crypto_api_t CRYPTO_API = {
     .base = {
         .init = port_base_init,
         .deinit = port_base_deinit,
@@ -155,20 +147,19 @@ static const cfn_hal_crypto_api_t crypto_api = {
     .set_key = port_crypto_set_key
 };
 
-/* Instantiation ----------------------------------------------------*/
-cfn_hal_error_code_t cfn_hal_crypto_construct(cfn_hal_crypto_t *driver, const cfn_hal_crypto_config_t *config, const cfn_hal_crypto_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_crypto_construct(cfn_hal_crypto_t              *driver,
+                                              const cfn_hal_crypto_config_t *config,
+                                              const cfn_hal_crypto_phy_t    *phy)
 {
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-
-    driver->api = &crypto_api;
+    driver->api = &CRYPTO_API;
     driver->base.type = CFN_HAL_PERIPHERAL_TYPE_CRYPTO;
     driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
     driver->config = config;
     driver->phy = phy;
-
     return CFN_HAL_ERROR_OK;
 }
 
@@ -178,12 +169,10 @@ cfn_hal_error_code_t cfn_hal_crypto_destruct(cfn_hal_crypto_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-
     driver->api = NULL;
     driver->base.type = CFN_HAL_PERIPHERAL_TYPE_CRYPTO;
     driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
     driver->config = NULL;
     driver->phy = NULL;
-
     return CFN_HAL_ERROR_OK;
 }

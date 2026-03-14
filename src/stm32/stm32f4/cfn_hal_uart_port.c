@@ -13,10 +13,7 @@
 
 /* Private Data -----------------------------------------------------*/
 
-/**
- * @brief Mapping from internal enum to STM32 physical instance pointers.
- */
-static USART_TypeDef * const port_instances[CFN_HAL_UART_PORT_MAX] = {
+static USART_TypeDef * const PORT_INSTANCES[CFN_HAL_UART_PORT_MAX] = {
 #if defined(USART1)
     [CFN_HAL_UART_PORT_USART1] = USART1,
 #endif
@@ -35,23 +32,8 @@ static USART_TypeDef * const port_instances[CFN_HAL_UART_PORT_MAX] = {
 #if defined(USART6)
     [CFN_HAL_UART_PORT_USART6] = USART6,
 #endif
-#if defined(UART7)
-    [CFN_HAL_UART_PORT_UART7] = UART7,
-#endif
-#if defined(UART8)
-    [CFN_HAL_UART_PORT_UART8] = UART8,
-#endif
-#if defined(UART9)
-    [CFN_HAL_UART_PORT_UART9] = UART9,
-#endif
-#if defined(UART10)
-    [CFN_HAL_UART_PORT_UART10] = UART10,
-#endif
 };
 
-/**
- * @brief Static array of ST HAL handles.
- */
 static UART_HandleTypeDef port_huarts[CFN_HAL_UART_PORT_MAX];
 
 /* VMT Implementations ----------------------------------------------*/
@@ -60,11 +42,11 @@ static void low_level_init(cfn_hal_uart_t *driver)
 {
     uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate((cfn_hal_port_peripheral_id_t)(CFN_HAL_PORT_PERIPH_USART1 + port_id));
+cfn_hal_port_clock_enable_gate((cfn_hal_port_peripheral_id_t)(CFN_HAL_PORT_PERIPH_USART1 + port_id));
 
     /* 2. Initialize Pins */
-    if (driver->phy->tx) { (void)cfn_hal_base_init((cfn_hal_driver_t *)driver->phy->tx, CFN_HAL_PERIPHERAL_TYPE_GPIO); }
-    if (driver->phy->rx) { (void)cfn_hal_base_init((cfn_hal_driver_t *)driver->phy->rx, CFN_HAL_PERIPHERAL_TYPE_GPIO); }
+    if (driver->phy->tx) { (void)cfn_hal_base_init((cfn_hal_driver_t *)driver->phy->tx->port, CFN_HAL_PERIPHERAL_TYPE_GPIO); }
+    if (driver->phy->rx) { (void)cfn_hal_base_init((cfn_hal_driver_t *)driver->phy->rx->port, CFN_HAL_PERIPHERAL_TYPE_GPIO); }
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
@@ -75,53 +57,16 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 
     low_level_init(driver);
 
-    /* 1. Map generic config to ST Init struct */
+    huart->Instance = PORT_INSTANCES[port_id];
     huart->Init.BaudRate = driver->config->baudrate;
-    
-    switch (driver->config->data_len)
-    {
-        case CFN_HAL_UART_CONFIG_DATA_LEN_8:
-            huart->Init.WordLength = UART_WORDLENGTH_8B;
-            break;
-        case CFN_HAL_UART_CONFIG_DATA_LEN_9:
-            huart->Init.WordLength = UART_WORDLENGTH_9B;
-            break;
-        default:
-            return CFN_HAL_ERROR_BAD_PARAM;
-    }
-
-    switch (driver->config->stop_bits)
-    {
-        case CFN_HAL_UART_CONFIG_STOP_ONE_BIT:
-            huart->Init.StopBits = UART_STOPBITS_1;
-            break;
-        case CFN_HAL_UART_CONFIG_STOP_TWO_BITS:
-            huart->Init.StopBits = UART_STOPBITS_2;
-            break;
-        default:
-            return CFN_HAL_ERROR_BAD_PARAM;
-    }
-
-    switch (driver->config->parity)
-    {
-        case CFN_HAL_UART_CONFIG_PARITY_NONE:
-            huart->Init.Parity = UART_PARITY_NONE;
-            break;
-        case CFN_HAL_UART_CONFIG_PARITY_EVEN:
-            huart->Init.Parity = UART_PARITY_EVEN;
-            break;
-        case CFN_HAL_UART_CONFIG_PARITY_ODD:
-            huart->Init.Parity = UART_PARITY_ODD;
-            break;
-        default:
-            return CFN_HAL_ERROR_BAD_PARAM;
-    }
-
+    huart->Init.WordLength = (driver->config->data_len == CFN_HAL_UART_CONFIG_DATA_LEN_9) ? UART_WORDLENGTH_9B : UART_WORDLENGTH_8B;
+    huart->Init.StopBits = (driver->config->stop_bits == CFN_HAL_UART_CONFIG_STOP_TWO_BITS) ? UART_STOPBITS_2 : UART_STOPBITS_1;
+    huart->Init.Parity = (driver->config->parity == CFN_HAL_UART_CONFIG_PARITY_NONE) ? UART_PARITY_NONE :
+                         (driver->config->parity == CFN_HAL_UART_CONFIG_PARITY_EVEN) ? UART_PARITY_EVEN : UART_PARITY_ODD;
     huart->Init.Mode = UART_MODE_TX_RX;
     huart->Init.HwFlowCtl = UART_HWCONTROL_NONE;
     huart->Init.OverSampling = UART_OVERSAMPLING_16;
 
-    /* 2. Call ST HAL Init */
     return cfn_hal_stm32_map_error(HAL_UART_Init(huart));
 }
 
@@ -132,7 +77,7 @@ static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
     return cfn_hal_stm32_map_error(HAL_UART_DeInit(&port_huarts[port_id]));
 }
 
-/* ... standard base stubs ... */
+/* ... base stubs ... */
 static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(state); return CFN_HAL_ERROR_OK; }
 static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(config); return port_base_init(base); }
 static cfn_hal_error_code_t port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(callback); CFN_HAL_UNUSED(user_arg); return CFN_HAL_ERROR_OK; }
@@ -145,28 +90,33 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 /* UART Specific Functions */
 
-static cfn_hal_error_code_t port_uart_tx_polling(cfn_hal_uart_t *driver, const uint8_t *data, size_t nbr_of_bytes, uint32_t timeout)
+static cfn_hal_error_code_t port_uart_tx_polling(cfn_hal_uart_t *driver, const uint8_t *data, size_t length, uint32_t timeout)
 {
     uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-    return cfn_hal_stm32_map_error(HAL_UART_Transmit(&port_huarts[port_id], (uint8_t *)data, (uint16_t)nbr_of_bytes, timeout));
+    return cfn_hal_stm32_map_error(HAL_UART_Transmit(&port_huarts[port_id], (uint8_t *)data, (uint16_t)length, timeout));
 }
 
-static cfn_hal_error_code_t port_uart_rx_polling(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes, uint32_t timeout)
+static cfn_hal_error_code_t port_uart_rx_polling(cfn_hal_uart_t *driver, uint8_t *buffer, size_t length, uint32_t timeout)
 {
     uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-    return cfn_hal_stm32_map_error(HAL_UART_Receive(&port_huarts[port_id], data, (uint16_t)nbr_of_bytes, timeout));
+    return cfn_hal_stm32_map_error(HAL_UART_Receive(&port_huarts[port_id], buffer, (uint16_t)length, timeout));
+}
+
+static cfn_hal_error_code_t port_uart_rx_to_idle(cfn_hal_uart_t *driver, uint8_t *data, size_t max_bytes, size_t *received_bytes, uint32_t timeout)
+{
+    CFN_HAL_UNUSED(driver); CFN_HAL_UNUSED(data); CFN_HAL_UNUSED(max_bytes); CFN_HAL_UNUSED(received_bytes); CFN_HAL_UNUSED(timeout);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
 
 static cfn_hal_error_code_t port_uart_tx_irq(cfn_hal_uart_t *driver, const uint8_t *data, size_t nbr_of_bytes) { CFN_HAL_UNUSED(driver); CFN_HAL_UNUSED(data); CFN_HAL_UNUSED(nbr_of_bytes); return CFN_HAL_ERROR_NOT_SUPPORTED; }
 static cfn_hal_error_code_t port_uart_tx_irq_abort(cfn_hal_uart_t *driver) { CFN_HAL_UNUSED(driver); return CFN_HAL_ERROR_NOT_SUPPORTED; }
 static cfn_hal_error_code_t port_uart_rx_irq(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes) { CFN_HAL_UNUSED(driver); CFN_HAL_UNUSED(data); CFN_HAL_UNUSED(nbr_of_bytes); return CFN_HAL_ERROR_NOT_SUPPORTED; }
 static cfn_hal_error_code_t port_uart_rx_irq_abort(cfn_hal_uart_t *driver) { CFN_HAL_UNUSED(driver); return CFN_HAL_ERROR_NOT_SUPPORTED; }
-static cfn_hal_error_code_t port_uart_rx_to_idle(cfn_hal_uart_t *driver, uint8_t *data, size_t max_bytes, size_t *received_bytes, uint32_t timeout) { CFN_HAL_UNUSED(driver); CFN_HAL_UNUSED(data); CFN_HAL_UNUSED(max_bytes); CFN_HAL_UNUSED(received_bytes); CFN_HAL_UNUSED(timeout); return CFN_HAL_ERROR_NOT_SUPPORTED; }
 static cfn_hal_error_code_t port_uart_tx_dma(cfn_hal_uart_t *driver, const uint8_t *data, size_t nbr_of_bytes) { CFN_HAL_UNUSED(driver); CFN_HAL_UNUSED(data); CFN_HAL_UNUSED(nbr_of_bytes); return CFN_HAL_ERROR_NOT_SUPPORTED; }
 static cfn_hal_error_code_t port_uart_rx_dma(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes) { CFN_HAL_UNUSED(driver); CFN_HAL_UNUSED(data); CFN_HAL_UNUSED(nbr_of_bytes); return CFN_HAL_ERROR_NOT_SUPPORTED; }
 
 /* API --------------------------------------------------------------*/
-static const cfn_hal_uart_api_t uart_api = {
+static const cfn_hal_uart_api_t UART_API = {
     .base = {
         .init = port_base_init,
         .deinit = port_base_deinit,
@@ -201,19 +151,18 @@ cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_ha
     }
 
     uint32_t port_id = (uint32_t)(uintptr_t)phy->instance;
-    if (port_id >= CFN_HAL_UART_PORT_MAX || port_instances[port_id] == NULL)
+    if (port_id >= CFN_HAL_UART_PORT_MAX || PORT_INSTANCES[port_id] == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = &uart_api;
+    driver->api = &UART_API;
     driver->base.type = CFN_HAL_PERIPHERAL_TYPE_UART;
     driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
     driver->config = config;
     driver->phy = phy;
 
-    /* Map the physical instance to the ST handle */
-    port_huarts[port_id].Instance = port_instances[port_id];
+    port_huarts[port_id].Instance = PORT_INSTANCES[port_id];
 
     return CFN_HAL_ERROR_OK;
 }

@@ -11,29 +11,9 @@ extern "C"
 {
 #endif
 
-/* Includes ---------------------------------------------------------*/
 #include "cfn_hal_qspi.h"
 
-/* Functions prototypes ---------------------------------------------*/
-
-/**
- * @brief Construct the qspi driver.
- *
- * @param driver Pointer to the peripheral driver instance.
- * @param config Pointer to the configuration structure.
- * @param phy Pointer to the physical mapping structure.
- * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
- */
-cfn_hal_error_code_t cfn_hal_qspi_construct(cfn_hal_qspi_t *driver,
-                                            const cfn_hal_qspi_config_t *config,
-                                            const cfn_hal_qspi_phy_t *phy);
-
-/**
- * @brief Destruct the qspi driver.
- *
- * @param driver Pointer to the peripheral driver instance.
- * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
- */
+cfn_hal_error_code_t cfn_hal_qspi_construct(cfn_hal_qspi_t *driver, const cfn_hal_qspi_config_t *config, const cfn_hal_qspi_phy_t *phy);
 cfn_hal_error_code_t cfn_hal_qspi_destruct(cfn_hal_qspi_t *driver);
 
 #ifdef __cplusplus

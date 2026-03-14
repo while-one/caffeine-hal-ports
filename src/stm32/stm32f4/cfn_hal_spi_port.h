@@ -32,9 +32,8 @@ typedef enum
 
 /* Functions prototypes ---------------------------------------------*/
 
-cfn_hal_error_code_t cfn_hal_spi_construct(cfn_hal_spi_t *driver,
-                                           const cfn_hal_spi_config_t *config,
-                                           const cfn_hal_spi_phy_t *phy);
+cfn_hal_error_code_t
+cfn_hal_spi_construct(cfn_hal_spi_t *driver, const cfn_hal_spi_config_t *config, const cfn_hal_spi_phy_t *phy);
 
 cfn_hal_error_code_t cfn_hal_spi_destruct(cfn_hal_spi_t *driver);
 

@@ -3,85 +3,20 @@
  * @brief CLOCK HAL Template Implementation.
  */
 
-/* Includes ---------------------------------------------------------*/
 #include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
 
-static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
-{
-    CFN_HAL_UNUSED(base);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
-{
-    CFN_HAL_UNUSED(base);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(state);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(config);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(callback);
-    CFN_HAL_UNUSED(user_arg);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
+static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base) { CFN_HAL_UNUSED(base); return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base) { CFN_HAL_UNUSED(base); return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(state); return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(config); return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(callback); CFN_HAL_UNUSED(user_arg); return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(event_mask); return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(event_mask); return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask) { CFN_HAL_UNUSED(base); if (event_mask) { *event_mask = 0; } return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(error_mask); return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(error_mask); return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask) { CFN_HAL_UNUSED(base); if (error_mask) { *error_mask = 0; } return CFN_HAL_ERROR_OK; }
 
 static cfn_hal_error_code_t port_clock_suspend_tick(cfn_hal_clock_t *driver)
 {
@@ -124,7 +59,6 @@ static cfn_hal_error_code_t port_clock_disable_gate(cfn_hal_clock_t *driver, uin
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
 
-/* API --------------------------------------------------------------*/
 static const cfn_hal_clock_api_t clock_api = {
     .base = {
         .init = port_base_init,
@@ -147,35 +81,24 @@ static const cfn_hal_clock_api_t clock_api = {
     .disable_gate = port_clock_disable_gate
 };
 
-/* Instantiation ----------------------------------------------------*/
 cfn_hal_error_code_t cfn_hal_clock_construct(cfn_hal_clock_t *driver, const cfn_hal_clock_config_t *config, const cfn_hal_clock_phy_t *phy)
 {
-    if ((driver == NULL) || (phy == NULL))
-    {
-        return CFN_HAL_ERROR_BAD_PARAM;
-    }
-
+    if ((driver == NULL) || (phy == NULL)) { return CFN_HAL_ERROR_BAD_PARAM; }
     driver->api = &clock_api;
     driver->base.type = CFN_HAL_PERIPHERAL_TYPE_CLOCK;
     driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
     driver->config = config;
     driver->phy = phy;
-
     return CFN_HAL_ERROR_OK;
 }
 
 cfn_hal_error_code_t cfn_hal_clock_destruct(cfn_hal_clock_t *driver)
 {
-    if (driver == NULL)
-    {
-        return CFN_HAL_ERROR_BAD_PARAM;
-    }
-
+    if (driver == NULL) { return CFN_HAL_ERROR_BAD_PARAM; }
     driver->api = NULL;
     driver->base.type = CFN_HAL_PERIPHERAL_TYPE_CLOCK;
     driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
     driver->config = NULL;
     driver->phy = NULL;
-
     return CFN_HAL_ERROR_OK;
 }

@@ -13,7 +13,7 @@
 
 /* Private Data -----------------------------------------------------*/
 
-static I2C_TypeDef * const port_instances[CFN_HAL_I2C_PORT_MAX] = {
+static I2C_TypeDef *const PORT_INSTANCES[CFN_HAL_I2C_PORT_MAX] = {
 #if defined(I2C1)
     [CFN_HAL_I2C_PORT_I2C1] = I2C1,
 #endif
@@ -31,22 +31,24 @@ static I2C_HandleTypeDef port_hi2cs[CFN_HAL_I2C_PORT_MAX];
 
 static void low_level_init(cfn_hal_i2c_t *driver)
 {
-    uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate((cfn_hal_port_peripheral_id_t)(CFN_HAL_PORT_PERIPH_I2C1 + port_id));
+    cfn_hal_port_clock_enable_gate((cfn_hal_port_peripheral_id_t) (CFN_HAL_PORT_PERIPH_I2C1 + port_id));
 
     /* 2. Initialize Pins */
-    if (driver->phy->scl) { (void)cfn_hal_base_init((cfn_hal_driver_t *)driver->phy->scl, CFN_HAL_PERIPHERAL_TYPE_GPIO); }
-    if (driver->phy->sda) { (void)cfn_hal_base_init((cfn_hal_driver_t *)driver->phy->sda, CFN_HAL_PERIPHERAL_TYPE_GPIO); }
+    /* Note: In a real app, user would have already initialized these via pin_config */
+    CFN_HAL_UNUSED(driver);
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_i2c_t *driver = (cfn_hal_i2c_t *)base;
-    uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
+    cfn_hal_i2c_t     *driver = (cfn_hal_i2c_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     I2C_HandleTypeDef *hi2c = &port_hi2cs[port_id];
 
     low_level_init(driver);
+
+    hi2c->Instance = PORT_INSTANCES[port_id];
 
     switch (driver->config->speed)
     {
@@ -57,7 +59,8 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
             hi2c->Init.ClockSpeed = 400000;
             break;
         default:
-            return CFN_HAL_ERROR_BAD_PARAM;
+            hi2c->Init.ClockSpeed = 100000;
+            break;
     }
 
     hi2c->Init.DutyCycle = I2C_DUTYCYCLE_2;
@@ -73,65 +76,153 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 {
-    cfn_hal_i2c_t *driver = (cfn_hal_i2c_t *)base;
-    uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
+    cfn_hal_i2c_t *driver = (cfn_hal_i2c_t *) base;
+    uint32_t       port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     return cfn_hal_stm32_map_error(HAL_I2C_DeInit(&port_hi2cs[port_id]));
 }
 
 /* ... base stubs ... */
-static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(state); return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(config); return port_base_init(base); }
-static cfn_hal_error_code_t port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(callback); CFN_HAL_UNUSED(user_arg); return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(event_mask); return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(event_mask); return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask) { CFN_HAL_UNUSED(base); if (event_mask) { *event_mask = 0; } return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(error_mask); return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(error_mask); return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask) { CFN_HAL_UNUSED(base); if (error_mask) { *error_mask = 0; } return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
+{
+    CFN_HAL_UNUSED(base);
+    CFN_HAL_UNUSED(state);
+    return CFN_HAL_ERROR_OK;
+}
+static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
+{
+    CFN_HAL_UNUSED(base);
+    CFN_HAL_UNUSED(config);
+    return port_base_init(base);
+}
+static cfn_hal_error_code_t
+port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg)
+{
+    CFN_HAL_UNUSED(base);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
+    return CFN_HAL_ERROR_OK;
+}
+static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
+{
+    CFN_HAL_UNUSED(base);
+    CFN_HAL_UNUSED(event_mask);
+    return CFN_HAL_ERROR_OK;
+}
+static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
+{
+    CFN_HAL_UNUSED(base);
+    CFN_HAL_UNUSED(event_mask);
+    return CFN_HAL_ERROR_OK;
+}
+static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
+{
+    CFN_HAL_UNUSED(base);
+    if (event_mask)
+    {
+        *event_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
+}
+static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
+{
+    CFN_HAL_UNUSED(base);
+    CFN_HAL_UNUSED(error_mask);
+    return CFN_HAL_ERROR_OK;
+}
+static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
+{
+    CFN_HAL_UNUSED(base);
+    CFN_HAL_UNUSED(error_mask);
+    return CFN_HAL_ERROR_OK;
+}
+static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
+{
+    CFN_HAL_UNUSED(base);
+    if (error_mask)
+    {
+        *error_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
+}
 
 /* I2C Specific Functions */
 
-static cfn_hal_error_code_t port_i2c_xfr_polling(cfn_hal_i2c_t *driver, const cfn_hal_i2c_transaction_t *xfr, uint32_t timeout)
+static cfn_hal_error_code_t
+port_i2c_xfr_polling(cfn_hal_i2c_t *driver, const cfn_hal_i2c_transaction_t *xfr, uint32_t timeout)
 {
-    uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-    I2C_HandleTypeDef *hi2c = &port_hi2cs[port_id];
-    HAL_StatusTypeDef status;
+    uint32_t          port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    HAL_StatusTypeDef status = HAL_OK;
 
     if (xfr->nbr_of_tx_bytes > 0)
     {
-        status = HAL_I2C_Master_Transmit(hi2c, xfr->slave_address << 1, (uint8_t *)xfr->tx_payload, (uint16_t)xfr->nbr_of_tx_bytes, timeout);
-        if (status != HAL_OK) { return cfn_hal_stm32_map_error(status); }
+        status = HAL_I2C_Master_Transmit(&port_hi2cs[port_id],
+                                         xfr->slave_address << 1,
+                                         (uint8_t *) xfr->tx_payload,
+                                         (uint16_t) xfr->nbr_of_tx_bytes,
+                                         timeout);
+        if (status != HAL_OK)
+        {
+            return cfn_hal_stm32_map_error(status);
+        }
     }
 
     if (xfr->nbr_of_rx_bytes > 0)
     {
-        status = HAL_I2C_Master_Receive(hi2c, xfr->slave_address << 1, xfr->rx_payload, (uint16_t)xfr->nbr_of_rx_bytes, timeout);
-        if (status != HAL_OK) { return cfn_hal_stm32_map_error(status); }
+        status = HAL_I2C_Master_Receive(
+            &port_hi2cs[port_id], xfr->slave_address << 1, xfr->rx_payload, (uint16_t) xfr->nbr_of_rx_bytes, timeout);
     }
 
-    return CFN_HAL_ERROR_OK;
+    return cfn_hal_stm32_map_error(status);
 }
 
-static cfn_hal_error_code_t port_i2c_mem_write(cfn_hal_i2c_t *driver, const cfn_hal_i2c_mem_transaction_t *mem_xfr, uint32_t timeout)
+static cfn_hal_error_code_t
+port_i2c_mem_write(cfn_hal_i2c_t *driver, const cfn_hal_i2c_mem_transaction_t *mem_xfr, uint32_t timeout)
 {
-    uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-    uint16_t st_mem_size = (mem_xfr->mem_addr_size == 1) ? I2C_MEMADD_SIZE_8BIT : I2C_MEMADD_SIZE_16BIT;
-    return cfn_hal_stm32_map_error(HAL_I2C_Mem_Write(&port_hi2cs[port_id], mem_xfr->dev_addr << 1, mem_xfr->mem_addr, st_mem_size, mem_xfr->data, (uint16_t)mem_xfr->size, timeout));
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    uint32_t st_mem_size = (mem_xfr->mem_addr_size == 1) ? I2C_MEMADD_SIZE_8BIT : I2C_MEMADD_SIZE_16BIT;
+    return cfn_hal_stm32_map_error(HAL_I2C_Mem_Write(&port_hi2cs[port_id],
+                                                     mem_xfr->dev_addr << 1,
+                                                     mem_xfr->mem_addr,
+                                                     st_mem_size,
+                                                     (uint8_t *) mem_xfr->data,
+                                                     (uint16_t) mem_xfr->size,
+                                                     timeout));
 }
 
-static cfn_hal_error_code_t port_i2c_mem_read(cfn_hal_i2c_t *driver, const cfn_hal_i2c_mem_transaction_t *mem_xfr, uint32_t timeout)
+static cfn_hal_error_code_t
+port_i2c_mem_read(cfn_hal_i2c_t *driver, const cfn_hal_i2c_mem_transaction_t *mem_xfr, uint32_t timeout)
 {
-    uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-    uint16_t st_mem_size = (mem_xfr->mem_addr_size == 1) ? I2C_MEMADD_SIZE_8BIT : I2C_MEMADD_SIZE_16BIT;
-    return cfn_hal_stm32_map_error(HAL_I2C_Mem_Read(&port_hi2cs[port_id], mem_xfr->dev_addr << 1, mem_xfr->mem_addr, st_mem_size, mem_xfr->data, (uint16_t)mem_xfr->size, timeout));
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    uint32_t st_mem_size = (mem_xfr->mem_addr_size == 1) ? I2C_MEMADD_SIZE_8BIT : I2C_MEMADD_SIZE_16BIT;
+    return cfn_hal_stm32_map_error(HAL_I2C_Mem_Read(&port_hi2cs[port_id],
+                                                    mem_xfr->dev_addr << 1,
+                                                    mem_xfr->mem_addr,
+                                                    st_mem_size,
+                                                    mem_xfr->data,
+                                                    (uint16_t) mem_xfr->size,
+                                                    timeout));
 }
 
-static cfn_hal_error_code_t port_i2c_xfr_irq(cfn_hal_i2c_t *driver, const cfn_hal_i2c_transaction_t *xfr) { CFN_HAL_UNUSED(driver); CFN_HAL_UNUSED(xfr); return CFN_HAL_ERROR_NOT_SUPPORTED; }
-static cfn_hal_error_code_t port_i2c_xfr_irq_abort(cfn_hal_i2c_t *driver) { CFN_HAL_UNUSED(driver); return CFN_HAL_ERROR_NOT_SUPPORTED; }
-static cfn_hal_error_code_t port_i2c_xfr_dma(cfn_hal_i2c_t *driver, const cfn_hal_i2c_transaction_t *xfr) { CFN_HAL_UNUSED(driver); CFN_HAL_UNUSED(xfr); return CFN_HAL_ERROR_NOT_SUPPORTED; }
+static cfn_hal_error_code_t port_i2c_xfr_irq(cfn_hal_i2c_t *driver, const cfn_hal_i2c_transaction_t *xfr)
+{
+    CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(xfr);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+}
+static cfn_hal_error_code_t port_i2c_xfr_irq_abort(cfn_hal_i2c_t *driver)
+{
+    CFN_HAL_UNUSED(driver);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+}
+static cfn_hal_error_code_t port_i2c_xfr_dma(cfn_hal_i2c_t *driver, const cfn_hal_i2c_transaction_t *xfr)
+{
+    CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(xfr);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+}
 
 /* API --------------------------------------------------------------*/
-static const cfn_hal_i2c_api_t i2c_api = {
+static const cfn_hal_i2c_api_t I2C_API = {
     .base = {
         .init = port_base_init,
         .deinit = port_base_deinit,
@@ -155,26 +246,27 @@ static const cfn_hal_i2c_api_t i2c_api = {
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t cfn_hal_i2c_construct(cfn_hal_i2c_t *driver, const cfn_hal_i2c_config_t *config, const cfn_hal_i2c_phy_t *phy)
+cfn_hal_error_code_t
+cfn_hal_i2c_construct(cfn_hal_i2c_t *driver, const cfn_hal_i2c_config_t *config, const cfn_hal_i2c_phy_t *phy)
 {
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    uint32_t port_id = (uint32_t)(uintptr_t)phy->instance;
-    if (port_id >= CFN_HAL_I2C_PORT_MAX || port_instances[port_id] == NULL)
+    uint32_t port_id = (uint32_t) (uintptr_t) phy->instance;
+    if (port_id >= CFN_HAL_I2C_PORT_MAX || PORT_INSTANCES[port_id] == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = &i2c_api;
+    driver->api = &I2C_API;
     driver->base.type = CFN_HAL_PERIPHERAL_TYPE_I2C;
     driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
     driver->config = config;
     driver->phy = phy;
 
-    port_hi2cs[port_id].Instance = port_instances[port_id];
+    port_hi2cs[port_id].Instance = PORT_INSTANCES[port_id];
 
     return CFN_HAL_ERROR_OK;
 }

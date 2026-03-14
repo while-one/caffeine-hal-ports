@@ -33,7 +33,8 @@ static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const v
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
 
-static cfn_hal_error_code_t port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg)
+static cfn_hal_error_code_t
+port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(callback);
@@ -83,7 +84,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
 
-static cfn_hal_error_code_t port_sdio_send_command(cfn_hal_sdio_t *driver, const cfn_hal_sdio_cmd_t *cmd, uint32_t *response)
+static cfn_hal_error_code_t
+port_sdio_send_command(cfn_hal_sdio_t *driver, const cfn_hal_sdio_cmd_t *cmd, uint32_t *response)
 {
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(cmd);
@@ -106,7 +108,7 @@ static cfn_hal_error_code_t port_sdio_wait_card_ready(cfn_hal_sdio_t *driver, ui
 }
 
 /* API --------------------------------------------------------------*/
-static const cfn_hal_sdio_api_t sdio_api = {
+static const cfn_hal_sdio_api_t SDIO_API = {
     .base = {
         .init = port_base_init,
         .deinit = port_base_deinit,
@@ -126,14 +128,15 @@ static const cfn_hal_sdio_api_t sdio_api = {
 };
 
 /* Instantiation ----------------------------------------------------*/
-cfn_hal_error_code_t cfn_hal_sdio_construct(cfn_hal_sdio_t *driver, const cfn_hal_sdio_config_t *config, const cfn_hal_sdio_phy_t *phy)
+cfn_hal_error_code_t
+cfn_hal_sdio_construct(cfn_hal_sdio_t *driver, const cfn_hal_sdio_config_t *config, const cfn_hal_sdio_phy_t *phy)
 {
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = &sdio_api;
+    driver->api = &SDIO_API;
     driver->base.type = CFN_HAL_PERIPHERAL_TYPE_SDIO;
     driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
     driver->config = config;

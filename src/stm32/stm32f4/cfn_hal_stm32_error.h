@@ -44,7 +44,7 @@ static const cfn_hal_error_code_t stm32_error_map[CFN_HAL_STM32_ERROR_MAX] = {
  */
 static inline cfn_hal_error_code_t cfn_hal_stm32_map_error(HAL_StatusTypeDef status)
 {
-    if ((uint32_t)status >= CFN_HAL_STM32_ERROR_MAX)
+    if ((uint32_t) status >= CFN_HAL_STM32_ERROR_MAX)
     {
         return CFN_HAL_ERROR_FAIL;
     }
