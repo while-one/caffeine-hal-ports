@@ -20,14 +20,14 @@ The build system relies on a strictly target-based, preset-driven architecture. 
 *   Declares user-configurable options like `CAFFEINE_WARNINGS_AS_ERRORS` (default `ON`) and `CAFFEINE_OPTIMIZATION_LEVEL` (default `-Os`).
 
 ### B. Modular CMake Presets Architecture
-The build system utilizes a modular, directory-based preset architecture. The root `CMakePresets.json` acts strictly as a delegator and base configuration host, while hardware-specific profiles are isolated in `cmake/presets/<vendor>/<family>.json`.
-*   **Root `CMakePresets.json`:** Defines base configurations (`base-common`, `base-arm`, `base-riscv`) and uses the `"include"` array to load vendor-specific files. Do not add MCU-specific configurations here.
-*   **Vendor Files (`cmake/presets/<vendor>/<family>.json`):** Every supported target MCU or board must be added to its corresponding family file.
+The build system utilizes a modular, directory-based preset architecture. The root `CMakePresets.json` acts strictly as a delegator and base configuration host, while hardware-specific profiles are isolated in `caffeine-build/cmake/presets/<vendor>/<family>.json`.
+*   **Root `CMakePresets.json`:** Includes the base presets from the `caffeine-build` submodule and defines the local project-specific presets.
+*   **Vendor Files (`caffeine-build/cmake/presets/<vendor>/<family>.json`):** Every supported target MCU or board must be added to its corresponding family file inside the `caffeine-build` repository.
 *   **Preset Definitions:** Presets define `CAFFEINE_VENDOR` (e.g., `stm32`), `CAFFEINE_PORT_FAMILY` (e.g., `stm32f4`), CPU architectures (`CAFFEINE_MCU_CORE`), required macros (`CAFFEINE_MCU_MACRO`), and the base linker script (`CAFFEINE_BOARD_LINKER`).
 *   **Silicon Extras:** Use `CAFFEINE_MCU_COMPILE_OPTIONS` to pass specific FPU settings (e.g., `-mfloat-abi=hard -mfpu=fpv4-sp-d16`) or other custom silicon flags.
 
-### C. Toolchains (`cmake/toolchains/`)
-Toolchain files only define **how** to compile. They must remain architecture-agnostic regarding specific silicon.
+### C. Toolchains (`caffeine-build/cmake/toolchains/`)
+Toolchain files only define **how** to compile and are provided by the `caffeine-build` submodule. They must remain architecture-agnostic regarding specific silicon.
 *   Do not include silicon flags (like `-mcpu=cortex-m4` or `-mfloat-abi=hard`) here.
 *   Always use `find_program` to locate binaries (e.g., `arm-none-eabi-gcc`).
 *   Always enforce safe cross-compilation by setting `CMAKE_FIND_ROOT_PATH_MODE_*` to prevent linking host PC libraries.
