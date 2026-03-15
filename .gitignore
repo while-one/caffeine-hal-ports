@@ -5,3 +5,4 @@ build*/
 # JetBrains IDE
 .idea/
 .artifacts/
+CMakeUserPresets.json

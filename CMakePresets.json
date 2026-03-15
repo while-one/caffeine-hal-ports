@@ -1,0 +1,16 @@
+{
+  "version": 4,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+  "include": [
+    "cmake/presets/base.json",
+    "cmake/presets/stm32/stm32f4.json",
+    "cmake/presets/gigadevice/gd32v.json",
+    "cmake/presets/posix/linux.json",
+    "cmake/presets/mock/tests.json",
+    "cmake/presets/template/compliance.json"
+  ]
+}
