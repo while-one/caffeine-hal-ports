@@ -212,14 +212,11 @@ install(
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake
 )
 
-# 6. Install the generated linker script (if applicable for this port)
-if(DEFINED CAFFEINE_BOARD_LINKER)
-    # TODO: This placeholder will be replaced by the actual dynamic linker generator script.
-    # We use file(GENERATE) to ensure the file is known to the build system before the install phase.
-    file(GENERATE OUTPUT "${GENERATED_LINKER_SCRIPT}" CONTENT "/* Dynamic Linker Script Placeholder for ${CAFFEINE_BOARD_LINKER} */\n")
-
+# 6. Install the actual linker scripts
+file(GLOB ALL_LINKER_SCRIPTS "${PROJECT_SOURCE_DIR}/linker/*.ld")
+if(ALL_LINKER_SCRIPTS)
     install(
-        FILES "${GENERATED_LINKER_SCRIPT}"
+        FILES ${ALL_LINKER_SCRIPTS}
         DESTINATION ${PACKAGE_LINKER_INSTALL_DIR}
     )
 endif()
