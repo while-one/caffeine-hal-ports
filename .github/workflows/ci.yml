@@ -13,9 +13,11 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     container:
-      image: ghcr.io/${{ github.repository_owner }}/caffeine-hal/build-native:latest
+      image: ghcr.io/${{ github.repository_owner }}/caffeine-build/build-native:latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: recursive
     
     - name: Configure CMake (Dry Run Format)
       run: cmake --preset linux-native -D FORMAT_DRY_RUN=ON -DFETCHCONTENT_FULLY_DISCONNECTED=OFF
@@ -29,9 +31,11 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     container:
-      image: ghcr.io/${{ github.repository_owner }}/caffeine-hal/build-native:latest
+      image: ghcr.io/${{ github.repository_owner }}/caffeine-build/build-native:latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: recursive
     
     - name: Configure CMake
       run: cmake --preset linux-native
@@ -45,9 +49,11 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     container:
-      image: ghcr.io/${{ github.repository_owner }}/caffeine-hal/build-arm:latest
+      image: ghcr.io/${{ github.repository_owner }}/caffeine-build/build-arm:latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: recursive
     
     - name: Configure CMake
       run: cmake --preset stm32f417vg-release -DFETCHCONTENT_FULLY_DISCONNECTED=OFF
@@ -62,9 +68,11 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     container:
-      image: ghcr.io/${{ github.repository_owner }}/caffeine-hal/build-arm:latest
+      image: ghcr.io/${{ github.repository_owner }}/caffeine-build/build-arm:latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: recursive
     
     - name: Configure CMake
       run: cmake --preset stm32f417vg-release -DFETCHCONTENT_FULLY_DISCONNECTED=OFF
@@ -82,9 +90,11 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     container:
-      image: ghcr.io/${{ github.repository_owner }}/caffeine-hal/build-native:latest
+      image: ghcr.io/${{ github.repository_owner }}/caffeine-build/build-native:latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: recursive
     
     - name: Install gcovr
       run: apt-get update && apt-get install -y gcovr
@@ -124,9 +134,11 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     container:
-      image: ghcr.io/${{ github.repository_owner }}/caffeine-hal/build-native:latest
+      image: ghcr.io/${{ github.repository_owner }}/caffeine-build/build-native:latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: recursive
     
     - name: Configure CMake (Template Compliance)
       run: cmake --preset template-compliance -DFETCHCONTENT_FULLY_DISCONNECTED=OFF

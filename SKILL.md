@@ -171,21 +171,21 @@ The framework relies on automated code quality tools. All contributions must pas
 *   **Memory Safety:** Never use `malloc`, `free`, `new`, or Variable Length Arrays (VLAs).
 *   **Types:** Use `<stdint.h>` strictly. Do not use bare `int`, `char`, or `long`.
 
-## 6. Automated CI/CD & Releases
+## 6. Build Environment & CI
 
-The Continuous Integration (CI) and Continuous Deployment (CD) for this repository leverage optimized, Dockerized environments for consistency and speed.
+The build process for Caffeine-HAL Ports is highly optimized for consistency across local development and GitHub Actions CI using the **`caffeine-build`** submodule.
 
-### A. CI Workflow (`.github/workflows/ci.yml`)
-The main CI workflow runs all checks (linting, static analysis, builds, tests) inside a pre-built Docker image. This eliminates the need for repeated `apt-get install` commands and ensures a consistent build environment identical to local Docker development.
-*   **Speed & Consistency:** Builds run significantly faster by pulling a pre-cached Docker image instead of installing dependencies.
-*   **Containerized Builds:** Jobs are configured with `container: image: ghcr.io/${{ github.repository }}/build-native:latest` (or `build-arm`, etc.) to execute within the specialized Docker environment.
-*   **Dependency Management:** CI jobs allow `FetchContent` to download code dependencies (like `caffeine-hal`) while preferring pre-installed tools (like GoogleTest) from the Docker image for maximum performance.
+### A. Dockerized Toolchain
+A multi-stage `Dockerfile` (located in the `caffeine-build` submodule) defines the entire build environment.
+*   **Centralized Infrastructure:** All build images are published and hosted by the `caffeine-build` repository on the GitHub Container Registry.
+*   **Sanity Checks:** CI jobs in this repository utilize these pre-built images for maximum performance.
 
-### B. Docker Image Management (`.github/workflows/docker-publish.yml`)
-A dedicated workflow handles the building and publishing of the Docker images used by the CI.
-*   **Trigger:** This workflow automatically runs when the `Dockerfile` in the repository root is modified on the `main` branch.
-*   **Multi-Stage Build:** The `Dockerfile` uses multiple stages (`base`, `build-arm`, `build-riscv`, `build-native`) to create specialized images. The `base` stage pre-installs common tools (linters, CMake, compilers) and pre-builds GoogleTest.
-*   **GHCR Integration:** Built images are pushed to the GitHub Container Registry (`ghcr.io/${{ github.repository }}`).
+### B. CI Workflow (`.github/workflows/ci.yml`)
+The main CI workflow runs all checks (linting, static analysis, builds, tests) inside the appropriate Docker image.
+*   **Fast & Consistent Builds:** Jobs run within a pre-built Docker container from the `caffeine-build` registry.
+*   **Submodule Checkout:** Every CI job MUST ensure submodules are initialized recursively to access the build infrastructure and toolchains.
+*   **Offline Dependencies:** CMake configuration steps include `-DFETCHCONTENT_FULLY_DISCONNECTED=OFF` (as ports need to fetch vendor SDKs) while preferring pre-installed tools from the Docker image.
+
 ### C. Local Development with Docker (`caffeine-build/scripts/build.sh`)
 Developers can replicate the exact CI build environment locally using the provided helper script:
 ```bash
@@ -195,18 +195,17 @@ Developers can replicate the exact CI build environment locally using the provid
 # Example: Run a specific CMake target (e.g., 'caffeine-hal-ports-format')
 ./caffeine-build/scripts/build.sh linux-native caffeine-hal-ports-format
 
-# Example: Run code coverage inside Docker
-./caffeine-build/scripts/build.sh tests-native caffeine-hal-ports-coverage
-```
+# Example: Run a cross-compilation build
 ./caffeine-build/scripts/build.sh stm32f407-release
 ```
 
 ### D. Local Development (Native Host)
-Developers can still build the project directly on their host machine without Docker. The CMake `Find-then-Fetch` logic for GoogleTest (in `tests/CMakeLists.txt`) ensures that if GTest is not found on the host, it will be automatically downloaded, maintaining native build capability.
+Developers can still build the project directly on their host machine without Docker. The CMake configuration is designed to gracefully handle missing dependencies. You must manually install the cross-compilation toolchains referenced in `caffeine-build/cmake/toolchains/`.
 
-*   The CI matrix must parse `CMakePresets.json` to automatically discover and build all targets.
-*   Upon creating a GitHub Release (tag), the CI must compile and package the output for each preset.
-*   Release artifacts must contain:
+### E. Manual Release Steps
+*   The CI matrix automatically discovers and builds all targets defined in `CMakePresets.json`.
+*   Upon creating a GitHub Release (tag), the CI compiles and packages the output for each preset.
+*   Release artifacts contain:
     1.  The compiled static library (`.a` file).
     2.  The dynamically generated linker script for the specified board.
     3.  A unified `include/` directory representing the public API.
