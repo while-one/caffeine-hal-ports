@@ -1,0 +1,15 @@
+@PACKAGE_INIT@
+
+# Since caffeine-hal-ports requires the generic headers to be useful,
+# we ensure the core framework is found when finding this package.
+include(CMakeFindDependencyMacro)
+find_dependency(caffeine-hal)
+
+# Include the exported targets
+include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+
+# Provide a variable pointing to the installed linker script directory
+# so user applications can easily locate it if doing a hardware build.
+set(CAFFEINE_HAL_PORTS_LINKER_DIR "@PACKAGE_LINKER_INSTALL_DIR@")
+
+check_required_components("@PROJECT_NAME@")
