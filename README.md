@@ -51,20 +51,20 @@ To ensure consistency between local development and CI, a multi-stage `Dockerfil
 
 ### 1. Building with Docker (Recommended for CI Parity)
 
-Use the `scripts/build-local.sh` helper script to build your project inside a Docker container. This guarantees your build environment is identical to the CI.
+Use the `caffeine-build/scripts/build.sh` helper script to build your project inside a Docker container. This guarantees your build environment is identical to the CI.
 
 ```bash
 # Build using the native Linux stage (default: builds all targets for the preset)
-./scripts/build-local.sh linux-native
+./caffeine-build/scripts/build.sh linux-native
 
 # To build a specific CMake target (e.g., 'caffeine-hal-ports-format')
-./scripts/build-local.sh linux-native caffeine-hal-ports-format
+./caffeine-build/scripts/build.sh linux-native caffeine-hal-ports-format
 
 # To build for a specific cross-compiler preset and a specific target
-./scripts/build-local.sh stm32f407-release caffeine-hal-ports-analyze
+./caffeine-build/scripts/build.sh stm32f407-release caffeine-hal-ports-analyze
 
 # To run code coverage inside Docker
-./scripts/build-local.sh tests-native caffeine-hal-ports-coverage
+./caffeine-build/scripts/build.sh tests-native caffeine-hal-ports-coverage
 ```
 
 ### 2. Building Natively (Without Docker)

@@ -186,19 +186,19 @@ A dedicated workflow handles the building and publishing of the Docker images us
 *   **Trigger:** This workflow automatically runs when the `Dockerfile` in the repository root is modified on the `main` branch.
 *   **Multi-Stage Build:** The `Dockerfile` uses multiple stages (`base`, `build-arm`, `build-riscv`, `build-native`) to create specialized images. The `base` stage pre-installs common tools (linters, CMake, compilers) and pre-builds GoogleTest.
 *   **GHCR Integration:** Built images are pushed to the GitHub Container Registry (`ghcr.io/${{ github.repository }}`).
-### C. Local Development with Docker (`scripts/build-local.sh`)
+### C. Local Development with Docker (`caffeine-build/scripts/build.sh`)
 Developers can replicate the exact CI build environment locally using the provided helper script:
 ```bash
 # Build the project for a specific preset inside a Docker container (default: builds all targets)
-./scripts/build-local.sh linux-native
+./caffeine-build/scripts/build.sh linux-native
 
 # Example: Run a specific CMake target (e.g., 'caffeine-hal-ports-format')
-./scripts/build-local.sh linux-native caffeine-hal-ports-format
+./caffeine-build/scripts/build.sh linux-native caffeine-hal-ports-format
 
 # Example: Run code coverage inside Docker
-./scripts/build-local.sh tests-native caffeine-hal-ports-coverage
+./caffeine-build/scripts/build.sh tests-native caffeine-hal-ports-coverage
 ```
-./scripts/build-local.sh stm32f407-release
+./caffeine-build/scripts/build.sh stm32f407-release
 ```
 
 ### D. Local Development (Native Host)
