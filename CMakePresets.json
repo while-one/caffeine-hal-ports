@@ -6,11 +6,11 @@
     "patch": 0
   },
   "include": [
-    "cmake/presets/base.json",
-    "cmake/presets/stm32/stm32f4.json",
-    "cmake/presets/gigadevice/gd32v.json",
-    "cmake/presets/posix/linux.json",
-    "cmake/presets/mock/tests.json",
-    "cmake/presets/template/compliance.json"
+    "caffeine-build/cmake/presets/base.json",
+    "caffeine-build/cmake/presets/stm32/stm32f4.json",
+    "caffeine-build/cmake/presets/gigadevice/gd32v.json",
+    "caffeine-build/cmake/presets/posix/linux.json",
+    "caffeine-build/cmake/presets/mock/tests.json",
+    "caffeine-build/cmake/presets/template/compliance.json"
   ]
 }

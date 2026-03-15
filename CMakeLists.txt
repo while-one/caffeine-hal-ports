@@ -29,7 +29,7 @@ include(FetchContent)
 FetchContent_Declare(
     caffeine-hal
     GIT_REPOSITORY https://github.com/while-one/caffeine-hal.git
-    GIT_TAG        v0.3.3
+    GIT_TAG        v0.4.0
 )
 FetchContent_MakeAvailable(caffeine-hal)
 
@@ -110,7 +110,7 @@ if(CLANG_FORMAT)
         ${PROJECT_NAME}-format
         COMMAND ${CLANG_FORMAT}
         ${FORMAT_ARGS}
-        -style=file:${PROJECT_SOURCE_DIR}/config/coding/.clang-format
+        -style=file:${PROJECT_SOURCE_DIR}/caffeine-build/config/coding/.clang-format
         ${ALL_FORMAT_SOURCES}
         COMMENT "${FORMAT_COMMENT}"
     )
@@ -152,7 +152,7 @@ if(CLANG_TIDY)
         ${PROJECT_NAME}-tidy
         COMMAND ${CLANG_TIDY}
         -p=${CMAKE_BINARY_DIR}
-        --config-file=${PROJECT_SOURCE_DIR}/config/coding/.clang-tidy
+        --config-file=${PROJECT_SOURCE_DIR}/caffeine-build/config/coding/.clang-tidy
         --header-filter="${PROJECT_SOURCE_DIR}/src/${ANALYSIS_SUBDIR}/.*/cfn_hal_.*"
         ${CAFFEINE_CLANG_TIDY_EXTRA_ARGS}
         ${PORT_SOURCES}
@@ -212,14 +212,11 @@ install(
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake
 )
 
-# 6. Install the generated linker script (if applicable for this port)
-if(DEFINED CAFFEINE_BOARD_LINKER)
-    # TODO: This placeholder will be replaced by the actual dynamic linker generator script.
-    # We use file(GENERATE) to ensure the file is known to the build system before the install phase.
-    file(GENERATE OUTPUT "${GENERATED_LINKER_SCRIPT}" CONTENT "/* Dynamic Linker Script Placeholder for ${CAFFEINE_BOARD_LINKER} */\n")
-
+# 6. Install the actual linker scripts
+file(GLOB ALL_LINKER_SCRIPTS "${PROJECT_SOURCE_DIR}/linker/*.ld")
+if(ALL_LINKER_SCRIPTS)
     install(
-        FILES "${GENERATED_LINKER_SCRIPT}"
+        FILES ${ALL_LINKER_SCRIPTS}
         DESTINATION ${PACKAGE_LINKER_INSTALL_DIR}
     )
 endif()
