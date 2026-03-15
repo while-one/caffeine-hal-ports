@@ -72,8 +72,8 @@ Once the build system successfully fetches and links the Vendor SDK, begin imple
 *   **Interrupt & Event Pipeline:** 
     *   You MUST implement `event_enable`, `event_disable`, and `event_get` using vendor register macros (e.g., `__HAL_UART_ENABLE_IT`).
     *   You MUST provide raw `_IRQHandler` functions for each peripheral instance.
-    *   You MUST implement static driver tracking (e.g., `static cfn_hal_uart_t * port_drivers[...]`) to map ST HAL C-style callbacks back to the Caffeine HAL driver instances.
-    *   **Rule (Static Analysis):** You MUST use `// NOLINT(readability-identifier-naming)` on raw ISR handlers.
+    *   You MUST implement static driver tracking (e.g., `static cfn_hal_uart_t * port_drivers[...]`) to map ST HAL C-style callbacks back to the Caffeine HAL driver instances. This O(1) approach is safe but ensures that only one `cfn_hal` object can represent a physical peripheral at a time.
+    *   **Rule (Static Analysis):** You MUST use `// NOLINT(readability-identifier-naming)` on raw ISR handlers to bridge ST's naming conventions with the project's strict style rules.
     *   **Rule (Callback Registration):** `callback_register` returning `OK` is acceptable if no hardware-specific setup is needed, as core `caffeine-hal` handles pointer storage.
     *   **Rule (Handle Qualifiers):** You MUST NOT declare handle parameters as `const` in ST HAL callback overrides (e.g., `HAL_UART_RxCpltCallback`), as it conflicts with ST's non-const signatures.
 *   **Memory-Mapped Operations:** 

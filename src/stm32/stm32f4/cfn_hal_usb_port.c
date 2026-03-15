@@ -10,6 +10,7 @@
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
+#include <string.h>
 
 /* Private Data -----------------------------------------------------*/
 
@@ -23,12 +24,26 @@ static USB_OTG_GlobalTypeDef *const PORT_INSTANCES[CFN_HAL_USB_PORT_MAX] = {
 };
 
 static PCD_HandleTypeDef port_hpcds[CFN_HAL_USB_PORT_MAX];
+static cfn_hal_usb_t *   port_drivers[CFN_HAL_USB_PORT_MAX];
+
+/* Internal Helpers -------------------------------------------------*/
+
+static int32_t get_port_id_from_handle(PCD_HandleTypeDef *hpcd)
+{
+    for (uint32_t i = 0; i < CFN_HAL_USB_PORT_MAX; i++)
+    {
+        if (&port_hpcds[i] == hpcd)
+        {
+            return (int32_t) i;
+        }
+    }
+    return -1;
+}
 
 /* VMT Implementations ----------------------------------------------*/
 
 static void low_level_init(cfn_hal_usb_t *driver)
 {
-    CFN_HAL_UNUSED(driver);
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     if (port_id == (uint32_t) CFN_HAL_USB_PORT_OTG_FS)
     {
@@ -68,7 +83,6 @@ static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
     return cfn_hal_stm32_map_error(HAL_PCD_DeInit(&port_hpcds[port_id]));
 }
 
-/* ... base stubs ... */
 static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
 {
     CFN_HAL_UNUSED(base);
@@ -77,7 +91,6 @@ static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cf
 }
 static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
 {
-    CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(config);
     return port_base_init(base);
 }
@@ -104,7 +117,7 @@ static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
     CFN_HAL_UNUSED(base);
-    if (event_mask)
+    if (event_mask != NULL)
     {
         *event_mask = 0;
     }
@@ -125,12 +138,108 @@ static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
 {
     CFN_HAL_UNUSED(base);
-    if (error_mask)
+    if (error_mask != NULL)
     {
         *error_mask = 0;
     }
     return CFN_HAL_ERROR_OK;
 }
+
+/* ST HAL Callback Overrides ----------------------------------------*/
+
+void HAL_PCD_ResetCallback(PCD_HandleTypeDef *hpcd)
+{
+    int32_t port_id = get_port_id_from_handle(hpcd);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_usb_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_USB_EVENT_RESET, 0, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd)
+{
+    int32_t port_id = get_port_id_from_handle(hpcd);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_usb_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_USB_EVENT_SETUP_READY, 0, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_PCD_DataOutStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum)
+{
+    int32_t port_id = get_port_id_from_handle(hpcd);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_usb_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_USB_EVENT_EP_DATA_OUT, 0, epnum, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum)
+{
+    int32_t port_id = get_port_id_from_handle(hpcd);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_usb_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_USB_EVENT_EP_DATA_IN, 0, epnum | 0x80, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_PCD_SuspendCallback(PCD_HandleTypeDef *hpcd)
+{
+    int32_t port_id = get_port_id_from_handle(hpcd);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_usb_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_USB_EVENT_SUSPEND, 0, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+void HAL_PCD_ResumeCallback(PCD_HandleTypeDef *hpcd)
+{
+    int32_t port_id = get_port_id_from_handle(hpcd);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_usb_t *driver = port_drivers[port_id];
+        if (driver->cb != NULL)
+        {
+            driver->cb(driver, CFN_HAL_USB_EVENT_RESUME, 0, 0, driver->cb_user_arg);
+        }
+    }
+}
+
+/* Raw ISR Handlers -------------------------------------------------*/
+
+#if defined(USB_OTG_FS)
+void OTG_FS_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_PCD_IRQHandler(&port_hpcds[CFN_HAL_USB_PORT_OTG_FS]);
+}
+#endif
+
+#if defined(USB_OTG_HS)
+void OTG_HS_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_PCD_IRQHandler(&port_hpcds[CFN_HAL_USB_PORT_OTG_HS]);
+}
+#endif
 
 /* USB Specific Functions */
 
@@ -208,6 +317,25 @@ static cfn_hal_error_code_t port_usb_ep_stall(cfn_hal_usb_t *driver, uint8_t ep_
     }
 }
 
+static cfn_hal_error_code_t port_usb_read_setup_packet(cfn_hal_usb_t *driver, uint8_t *buffer)
+{
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    PCD_HandleTypeDef *hpcd = &port_hpcds[port_id];
+    memcpy(buffer, hpcd->Setup, 8);
+    return CFN_HAL_ERROR_OK;
+}
+
+static cfn_hal_error_code_t port_usb_get_rx_data_size(cfn_hal_usb_t *driver, uint8_t ep_addr, size_t *size)
+{
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (size == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    *size = (size_t) HAL_PCD_EP_GetRxCount(&port_hpcds[port_id], ep_addr);
+    return CFN_HAL_ERROR_OK;
+}
+
 /* API --------------------------------------------------------------*/
 static const cfn_hal_usb_api_t USB_API = {
     .base = {
@@ -230,7 +358,9 @@ static const cfn_hal_usb_api_t USB_API = {
     .ep_close = port_usb_ep_close,
     .ep_transmit = port_usb_ep_transmit,
     .ep_receive = port_usb_ep_receive,
-    .ep_stall = port_usb_ep_stall
+    .ep_stall = port_usb_ep_stall,
+    .read_setup_packet = port_usb_read_setup_packet,
+    .get_rx_data_size = port_usb_get_rx_data_size
 };
 
 /* Instantiation ----------------------------------------------------*/
@@ -256,6 +386,7 @@ cfn_hal_usb_construct(cfn_hal_usb_t *driver, const cfn_hal_usb_config_t *config,
     driver->phy = phy;
 
     port_hpcds[port_id].Instance = PORT_INSTANCES[port_id];
+    port_drivers[port_id] = driver;
 
     return CFN_HAL_ERROR_OK;
 }
@@ -265,6 +396,12 @@ cfn_hal_error_code_t cfn_hal_usb_destruct(cfn_hal_usb_t *driver)
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id < CFN_HAL_USB_PORT_MAX)
+    {
+        port_drivers[port_id] = NULL;
     }
 
     driver->api = NULL;
