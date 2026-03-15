@@ -28,7 +28,7 @@ set(GENERATED_LINKER_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/generated_${CAFFEINE_BO
 
 # Propagate Linker Script
 target_link_options(${PROJECT_NAME} INTERFACE
-    -T ${GENERATED_LINKER_SCRIPT}
+    -T ${CMAKE_CURRENT_LIST_DIR}/../../../linker/${CAFFEINE_BOARD_LINKER}
     -Wl,--gc-sections
     -nostartfiles
 )
