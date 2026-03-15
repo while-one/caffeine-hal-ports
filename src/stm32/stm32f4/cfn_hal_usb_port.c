@@ -24,7 +24,7 @@ static USB_OTG_GlobalTypeDef *const PORT_INSTANCES[CFN_HAL_USB_PORT_MAX] = {
 };
 
 static PCD_HandleTypeDef port_hpcds[CFN_HAL_USB_PORT_MAX];
-static cfn_hal_usb_t *   port_drivers[CFN_HAL_USB_PORT_MAX];
+static cfn_hal_usb_t    *port_drivers[CFN_HAL_USB_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
