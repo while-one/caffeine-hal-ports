@@ -29,7 +29,7 @@ include(FetchContent)
 FetchContent_Declare(
     caffeine-hal
     GIT_REPOSITORY https://github.com/while-one/caffeine-hal.git
-    GIT_TAG        v0.4.0
+    GIT_TAG        v0.4.1
 )
 FetchContent_MakeAvailable(caffeine-hal)
 
@@ -53,6 +53,7 @@ if(TARGET_TYPE STREQUAL "INTERFACE_LIBRARY")
     target_link_libraries(${PROJECT_NAME} INTERFACE caffeine::hal)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE ${CAFFEINE_COMPILE_OPTIONS})
+    target_compile_options(${PROJECT_NAME} INTERFACE ${CAFFEINE_COMPILE_OPTIONS})
     target_link_libraries(${PROJECT_NAME} PUBLIC caffeine::hal)
 endif()
 

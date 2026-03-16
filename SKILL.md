@@ -49,6 +49,11 @@ Because `caffeine-hal-ports` dynamically fetches `caffeine-hal` from GitHub via 
 *   **Preferred Method:** Create a `CMakeUserPresets.json` file to define `-local` presets that inherit from the main presets and set `"FETCHCONTENT_SOURCE_DIR_CAFFEINE-HAL": "${sourceDir}/../caffeine-hal"`. This works flawlessly with CLion and VSCode without dirtying the Git tree.
 *   **CLI Fallback:** You can also pass the override directly: `cmake --preset linux-native -D FETCHCONTENT_SOURCE_DIR_CAFFEINE-HAL=/path/to/local/caffeine-hal`.
 
+### F. Hardware Parameter Overrides
+To allow applications to customize the HAL configuration without modifying port files, use `#cmakedefine` in the `stm32f4xx_hal_conf.h.in` template.
+*   **Supported Variables:** `CFN_HAL_CLOCK_HSE_HZ`, `CFN_HAL_CLOCK_LSE_HZ`, and `CFN_HAL_POWER_VDD_MV`.
+*   **Implementation:** These variables are injected into the generated `stm32f4xx_hal_conf.h` and provide fallback defaults (e.g., 25MHz HSE) if not defined by the application.
+
 ## 3. C Implementation Rules (The VMT Wrappers)
 
 **Crucial Time-Saver:** A complete set of pre-written C stubs for every peripheral API exists in `src/template/`. When starting a new port, always copy these files directly to your target directory (e.g., `cp src/template/cfn_hal_uart.c src/stm32/stm32f4/cfn_hal_uart.c`) to ensure you don't miss any VMT function signatures.

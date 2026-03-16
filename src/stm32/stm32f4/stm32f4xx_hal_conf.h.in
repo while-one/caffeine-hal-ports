@@ -92,7 +92,10 @@ extern "C"
  *        This value is used by the RCC HAL module to compute the system frequency
  *        (when HSE is used as system clock source, directly or through the PLL).
  */
-#if !defined(HSE_VALUE)
+#cmakedefine CFN_HAL_CLOCK_HSE_HZ @CFN_HAL_CLOCK_HSE_HZ@
+#if defined(CFN_HAL_CLOCK_HSE_HZ) && !defined(HSE_VALUE)
+#define HSE_VALUE CFN_HAL_CLOCK_HSE_HZ /*!< Value injected from CMake Preset */
+#elif !defined(HSE_VALUE)
 #define HSE_VALUE 25000000U /*!< Value of the External oscillator in Hz */
 #endif                      /* HSE_VALUE */
 
@@ -120,7 +123,10 @@ extern "C"
 /**
  * @brief External Low Speed oscillator (LSE) value.
  */
-#if !defined(LSE_VALUE)
+#cmakedefine CFN_HAL_CLOCK_LSE_HZ @CFN_HAL_CLOCK_LSE_HZ@
+#if defined(CFN_HAL_CLOCK_LSE_HZ) && !defined(LSE_VALUE)
+#define LSE_VALUE CFN_HAL_CLOCK_LSE_HZ /*!< Value injected from CMake Preset */
+#elif !defined(LSE_VALUE)
 #define LSE_VALUE 32768U /*!< Value of the External Low Speed oscillator in Hz */
 #endif                   /* LSE_VALUE */
 
@@ -144,7 +150,12 @@ extern "C"
 /**
  * @brief This is the HAL system configuration section
  */
-#define VDD_VALUE                3300U /*!< Value of VDD in mv */
+#cmakedefine CFN_HAL_POWER_VDD_MV @CFN_HAL_POWER_VDD_MV@
+#if defined(CFN_HAL_POWER_VDD_MV)
+#define VDD_VALUE CFN_HAL_POWER_VDD_MV /*!< Value injected from CMake Preset */
+#else
+#define VDD_VALUE 3300U /*!< Value of VDD in mv */
+#endif
 #define TICK_INT_PRIORITY        0x0FU /*!< tick interrupt priority */
 #define USE_RTOS                 0U
 #define PREFETCH_ENABLE          1U

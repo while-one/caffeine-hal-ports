@@ -49,8 +49,7 @@ endif()
 # The generated linker script path (pending script implementation)
 set(GENERATED_LINKER_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/generated_${CAFFEINE_BOARD_LINKER}")
 
-# Propagate Board-specific Linker Script and generate a memory map
+# Propagate Board-specific Linker Script
 target_link_options(${PROJECT_NAME} INTERFACE
     -T ${CMAKE_CURRENT_LIST_DIR}/../../../linker/${CAFFEINE_BOARD_LINKER}
-    -Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/firmware.map
 )
