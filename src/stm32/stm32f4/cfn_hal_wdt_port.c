@@ -178,6 +178,7 @@ cfn_hal_wdt_construct(cfn_hal_wdt_t *driver, const cfn_hal_wdt_config_t *config,
 
     return CFN_HAL_ERROR_OK;
 #else
+    CFN_HAL_UNUSED(config);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }

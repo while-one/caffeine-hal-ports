@@ -395,6 +395,7 @@ cfn_hal_usb_construct(cfn_hal_usb_t *driver, const cfn_hal_usb_config_t *config,
 
     return CFN_HAL_ERROR_OK;
 #else
+    CFN_HAL_UNUSED(config);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }

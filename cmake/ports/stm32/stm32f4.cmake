@@ -28,12 +28,14 @@ set(PORT_SOURCES_LIST "")
 
 # Helper to conditionally add modules
 macro(cfn_add_stm32f4_module NAME VENDOR_FILES PORT_FILES)
+    # Port files are ALWAYS added to ensure construct/destruct symbols exist
+    foreach(PFILE IN ITEMS ${PORT_FILES})
+        list(APPEND PORT_SOURCES_LIST "${CMAKE_CURRENT_SOURCE_DIR}/${PFILE}")
+    endforeach()
+
     if(CFN_HAL_${NAME} STREQUAL "ON")
-        foreach(VFILE IN LISTS VENDOR_FILES)
+        foreach(VFILE IN ITEMS ${VENDOR_FILES})
             list(APPEND VENDOR_SOURCES_LIST "${HAL_SRC_DIR}/${VFILE}")
-        endforeach()
-        foreach(PFILE IN LISTS PORT_FILES)
-            list(APPEND PORT_SOURCES_LIST "${CMAKE_CURRENT_SOURCE_DIR}/${PFILE}")
         endforeach()
         set(HAL_${NAME}_MODULE_ENABLED 1)
     else()
@@ -131,7 +133,13 @@ if(DEFINED CAFFEINE_BOOTLOADER_SIZE_HEX)
     target_compile_definitions(${PROJECT_NAME} PUBLIC USER_VECT_TAB_ADDRESS VECT_TAB_OFFSET=${CAFFEINE_BOOTLOADER_SIZE_HEX})
 endif()
 
+if(DEFINED CAFFEINE_LINKER_SCRIPT)
+    target_link_options(${PROJECT_NAME} INTERFACE
+        -T ${CMAKE_CURRENT_LIST_DIR}/../../../linker/${CAFFEINE_LINKER_SCRIPT}
+    )
+endif()
+
+# Always output the memory map regardless of custom linker script
 target_link_options(${PROJECT_NAME} INTERFACE
-    -T ${CMAKE_CURRENT_LIST_DIR}/../../../linker/${CAFFEINE_BOARD_LINKER}
     -Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/firmware.map
 )

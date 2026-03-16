@@ -23,7 +23,7 @@ static HASH_HandleTypeDef port_hhash;
 #endif
 
 #ifdef HAL_RNG_MODULE_ENABLED
-static RNG_HandleTypeDef  port_hrng;
+static RNG_HandleTypeDef port_hrng;
 #endif
 
 /* VMT Implementations ----------------------------------------------*/
@@ -129,7 +129,7 @@ static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint3
 static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
     CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
+    CFN_HAL_UNUSED(error_mask);
     return CFN_HAL_ERROR_OK;
 }
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
@@ -296,6 +296,7 @@ cfn_hal_error_code_t cfn_hal_crypto_construct(cfn_hal_crypto_t              *dri
     driver->phy = phy;
     return CFN_HAL_ERROR_OK;
 #else
+    CFN_HAL_UNUSED(config);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
