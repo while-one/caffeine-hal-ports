@@ -36,10 +36,25 @@ This repository contains the hardware-specific implementations (VMT wrappers) fo
 
 ## Architecture & Build Infrastructure
 
-This repository employs a clean, target-based CMake architecture driven by modular `CMakePresets.json` provided via the **`caffeine-build`** submodule:
-- **Global Constraints:** Strict warnings (`-Werror` by default), `-Os` size optimization, and dead-code elimination preparation are applied globally.
-- **Submodule Presets:** Base profiles and toolchains are centralized in the `caffeine-build` repository. Local presets inherit from these bases to define silicon-specific macros.
-- **Port Recipes:** Define silicon-specific flags, fetch vendor SDKs via `FetchContent`, and compile VMT wrappers. Linker scripts are exported as absolute paths via `INTERFACE` properties, simplifying application-level integration.
+This repository employs a clean, target-based CMake architecture driven by modular `CMakePresets.json` and a **"Hardware Contract"** model:
+- **Zero Assumption:** By default, no peripherals are enabled. Every target MCU preset must explicitly declare its hardware capabilities (e.g., `CFN_HAL_UART: ON`).
+- **Hierarchical Presets:** Capabilities are managed through hidden feature sets in `caffeine-build`, ensuring consistency and zero duplication across variants.
+- **Dynamic Configuration:** The vendor HAL (`hal_conf.h`) and source file lists are automatically generated and synchronized with the CMake hardware contract.
+- **Global Constraints:** Strict warnings (`-Werror`), `-Os` size optimization, and dead-code elimination are applied globally.
+- **Linker Accuracy:** Presets use full silicon part numbers (e.g., `STM32F417VG`) to ensure accurate memory maps and linker script selection via `CAFFEINE_LINKER_SCRIPT`.
+
+### Overriding the Default Linker Script
+By default, the HAL Ports library automatically propagates a standard memory map to your application via the `CAFFEINE_LINKER_SCRIPT` cache variable defined in your preset.
+
+If your application requires a custom memory layout (e.g., for a bootloader offset), you can override this behavior by simply **omitting** `CAFFEINE_LINKER_SCRIPT` from your `CMakePresets.json` (or setting it to an empty string) and explicitly defining it in your application's `CMakeLists.txt`:
+
+```cmake
+# 1. Fetch and link the HAL (No default linker script is injected)
+target_link_libraries(my_app PRIVATE caffeine::hal-ports)
+
+# 2. Apply your custom linker script
+target_link_options(my_app PRIVATE -T ${CMAKE_CURRENT_SOURCE_DIR}/my_custom_linker.ld)
+```
 
 ---
 

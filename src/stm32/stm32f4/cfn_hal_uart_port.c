@@ -11,6 +11,8 @@
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
 
+#ifdef HAL_UART_MODULE_ENABLED
+
 /* Private Data -----------------------------------------------------*/
 
 static USART_TypeDef *const PORT_INSTANCES[CFN_HAL_UART_PORT_MAX] = {
@@ -452,11 +454,14 @@ static const cfn_hal_uart_api_t UART_API = {
     .rx_dma = port_uart_rx_dma
 };
 
+#endif /* HAL_UART_MODULE_ENABLED */
+
 /* Instantiation ----------------------------------------------------*/
 
 cfn_hal_error_code_t
 cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *config, const cfn_hal_uart_phy_t *phy)
 {
+#ifdef HAL_UART_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -478,10 +483,17 @@ cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *conf
     port_drivers[port_id] = driver;
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(config);
+    CFN_HAL_UNUSED(phy);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }
 
 cfn_hal_error_code_t cfn_hal_uart_destruct(cfn_hal_uart_t *driver)
 {
+#ifdef HAL_UART_MODULE_ENABLED
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -500,4 +512,8 @@ cfn_hal_error_code_t cfn_hal_uart_destruct(cfn_hal_uart_t *driver)
     driver->phy = NULL;
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }

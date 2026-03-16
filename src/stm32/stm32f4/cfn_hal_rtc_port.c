@@ -10,6 +10,8 @@
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_stm32_error.h"
 
+#ifdef HAL_RTC_MODULE_ENABLED
+
 /* Private Data -----------------------------------------------------*/
 
 static RTC_TypeDef *const PORT_INSTANCES[CFN_HAL_RTC_PORT_MAX] = {
@@ -302,11 +304,14 @@ static const cfn_hal_rtc_api_t RTC_API = {
     .stop_alarm = port_rtc_stop_alarm
 };
 
+#endif /* HAL_RTC_MODULE_ENABLED */
+
 /* Instantiation ----------------------------------------------------*/
 
 cfn_hal_error_code_t
 cfn_hal_rtc_construct(cfn_hal_rtc_t *driver, const cfn_hal_rtc_config_t *config, const cfn_hal_rtc_phy_t *phy)
 {
+#ifdef HAL_RTC_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -328,10 +333,17 @@ cfn_hal_rtc_construct(cfn_hal_rtc_t *driver, const cfn_hal_rtc_config_t *config,
     port_drivers[port_id] = driver;
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(config);
+    CFN_HAL_UNUSED(phy);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }
 
 cfn_hal_error_code_t cfn_hal_rtc_destruct(cfn_hal_rtc_t *driver)
 {
+#ifdef HAL_RTC_MODULE_ENABLED
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -350,4 +362,8 @@ cfn_hal_error_code_t cfn_hal_rtc_destruct(cfn_hal_rtc_t *driver)
     driver->phy = NULL;
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }

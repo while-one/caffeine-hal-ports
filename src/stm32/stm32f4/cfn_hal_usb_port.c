@@ -12,6 +12,8 @@
 #include "cfn_hal_stm32_error.h"
 #include <string.h>
 
+#if defined(HAL_PCD_MODULE_ENABLED)
+
 /* Private Data -----------------------------------------------------*/
 
 static USB_OTG_GlobalTypeDef *const PORT_INSTANCES[CFN_HAL_USB_PORT_MAX] = {
@@ -363,6 +365,8 @@ static const cfn_hal_usb_api_t USB_API = {
     .get_rx_data_size = port_usb_get_rx_data_size
 };
 
+#endif /* HAL_PCD_MODULE_ENABLED */
+
 /* Instantiation ----------------------------------------------------*/
 
 cfn_hal_error_code_t
@@ -373,6 +377,7 @@ cfn_hal_usb_construct(cfn_hal_usb_t *driver, const cfn_hal_usb_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
+#if defined(HAL_PCD_MODULE_ENABLED)
     uint32_t port_id = (uint32_t) (uintptr_t) phy->instance;
     if (port_id >= CFN_HAL_USB_PORT_MAX || PORT_INSTANCES[port_id] == NULL)
     {
@@ -389,6 +394,10 @@ cfn_hal_usb_construct(cfn_hal_usb_t *driver, const cfn_hal_usb_config_t *config,
     port_drivers[port_id] = driver;
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(config);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }
 
 cfn_hal_error_code_t cfn_hal_usb_destruct(cfn_hal_usb_t *driver)
@@ -398,11 +407,13 @@ cfn_hal_error_code_t cfn_hal_usb_destruct(cfn_hal_usb_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
+#if defined(HAL_PCD_MODULE_ENABLED)
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     if (port_id < CFN_HAL_USB_PORT_MAX)
     {
         port_drivers[port_id] = NULL;
     }
+#endif
 
     driver->api = NULL;
     driver->base.type = CFN_HAL_PERIPHERAL_TYPE_USB;
