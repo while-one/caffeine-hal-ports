@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(caffeine-hal-ports VERSION 0.2.2 LANGUAGES C ASM)
+project(caffeine-hal-ports VERSION 0.2.3 LANGUAGES C ASM)
 
 # Global standards for the Caffeine Framework
 set(CMAKE_C_STANDARD 11)
