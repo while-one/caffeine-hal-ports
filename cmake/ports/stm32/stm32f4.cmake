@@ -99,6 +99,18 @@ configure_file(
 # --- 1. Vendor SDK Isolation Target ---
 add_library(vendor_sdk OBJECT ${VENDOR_SOURCES_LIST} ${STARTUP_FILE})
 target_compile_options(vendor_sdk PRIVATE -w)
+target_link_libraries(vendor_sdk PRIVATE caffeine::hal)
+
+set(CPU_FLAGS -mcpu=${CAFFEINE_MCU_CORE} -mthumb)
+target_compile_options(vendor_sdk PUBLIC ${CPU_FLAGS})
+target_compile_options(vendor_sdk PRIVATE ${CPU_FLAGS})
+
+if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
+    separate_arguments(MCU_FLAGS_LIST NATIVE_COMMAND ${CAFFEINE_MCU_COMPILE_OPTIONS})
+    target_compile_options(vendor_sdk PUBLIC ${MCU_FLAGS_LIST})
+    target_compile_options(vendor_sdk PRIVATE ${MCU_FLAGS_LIST})
+endif()
+
 target_include_directories(vendor_sdk SYSTEM PRIVATE
     ${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc
     ${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Include
@@ -107,13 +119,29 @@ target_include_directories(vendor_sdk SYSTEM PRIVATE
 target_include_directories(vendor_sdk PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 target_compile_definitions(vendor_sdk PUBLIC USE_HAL_DRIVER ${CAFFEINE_MCU_MACRO})
-set(CPU_FLAGS -mcpu=${CAFFEINE_MCU_CORE} -mthumb)
-target_compile_options(vendor_sdk PUBLIC ${CPU_FLAGS})
 
 # --- 2. Main Port Library ---
 add_library(${PROJECT_NAME} STATIC ${PORT_SOURCES_LIST})
-target_compile_options(${PROJECT_NAME} PUBLIC ${CPU_FLAGS})
+target_compile_options(${PROJECT_NAME} PRIVATE ${CPU_FLAGS})
+target_compile_options(${PROJECT_NAME} INTERFACE ${CPU_FLAGS})
+target_link_options(${PROJECT_NAME} INTERFACE ${CPU_FLAGS})
+
+if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
+    separate_arguments(MCU_FLAGS_LIST NATIVE_COMMAND ${CAFFEINE_MCU_COMPILE_OPTIONS})
+    target_compile_options(${PROJECT_NAME} PRIVATE ${MCU_FLAGS_LIST})
+    target_compile_options(${PROJECT_NAME} INTERFACE ${MCU_FLAGS_LIST})
+    target_link_options(${PROJECT_NAME} INTERFACE ${MCU_FLAGS_LIST})
+endif()
+
+# We link vendor_sdk INTERFACE so that downstream executables pull in the object files (startup, etc)
+target_link_libraries(${PROJECT_NAME} INTERFACE $<TARGET_OBJECTS:vendor_sdk>)
 target_link_libraries(${PROJECT_NAME} PRIVATE $<TARGET_OBJECTS:vendor_sdk>)
+
+# Export port-specific headers and generated config to downstream users
+target_include_directories(${PROJECT_NAME} PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/../../../src/stm32/stm32f4>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
+)
 
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
     ${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc
@@ -124,22 +152,20 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/g
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC USE_HAL_DRIVER ${CAFFEINE_MCU_MACRO})
 
-if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
-    separate_arguments(EXTRA_FLAGS_LIST NATIVE_COMMAND ${CAFFEINE_MCU_COMPILE_OPTIONS})
-    target_compile_options(${PROJECT_NAME} PUBLIC ${EXTRA_FLAGS_LIST})
-endif()
-
 if(DEFINED CAFFEINE_BOOTLOADER_SIZE_HEX)
     target_compile_definitions(${PROJECT_NAME} PUBLIC USER_VECT_TAB_ADDRESS VECT_TAB_OFFSET=${CAFFEINE_BOOTLOADER_SIZE_HEX})
 endif()
 
 if(DEFINED CAFFEINE_LINKER_SCRIPT)
-    target_link_options(${PROJECT_NAME} INTERFACE
-        -T ${CMAKE_CURRENT_LIST_DIR}/../../../linker/${CAFFEINE_LINKER_SCRIPT}
+    find_file(LINKER_SCRIPT_FULL_PATH 
+        NAMES ${CAFFEINE_LINKER_SCRIPT}
+        PATHS "${CMAKE_CURRENT_LIST_DIR}/../../../linker"
+        NO_DEFAULT_PATH
     )
+    if(LINKER_SCRIPT_FULL_PATH)
+        target_link_options(${PROJECT_NAME} INTERFACE
+            -T "${LINKER_SCRIPT_FULL_PATH}"
+        )
+    endif()
 endif()
 
-# Always output the memory map regardless of custom linker script
-target_link_options(${PROJECT_NAME} INTERFACE
-    -Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/firmware.map
-)

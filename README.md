@@ -43,6 +43,22 @@ This repository employs a clean, target-based CMake architecture driven by modul
 - **Global Constraints:** Strict warnings (`-Werror`), `-Os` size optimization, and dead-code elimination are applied globally.
 - **Linker Accuracy:** Presets use full silicon part numbers (e.g., `STM32F417VG`) to ensure accurate memory maps and linker script selection via `CAFFEINE_LINKER_SCRIPT`.
 
+### Hardware Parameter Overrides
+The framework allows applications to override default hardware parameters directly from their `CMakePresets.json` without modifying the core port files. These values are injected into the generated `stm32f4xx_hal_conf.h`.
+
+Available override variables:
+- `CFN_HAL_CLOCK_HSE_HZ`: External High Speed oscillator frequency in Hz (e.g., `8000000`).
+- `CFN_HAL_CLOCK_LSE_HZ`: External Low Speed oscillator frequency in Hz (e.g., `32768`).
+- `CFN_HAL_POWER_VDD_MV`: VDD voltage in millivolts (e.g., `3300`).
+
+Example `cacheVariables` in an application's `CMakePresets.json`:
+```json
+"cacheVariables": {
+  "CFN_HAL_CLOCK_HSE_HZ": "8000000",
+  "CFN_HAL_POWER_VDD_MV": "3300"
+}
+```
+
 ### Overriding the Default Linker Script
 By default, the HAL Ports library automatically propagates a standard memory map to your application via the `CAFFEINE_LINKER_SCRIPT` cache variable defined in your preset.
 
