@@ -11,6 +11,8 @@
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
 
+#ifdef HAL_DAC_MODULE_ENABLED
+
 /* Private Data -----------------------------------------------------*/
 
 static DAC_TypeDef *const PORT_INSTANCES[CFN_HAL_DAC_PORT_MAX] = {
@@ -277,11 +279,14 @@ static const cfn_hal_dac_api_t DAC_API = {
     .write_dma = port_dac_write_dma
 };
 
+#endif /* HAL_DAC_MODULE_ENABLED */
+
 /* Instantiation ----------------------------------------------------*/
 
 cfn_hal_error_code_t
 cfn_hal_dac_construct(cfn_hal_dac_t *driver, const cfn_hal_dac_config_t *config, const cfn_hal_dac_phy_t *phy)
 {
+#ifdef HAL_DAC_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -303,10 +308,17 @@ cfn_hal_dac_construct(cfn_hal_dac_t *driver, const cfn_hal_dac_config_t *config,
     port_drivers[port_id] = driver;
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(config);
+    CFN_HAL_UNUSED(phy);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }
 
 cfn_hal_error_code_t cfn_hal_dac_destruct(cfn_hal_dac_t *driver)
 {
+#ifdef HAL_DAC_MODULE_ENABLED
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -325,4 +337,8 @@ cfn_hal_error_code_t cfn_hal_dac_destruct(cfn_hal_dac_t *driver)
     driver->phy = NULL;
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }

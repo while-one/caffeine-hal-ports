@@ -12,6 +12,8 @@
 #include "cfn_hal_stm32_error.h"
 #include <string.h>
 
+#ifdef HAL_ETH_MODULE_ENABLED
+
 /* Private Data -----------------------------------------------------*/
 
 static ETH_TypeDef *const PORT_INSTANCES[CFN_HAL_ETH_PORT_MAX] = {
@@ -306,11 +308,14 @@ static const cfn_hal_eth_api_t ETH_API = {
     .get_link_status = port_eth_get_link_status
 };
 
+#endif /* HAL_ETH_MODULE_ENABLED */
+
 /* Instantiation ----------------------------------------------------*/
 
 cfn_hal_error_code_t
 cfn_hal_eth_construct(cfn_hal_eth_t *driver, const cfn_hal_eth_config_t *config, const cfn_hal_eth_phy_t *phy)
 {
+#ifdef HAL_ETH_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -332,10 +337,17 @@ cfn_hal_eth_construct(cfn_hal_eth_t *driver, const cfn_hal_eth_config_t *config,
     port_drivers[port_id] = driver;
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(config);
+    CFN_HAL_UNUSED(phy);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }
 
 cfn_hal_error_code_t cfn_hal_eth_destruct(cfn_hal_eth_t *driver)
 {
+#ifdef HAL_ETH_MODULE_ENABLED
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -354,4 +366,8 @@ cfn_hal_error_code_t cfn_hal_eth_destruct(cfn_hal_eth_t *driver)
     driver->phy = NULL;
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }

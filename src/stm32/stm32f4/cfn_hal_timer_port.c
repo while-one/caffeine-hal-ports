@@ -10,6 +10,8 @@
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_stm32_error.h"
 
+#ifdef HAL_TIM_MODULE_ENABLED
+
 /* Private Data -----------------------------------------------------*/
 
 static TIM_TypeDef *const PORT_INSTANCES[CFN_HAL_TIMER_PORT_MAX] = {
@@ -394,11 +396,14 @@ static const cfn_hal_timer_api_t TIMER_API = {
     .set_period = port_timer_set_period
 };
 
+#endif /* HAL_TIM_MODULE_ENABLED */
+
 /* Instantiation ----------------------------------------------------*/
 
 cfn_hal_error_code_t
 cfn_hal_timer_construct(cfn_hal_timer_t *driver, const cfn_hal_timer_config_t *config, const cfn_hal_timer_phy_t *phy)
 {
+#ifdef HAL_TIM_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -420,10 +425,17 @@ cfn_hal_timer_construct(cfn_hal_timer_t *driver, const cfn_hal_timer_config_t *c
     port_drivers[port_id] = driver;
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(config);
+    CFN_HAL_UNUSED(phy);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }
 
 cfn_hal_error_code_t cfn_hal_timer_destruct(cfn_hal_timer_t *driver)
 {
+#ifdef HAL_TIM_MODULE_ENABLED
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -442,4 +454,8 @@ cfn_hal_error_code_t cfn_hal_timer_destruct(cfn_hal_timer_t *driver)
     driver->phy = NULL;
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }

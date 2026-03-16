@@ -9,6 +9,8 @@
 #include "cfn_hal_wdt_port.h"
 #include "cfn_hal_stm32_error.h"
 
+#if defined(HAL_IWDG_MODULE_ENABLED) || defined(HAL_WWDG_MODULE_ENABLED)
+
 /* Private Data -----------------------------------------------------*/
 
 /* WDT enums usually not in cfn_hal_wdt.h because it's config-based,
@@ -45,7 +47,6 @@ static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
     return CFN_HAL_ERROR_OK;
 }
 
-/* ... base stubs ... */
 static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
 {
     CFN_HAL_UNUSED(base);
@@ -54,7 +55,6 @@ static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cf
 }
 static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
 {
-    CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(config);
     return port_base_init(base);
 }
@@ -151,6 +151,8 @@ static const cfn_hal_wdt_api_t WDT_API = {
     .feed = port_wdt_feed
 };
 
+#endif /* HAL_IWDG_MODULE_ENABLED || HAL_WWDG_MODULE_ENABLED */
+
 /* Instantiation ----------------------------------------------------*/
 
 cfn_hal_error_code_t
@@ -161,6 +163,7 @@ cfn_hal_wdt_construct(cfn_hal_wdt_t *driver, const cfn_hal_wdt_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
+#if defined(HAL_IWDG_MODULE_ENABLED) || defined(HAL_WWDG_MODULE_ENABLED)
     uint32_t port_id = (uint32_t) (uintptr_t) phy->instance;
     if (port_id >= CFN_HAL_WDT_PORT_MAX || PORT_INSTANCES[port_id] == NULL)
     {
@@ -174,6 +177,9 @@ cfn_hal_wdt_construct(cfn_hal_wdt_t *driver, const cfn_hal_wdt_config_t *config,
     driver->phy = phy;
 
     return CFN_HAL_ERROR_OK;
+#else
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }
 
 cfn_hal_error_code_t cfn_hal_wdt_destruct(cfn_hal_wdt_t *driver)

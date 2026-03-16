@@ -9,7 +9,7 @@
 #include "cfn_hal_qspi_port.h"
 #include "cfn_hal_stm32_error.h"
 
-#if defined(QUADSPI)
+#ifdef HAL_QSPI_MODULE_ENABLED
 
 /* Private Data -----------------------------------------------------*/
 
@@ -184,10 +184,13 @@ static const cfn_hal_qspi_api_t QSPI_API = {
     .memory_mapped_enable = port_qspi_memory_mapped_enable
 };
 
+#endif /* HAL_QSPI_MODULE_ENABLED */
+
 /* Instantiation ----------------------------------------------------*/
 cfn_hal_error_code_t
 cfn_hal_qspi_construct(cfn_hal_qspi_t *driver, const cfn_hal_qspi_config_t *config, const cfn_hal_qspi_phy_t *phy)
 {
+#ifdef HAL_QSPI_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -200,10 +203,17 @@ cfn_hal_qspi_construct(cfn_hal_qspi_t *driver, const cfn_hal_qspi_config_t *conf
     driver->phy = phy;
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(config);
+    CFN_HAL_UNUSED(phy);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }
 
 cfn_hal_error_code_t cfn_hal_qspi_destruct(cfn_hal_qspi_t *driver)
 {
+#ifdef HAL_QSPI_MODULE_ENABLED
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -216,25 +226,8 @@ cfn_hal_error_code_t cfn_hal_qspi_destruct(cfn_hal_qspi_t *driver)
     driver->phy = NULL;
 
     return CFN_HAL_ERROR_OK;
-}
-
 #else
-
-/* Stub implementation for variants without QUADSPI */
-
-cfn_hal_error_code_t
-cfn_hal_qspi_construct(cfn_hal_qspi_t *driver, const cfn_hal_qspi_config_t *config, const cfn_hal_qspi_phy_t *phy)
-{
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(config);
-    CFN_HAL_UNUSED(phy);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-cfn_hal_error_code_t cfn_hal_qspi_destruct(cfn_hal_qspi_t *driver)
-{
     CFN_HAL_UNUSED(driver);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
 #endif
+}

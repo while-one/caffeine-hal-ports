@@ -10,6 +10,8 @@
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_stm32_error.h"
 
+#ifdef HAL_SD_MODULE_ENABLED
+
 /* Private Data -----------------------------------------------------*/
 
 static SD_HandleTypeDef port_hsd;
@@ -196,10 +198,13 @@ static const cfn_hal_sdio_api_t SDIO_API = {
     .wait_card_ready = port_sdio_wait_card_ready
 };
 
+#endif /* HAL_SD_MODULE_ENABLED */
+
 /* Instantiation ----------------------------------------------------*/
 cfn_hal_error_code_t
 cfn_hal_sdio_construct(cfn_hal_sdio_t *driver, const cfn_hal_sdio_config_t *config, const cfn_hal_sdio_phy_t *phy)
 {
+#ifdef HAL_SD_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -212,10 +217,17 @@ cfn_hal_sdio_construct(cfn_hal_sdio_t *driver, const cfn_hal_sdio_config_t *conf
     driver->phy = phy;
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(config);
+    CFN_HAL_UNUSED(phy);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }
 
 cfn_hal_error_code_t cfn_hal_sdio_destruct(cfn_hal_sdio_t *driver)
 {
+#ifdef HAL_SD_MODULE_ENABLED
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -228,4 +240,8 @@ cfn_hal_error_code_t cfn_hal_sdio_destruct(cfn_hal_sdio_t *driver)
     driver->phy = NULL;
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }
