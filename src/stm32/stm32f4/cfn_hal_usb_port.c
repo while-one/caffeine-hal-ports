@@ -372,12 +372,12 @@ static const cfn_hal_usb_api_t USB_API = {
 cfn_hal_error_code_t
 cfn_hal_usb_construct(cfn_hal_usb_t *driver, const cfn_hal_usb_config_t *config, const cfn_hal_usb_phy_t *phy)
 {
+#if defined(HAL_PCD_MODULE_ENABLED)
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-#if defined(HAL_PCD_MODULE_ENABLED)
     uint32_t port_id = (uint32_t) (uintptr_t) phy->instance;
     if (port_id >= CFN_HAL_USB_PORT_MAX || PORT_INSTANCES[port_id] == NULL)
     {
@@ -395,7 +395,9 @@ cfn_hal_usb_construct(cfn_hal_usb_t *driver, const cfn_hal_usb_config_t *config,
 
     return CFN_HAL_ERROR_OK;
 #else
+    CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
+    CFN_HAL_UNUSED(phy);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }

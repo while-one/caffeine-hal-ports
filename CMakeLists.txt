@@ -21,6 +21,7 @@ if(CAFFEINE_WARNINGS_AS_ERRORS)
     list(APPEND CAFFEINE_COMPILE_OPTIONS -Werror)
 endif()
 
+MESSAGE(STATUS "Target CAFFEINE_BUILD_STAGE: ${CAFFEINE_BUILD_STAGE}")
 
 # Export compile commands for analysis tools
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -31,7 +32,7 @@ FetchContent_Declare(
     caffeine-hal
     GIT_REPOSITORY https://github.com/while-one/caffeine-hal.git
     GIT_TAG        v0.4.3
-)
+    )
 FetchContent_MakeAvailable(caffeine-hal)
 
 # --- Modular Port Selection ---
@@ -51,9 +52,21 @@ set(PORT_DIR "cmake/ports/${CFN_HAL_PORT_VENDOR}/${CFN_HAL_PORT_FAMILY}.cmake")
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${PORT_DIR}")
     include(${PORT_DIR})
     set(ANALYSIS_SUBDIR "${CFN_HAL_PORT_VENDOR}/${CFN_HAL_PORT_FAMILY}")
+    
+    # --- Universal Port Target Configuration ---
+    # Depending on the recipe (e.g., mock-tests vs stm32f4), the target might be an INTERFACE or STATIC library.
+    get_target_property(TARGET_TYPE ${PROJECT_NAME} TYPE)
+
+    if(TARGET_TYPE STREQUAL "INTERFACE_LIBRARY")
+        target_compile_options(${PROJECT_NAME} INTERFACE ${CAFFEINE_COMPILE_OPTIONS})
+        target_link_libraries(${PROJECT_NAME} INTERFACE caffeine::hal)
+    else()
+        target_compile_options(${PROJECT_NAME} PRIVATE ${CAFFEINE_COMPILE_OPTIONS})
+        target_compile_options(${PROJECT_NAME} INTERFACE ${CAFFEINE_COMPILE_OPTIONS})
+        target_link_libraries(${PROJECT_NAME} PUBLIC caffeine::hal)
+    endif()
+
     add_library(caffeine::hal-ports ALIAS ${PROJECT_NAME})
-    target_compile_options(${PROJECT_NAME} INTERFACE ${CAFFEINE_COMPILE_OPTIONS} )
-    target_link_libraries(${PROJECT_NAME} INTERFACE caffeine::hal)
 else()
     message(FATAL_ERROR "Port implementation not found: ${PORT_DIR}")
 endif()
@@ -82,13 +95,11 @@ endif()
 
 # Gather all source files for analysis (Port-specific and tests)
 # We glob based on the family directory to avoid noise from other ports
-file(GLOB_RECURSE ALL_FORMAT_SOURCES 
-    "src/${ANALYSIS_SUBDIR}/*.c" 
-    "src/${ANALYSIS_SUBDIR}/*.h"
-    "tests/*.cpp"
-)
+file(GLOB_RECURSE PORT_SOURCES_C "src/${ANALYSIS_SUBDIR}/*.c")
+file(GLOB_RECURSE PORT_SOURCES_H "src/${ANALYSIS_SUBDIR}/*.h")
+file(GLOB_RECURSE TEST_SOURCES_CPP "tests/*.cpp")
 
-# Convert to list for clang-tidy
+set(ALL_FORMAT_SOURCES ${PORT_SOURCES_C} ${PORT_SOURCES_H} ${TEST_SOURCES_CPP})
 set(PORT_SOURCES ${PORT_SOURCES_C}) # Only .c for clang-tidy
 set(ALL_ANALYSIS_SOURCES ${PORT_SOURCES_C} ${TEST_SOURCES_CPP})
 
@@ -128,7 +139,6 @@ if(CPPCHECK)
         --suppress=missingIncludeSystem
         --suppress=unusedFunction
         --suppress=*:*/_deps/*
-        --suppress=*:*/caffeine-hal/*
         --inline-suppr
         --check-level=exhaustive
         -D__GNUC__

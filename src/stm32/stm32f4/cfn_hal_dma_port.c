@@ -28,7 +28,7 @@ static cfn_hal_dma_t    *port_drivers[CFN_HAL_DMA_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
-static int32_t get_port_id_from_handle(DMA_HandleTypeDef *hdma)
+static int32_t get_port_id_from_handle(const DMA_HandleTypeDef *hdma)
 {
     for (uint32_t i = 0; i < CFN_HAL_DMA_PORT_MAX; i++)
     {
@@ -200,7 +200,7 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 /* ST HAL Callback Overrides ----------------------------------------*/
 
-void HAL_DMA_XferCpltCallback(DMA_HandleTypeDef *hdma) // NOLINT(readability-identifier-naming)
+void HAL_DMA_XferCpltCallback(const DMA_HandleTypeDef *hdma) // NOLINT(readability-identifier-naming)
 {
     int32_t port_id = get_port_id_from_handle(hdma);
     if ((port_id >= 0) && (port_drivers[port_id] != NULL))
@@ -213,7 +213,7 @@ void HAL_DMA_XferCpltCallback(DMA_HandleTypeDef *hdma) // NOLINT(readability-ide
     }
 }
 
-void HAL_DMA_XferHalfCpltCallback(DMA_HandleTypeDef *hdma) // NOLINT(readability-identifier-naming)
+void HAL_DMA_XferHalfCpltCallback(const DMA_HandleTypeDef *hdma) // NOLINT(readability-identifier-naming)
 {
     int32_t port_id = get_port_id_from_handle(hdma);
     if ((port_id >= 0) && (port_drivers[port_id] != NULL))
@@ -226,7 +226,7 @@ void HAL_DMA_XferHalfCpltCallback(DMA_HandleTypeDef *hdma) // NOLINT(readability
     }
 }
 
-void HAL_DMA_XferErrorCallback(DMA_HandleTypeDef *hdma) // NOLINT(readability-identifier-naming)
+void HAL_DMA_XferErrorCallback(const DMA_HandleTypeDef *hdma) // NOLINT(readability-identifier-naming)
 {
     int32_t port_id = get_port_id_from_handle(hdma);
     if ((port_id >= 0) && (port_drivers[port_id] != NULL))
