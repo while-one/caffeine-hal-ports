@@ -77,7 +77,7 @@ jobs:
         github-token: ${{secrets.GITHUB_TOKEN}}
         script: |
           const fs = require('fs');
-          const coverage = fs.readFileSync('build/tests-native/coverage.txt', 'utf8');
+          const coverage = fs.readFileSync('build/tests-native-ports/coverage.txt', 'utf8');
           github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
