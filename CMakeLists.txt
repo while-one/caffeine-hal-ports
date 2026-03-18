@@ -6,22 +6,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-# User-configurable flags (with sensible defaults)
-option(CAFFEINE_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
-set(CAFFEINE_OPTIMIZATION_LEVEL "-Os" CACHE STRING "Compiler optimization level (e.g., -O0, -O2, -Os, -O3)")
-
-# Universal strict warnings and preparation for dead-code elimination
-set(CAFFEINE_COMPILE_OPTIONS
-    -Wall -Wextra -Wpedantic -Wshadow
-    -ffunction-sections -fdata-sections
-    ${CAFFEINE_OPTIMIZATION_LEVEL}
-)
-
-if(CAFFEINE_WARNINGS_AS_ERRORS)
-    list(APPEND CAFFEINE_COMPILE_OPTIONS -Werror)
-endif()
-
-# Useful for IDEs, clang-tidy, and clangd
+# Export compile commands for analysis tools
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # --- Dependency: Caffeine-HAL ---
@@ -29,44 +14,45 @@ include(FetchContent)
 FetchContent_Declare(
     caffeine-hal
     GIT_REPOSITORY https://github.com/while-one/caffeine-hal.git
-    GIT_TAG        v0.4.2
+    GIT_TAG        main
 )
 FetchContent_MakeAvailable(caffeine-hal)
 
-if(NOT DEFINED CAFFEINE_VENDOR)
-    message(FATAL_ERROR "Please define CAFFEINE_VENDOR in your CMakePreset (e.g., stm32)")
+# --- Modular Port Selection ---
+# Each port is isolated in its own directory. 
+# We define CAFFEINE_HAL_PORT_VENDOR and CFN_HAL_PORT_FAMILY in the CMakePresets.json
+if(NOT DEFINED CFN_HAL_PORT_VENDOR)
+    message(FATAL_ERROR "Please define CFN_HAL_PORT_VENDOR in your CMakePreset (e.g., stm32)")
 endif()
 
-if(NOT DEFINED CAFFEINE_PORT_FAMILY)
-    message(FATAL_ERROR "Please configure using a CMakePreset (e.g., cmake --preset stm32f407-release)")
+if(NOT DEFINED CFN_HAL_PORT_FAMILY)
+    message(FATAL_ERROR "Please define CFN_HAL_PORT_FAMILY in your CMakePreset (e.g., stm32f4)")
 endif()
 
-# Dynamically include the specific vendor recipe
-include(cmake/ports/${CAFFEINE_VENDOR}/${CAFFEINE_PORT_FAMILY}.cmake)
+# Map the family to a subdirectory
+set(PORT_DIR "cmake/ports/${CFN_HAL_PORT_VENDOR}/${CFN_HAL_PORT_FAMILY}.cmake")
 
-# --- Universal Port Target Configuration ---
-# Depending on the recipe (e.g., mock-tests vs stm32f4), the target might be an INTERFACE or STATIC library.
-get_target_property(TARGET_TYPE ${PROJECT_NAME} TYPE)
-
-if(TARGET_TYPE STREQUAL "INTERFACE_LIBRARY")
-    target_compile_options(${PROJECT_NAME} INTERFACE ${CAFFEINE_COMPILE_OPTIONS})
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${PORT_DIR}")
+    include(${PORT_DIR})
+    set(ANALYSIS_SUBDIR "${CFN_HAL_PORT_VENDOR}/${CFN_HAL_PORT_FAMILY}")
+    add_library(caffeine::hal-ports ALIAS ${PROJECT_NAME})
     target_link_libraries(${PROJECT_NAME} INTERFACE caffeine::hal)
 else()
-    target_compile_options(${PROJECT_NAME} PRIVATE ${CAFFEINE_COMPILE_OPTIONS})
-    target_compile_options(${PROJECT_NAME} INTERFACE ${CAFFEINE_COMPILE_OPTIONS})
-    target_link_libraries(${PROJECT_NAME} PUBLIC caffeine::hal)
+    message(FATAL_ERROR "Port implementation not found: ${PORT_DIR}")
 endif()
-
-# Create the standard generic alias for user applications
-add_library(caffeine::hal-ports ALIAS ${PROJECT_NAME})
 
 # Consistent naming for exported target
 set_target_properties(${PROJECT_NAME} PROPERTIES EXPORT_NAME hal-ports)
 
 # --- Unit Testing (CTest & GoogleTest) ---
-option(CAFFEINE_PORT_BUILD_TESTS "Build the unit tests (Requires host compiler)" OFF)
+if(PROJECT_IS_TOP_LEVEL)
+    set(DEFAULT_BUILD_TESTS ON)
+else()
+    set(DEFAULT_BUILD_TESTS OFF)
+endif()
+option(CFN_HAL_PORT_BUILD_TESTS "Build the unit tests (Requires host compiler)" ${DEFAULT_BUILD_TESTS})
 
-if(CAFFEINE_PORT_BUILD_TESTS)
+if(CFN_HAL_PORT_BUILD_TESTS)
     include(CTest)
     if(BUILD_TESTING)
         add_subdirectory(tests)
@@ -76,22 +62,16 @@ endif()
 # ==============================================================================
 # Tooling: Code Formatting & Static Analysis
 # ==============================================================================
-# We use CONFIGURE_DEPENDS so CMake knows to re-run if we add or remove files.
 
-# Determine the correct source subdirectory for the current vendor
-if(CAFFEINE_VENDOR STREQUAL "linux")
-    set(ANALYSIS_SUBDIR "posix")
-else()
-    set(ANALYSIS_SUBDIR "${CAFFEINE_VENDOR}")
-endif()
+# Gather all source files for analysis (Port-specific and tests)
+# We glob based on the family directory to avoid noise from other ports
+file(GLOB_RECURSE ALL_FORMAT_SOURCES 
+    "src/${ANALYSIS_SUBDIR}/*.c" 
+    "src/${ANALYSIS_SUBDIR}/*.h"
+    "tests/*.cpp"
+)
 
-file(GLOB_RECURSE PORT_SOURCES_C CONFIGURE_DEPENDS "src/${ANALYSIS_SUBDIR}/**/*.c")
-file(GLOB_RECURSE PORT_SOURCES_H CONFIGURE_DEPENDS "src/${ANALYSIS_SUBDIR}/**/*.h")
-
-file(GLOB_RECURSE TEST_SOURCES_CPP CONFIGURE_DEPENDS "tests/**/*.cpp")
-file(GLOB_RECURSE TEST_SOURCES_H CONFIGURE_DEPENDS "tests/**/*.h")
-
-set(ALL_FORMAT_SOURCES ${PORT_SOURCES_C} ${PORT_SOURCES_H} ${TEST_SOURCES_CPP} ${TEST_SOURCES_H})
+# Convert to list for clang-tidy
 set(PORT_SOURCES ${PORT_SOURCES_C}) # Only .c for clang-tidy
 set(ALL_ANALYSIS_SOURCES ${PORT_SOURCES_C} ${TEST_SOURCES_CPP})
 
@@ -164,6 +144,22 @@ if(CLANG_TIDY)
     endif()
 else()
     message(WARNING "clang-tidy not found. '${PROJECT_NAME}-tidy' target will not be available.")
+endif()
+
+# 4. C11 Compliance Check
+add_executable(${PROJECT_NAME}-compliance ${PROJECT_SOURCE_DIR}/tests/compliance.c)
+target_link_libraries(${PROJECT_NAME}-compliance PRIVATE ${PROJECT_NAME})
+target_compile_options(${PROJECT_NAME}-compliance PRIVATE
+    -std=c11
+    -pedantic-errors
+    -Wall
+    -Wextra
+    -Werror
+)
+set_target_properties(${PROJECT_NAME}-compliance PROPERTIES EXCLUDE_FROM_ALL ON)
+
+if(TARGET ${PROJECT_NAME}-analyze)
+    add_dependencies(${PROJECT_NAME}-analyze ${PROJECT_NAME}-compliance)
 endif()
 
 # ==============================================================================

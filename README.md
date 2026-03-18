@@ -74,6 +74,17 @@ target_link_options(my_app PRIVATE -T ${CMAKE_CURRENT_SOURCE_DIR}/my_custom_link
 
 ---
 
+## Development & Analysis
+
+The project includes built-in targets for maintaining code quality:
+
+*   **Format Code:** `cmake --build build/tests-native --target caffeine-hal-ports-format`
+*   **Run Static Analysis:** `cmake --build build/tests-native --target caffeine-hal-ports-analyze`
+*   **Verify C11 Compliance:** `cmake --build build/tests-native --target caffeine-hal-ports-compliance`
+*   **Run Unit Tests:** `cmake --build build/tests-native --target caffeine-hal-ports-test`
+
+---
+
 ## Build Environment (Docker & Local)
 
 To ensure consistency between local development and CI, all build environments are managed via the **`caffeine-build`** submodule. Docker images are pre-built and hosted by the central build repository.
