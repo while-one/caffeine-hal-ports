@@ -6,6 +6,22 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
+# User-configurable flags (with sensible defaults)
+option(CAFFEINE_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
+set(CAFFEINE_OPTIMIZATION_LEVEL "-Os" CACHE STRING "Compiler optimization level (e.g., -O0, -O2, -Os, -O3)")
+
+# Universal strict warnings and preparation for dead-code elimination
+set(CAFFEINE_COMPILE_OPTIONS
+        -Wall -Wextra -Wpedantic -Wshadow
+        -ffunction-sections -fdata-sections
+        ${CAFFEINE_OPTIMIZATION_LEVEL}
+)
+
+if(CAFFEINE_WARNINGS_AS_ERRORS)
+    list(APPEND CAFFEINE_COMPILE_OPTIONS -Werror)
+endif()
+
+
 # Export compile commands for analysis tools
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -36,6 +52,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${PORT_DIR}")
     include(${PORT_DIR})
     set(ANALYSIS_SUBDIR "${CFN_HAL_PORT_VENDOR}/${CFN_HAL_PORT_FAMILY}")
     add_library(caffeine::hal-ports ALIAS ${PROJECT_NAME})
+    target_compile_options(${PROJECT_NAME} INTERFACE ${CAFFEINE_COMPILE_OPTIONS} )
     target_link_libraries(${PROJECT_NAME} INTERFACE caffeine::hal)
 else()
     message(FATAL_ERROR "Port implementation not found: ${PORT_DIR}")
