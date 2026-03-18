@@ -80,7 +80,6 @@ The project includes built-in targets for maintaining code quality:
 
 *   **Format Code:** `cmake --build build/tests-native --target caffeine-hal-ports-format`
 *   **Run Static Analysis:** `cmake --build build/tests-native --target caffeine-hal-ports-analyze`
-*   **Verify C11 Compliance:** `cmake --build build/tests-native --target caffeine-hal-ports-compliance`
 *   **Run Unit Tests:** `cmake --build build/tests-native --target caffeine-hal-ports-test`
 
 ---

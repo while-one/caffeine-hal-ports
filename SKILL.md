@@ -170,7 +170,6 @@ The framework relies on automated code quality tools. All contributions must pas
     *   `cmake --build build/tests-native --target caffeine-hal-ports-format`: Formats all `.c` and `.cpp` files in this repo using `clang-format`.
     *   `cmake --build build/tests-native --target caffeine-hal-ports-cppcheck`: Runs static analysis checking for C11 standard violations.
     *   `cmake --build build/tests-native --target caffeine-hal-ports-tidy`: Runs `clang-tidy` utilizing the project's `.clang-tidy` configuration.
-    *   `cmake --build build/tests-native --target caffeine-hal-ports-compliance`: Strict C11 compliance check.
     *   `cmake --build build/tests-native --target caffeine-hal-ports-analyze`: Runs both `cppcheck` and `tidy` targets.
 
 *   **Strict C11:** Do not use C++ features, GNU statement expressions, or compiler-specific attributes in the port implementation (`src/`).

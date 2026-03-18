@@ -12,6 +12,7 @@ set(CAFFEINE_OPTIMIZATION_LEVEL "-Os" CACHE STRING "Compiler optimization level 
 
 # Universal strict warnings and preparation for dead-code elimination
 set(CAFFEINE_COMPILE_OPTIONS
+        -pedantic-errors
         -Wall -Wextra -Wpedantic -Wshadow
         -ffunction-sections -fdata-sections
         ${CAFFEINE_OPTIMIZATION_LEVEL}
@@ -31,7 +32,7 @@ include(FetchContent)
 FetchContent_Declare(
     caffeine-hal
     GIT_REPOSITORY https://github.com/while-one/caffeine-hal.git
-    GIT_TAG        v0.4.3
+    GIT_TAG        v0.4.4
     )
 FetchContent_MakeAvailable(caffeine-hal)
 
@@ -173,21 +174,7 @@ else()
     message(WARNING "clang-tidy not found. '${PROJECT_NAME}-tidy' target will not be available.")
 endif()
 
-# 4. C11 Compliance Check
-add_executable(${PROJECT_NAME}-compliance ${PROJECT_SOURCE_DIR}/tests/compliance.c)
-target_link_libraries(${PROJECT_NAME}-compliance PRIVATE ${PROJECT_NAME})
-target_compile_options(${PROJECT_NAME}-compliance PRIVATE
-    -std=c11
-    -pedantic-errors
-    -Wall
-    -Wextra
-    -Werror
-)
-set_target_properties(${PROJECT_NAME}-compliance PROPERTIES EXCLUDE_FROM_ALL ON)
 
-if(TARGET ${PROJECT_NAME}-analyze)
-    add_dependencies(${PROJECT_NAME}-analyze ${PROJECT_NAME}-compliance)
-endif()
 
 # ==============================================================================
 # Installation
