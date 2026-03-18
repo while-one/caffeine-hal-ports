@@ -284,11 +284,11 @@ cfn_hal_error_code_t cfn_hal_crypto_construct(cfn_hal_crypto_t              *dri
                                               const cfn_hal_crypto_config_t *config,
                                               const cfn_hal_crypto_phy_t    *phy)
 {
+#if defined(HAL_CRYP_MODULE_ENABLED) || defined(HAL_HASH_MODULE_ENABLED) || defined(HAL_RNG_MODULE_ENABLED)
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-#if defined(HAL_CRYP_MODULE_ENABLED) || defined(HAL_HASH_MODULE_ENABLED) || defined(HAL_RNG_MODULE_ENABLED)
     driver->api = &CRYPTO_API;
     driver->base.type = CFN_HAL_PERIPHERAL_TYPE_CRYPTO;
     driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
@@ -296,7 +296,9 @@ cfn_hal_error_code_t cfn_hal_crypto_construct(cfn_hal_crypto_t              *dri
     driver->phy = phy;
     return CFN_HAL_ERROR_OK;
 #else
+    CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
+    CFN_HAL_UNUSED(phy);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }

@@ -23,7 +23,7 @@ The build system relies on a strictly target-based, preset-driven architecture. 
 The build system utilizes a modular, directory-based preset architecture. The root `CMakePresets.json` acts strictly as a delegator and base configuration host, while hardware-specific profiles are isolated in `caffeine-build/cmake/presets/<vendor>/<family>.json`.
 *   **Root `CMakePresets.json`:** Includes the base presets from the `caffeine-build` submodule and defines the local project-specific presets.
 *   **Vendor Files (`caffeine-build/cmake/presets/<vendor>/<family>.json`):** Every supported target MCU or board must be added to its corresponding family file inside the `caffeine-build` repository.
-*   **Preset Definitions:** Presets define `CAFFEINE_VENDOR` (e.g., `stm32`), `CAFFEINE_PORT_FAMILY` (e.g., `stm32f4`), CPU architectures (`CAFFEINE_MCU_CORE`), required macros (`CAFFEINE_MCU_MACRO`), and the base linker script (`CAFFEINE_BOARD_LINKER`).
+*   **Preset Definitions:** Presets define `CFN_HAL_PORT_VENDOR` (e.g., `stm32`), `CFN_HAL_PORT_FAMILY` (e.g., `stm32f4`), CPU architectures (`CAFFEINE_MCU_CORE`), required macros (`CAFFEINE_MCU_MACRO`), and the base linker script (`CAFFEINE_BOARD_LINKER`).
 *   **Silicon Extras:** Use `CAFFEINE_MCU_COMPILE_OPTIONS` to pass specific FPU settings (e.g., `-mfloat-abi=hard -mfpu=fpv4-sp-d16`) or other custom silicon flags.
 
 ### C. Toolchains (`caffeine-build/cmake/toolchains/`)
@@ -167,10 +167,10 @@ This repository follows the standardized Caffeine Framework testing pattern, but
 The framework relies on automated code quality tools. All contributions must pass the following targets before being merged:
 
 *   **Custom Tooling Targets:** 
-    *   `make caffeine-hal-ports-format`: Formats all `.c` and `.cpp` files in this repo using `clang-format`.
-    *   `make caffeine-hal-ports-cppcheck`: Runs static analysis checking for C11 standard violations.
-    *   `make caffeine-hal-ports-tidy`: Runs `clang-tidy` utilizing the project's `.clang-tidy` configuration.
-    *   `make caffeine-hal-ports-analyze`: Runs both `cppcheck` and `tidy` targets.
+    *   `cmake --build build/tests-native --target caffeine-hal-ports-format`: Formats all `.c` and `.cpp` files in this repo using `clang-format`.
+    *   `cmake --build build/tests-native --target caffeine-hal-ports-cppcheck`: Runs static analysis checking for C11 standard violations.
+    *   `cmake --build build/tests-native --target caffeine-hal-ports-tidy`: Runs `clang-tidy` utilizing the project's `.clang-tidy` configuration.
+    *   `cmake --build build/tests-native --target caffeine-hal-ports-analyze`: Runs both `cppcheck` and `tidy` targets.
 
 *   **Strict C11:** Do not use C++ features, GNU statement expressions, or compiler-specific attributes in the port implementation (`src/`).
 *   **Memory Safety:** Never use `malloc`, `free`, `new`, or Variable Length Arrays (VLAs).
