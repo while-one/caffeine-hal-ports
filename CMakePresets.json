@@ -18,6 +18,7 @@
       "name": "tests-native-ports",
       "displayName": "HAL Ports Unit Tests (Native GTest)",
       "inherits": "tests-native",
+      "binaryDir": "${sourceDir}/build/tests-native-ports",
       "cacheVariables": {
         "CFN_HAL_PORT_BUILD_TESTS": "ON"
       }
