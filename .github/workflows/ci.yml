@@ -65,10 +65,10 @@ jobs:
         submodules: recursive
     
     - name: Run Unit Tests (CTest)
-      run: ./caffeine-build/scripts/build.sh tests-native all
+      run: ./caffeine-build/scripts/build.sh tests-native-ports all
 
     - name: Run Coverage
-      run: ./caffeine-build/scripts/build.sh tests-native caffeine-hal-ports-coverage
+      run: ./caffeine-build/scripts/build.sh tests-native-ports caffeine-hal-ports-coverage
 
     - name: PR Comment with Coverage
       if: github.event_name == 'pull_request'
