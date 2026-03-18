@@ -12,5 +12,16 @@
     "caffeine-build/cmake/presets/posix/linux.json",
     "caffeine-build/cmake/presets/mock/tests.json",
     "caffeine-build/cmake/presets/template/compliance.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "unit-tests-gtest",
+      "displayName": "HAL Ports Unit Tests (Native GTest)",
+      "inherits": "tests-native",
+      "binaryDir": "${sourceDir}/build/unit-tests-gtest",
+      "cacheVariables": {
+        "CFN_HAL_PORT_BUILD_TESTS": "ON"
+      }
+    }
   ]
 }

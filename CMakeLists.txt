@@ -76,14 +76,8 @@ endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES EXPORT_NAME hal-ports)
 
 # --- Unit Testing (CTest & GoogleTest) ---
-if(PROJECT_IS_TOP_LEVEL)
-    set(DEFAULT_BUILD_TESTS ON)
-else()
-    set(DEFAULT_BUILD_TESTS OFF)
-endif()
-option(CFN_HAL_PORT_BUILD_TESTS "Build the unit tests (Requires host compiler)" ${DEFAULT_BUILD_TESTS})
-
-if(CFN_HAL_PORT_BUILD_TESTS)
+option(CFN_HAL_PORT_BUILD_TESTS "Build the unit tests (Requires host compiler)" OFF)
+if(PROJECT_IS_TOP_LEVEL AND CFN_HAL_PORT_BUILD_TESTS)
     include(CTest)
     if(BUILD_TESTING)
         add_subdirectory(tests)
