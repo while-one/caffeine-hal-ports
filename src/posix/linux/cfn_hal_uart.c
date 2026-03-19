@@ -189,7 +189,10 @@ static cfn_hal_error_code_t port_uart_tx_irq_abort(cfn_hal_uart_t *driver)
 
 static cfn_hal_error_code_t port_uart_rx_n_irq(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes)
 {
-    if (driver) { driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX; }
+    if (driver)
+    {
+        driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX;
+    }
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(data);
     CFN_HAL_UNUSED(nbr_of_bytes);
@@ -198,7 +201,10 @@ static cfn_hal_error_code_t port_uart_rx_n_irq(cfn_hal_uart_t *driver, uint8_t *
 
 static cfn_hal_error_code_t port_uart_rx_irq(cfn_hal_uart_t *driver)
 {
-    if (driver) { driver->base.flags |= CFN_HAL_UART_FLAG_CONTINUOUS_RX; }
+    if (driver)
+    {
+        driver->base.flags |= CFN_HAL_UART_FLAG_CONTINUOUS_RX;
+    }
     CFN_HAL_UNUSED(driver);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
