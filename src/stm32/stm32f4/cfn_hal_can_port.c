@@ -277,6 +277,8 @@ void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
 
 /* Raw ISR Handlers -------------------------------------------------*/
 
+#ifndef CFN_HAL_PORT_DISABLE_IRQ_CAN
+
 #if defined(CAN1)
 void CAN1_TX_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
@@ -306,6 +308,8 @@ void CAN2_SCE_IRQHandler(void) // NOLINT(readability-identifier-naming)
     HAL_CAN_IRQHandler(&port_hcans[CFN_HAL_CAN_PORT_CAN2]);
 }
 #endif
+
+#endif /* CFN_HAL_PORT_DISABLE_IRQ_CAN */
 
 /* CAN Specific Functions */
 

@@ -67,6 +67,9 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${PORT_DIR}")
         target_link_libraries(${PROJECT_NAME} PUBLIC caffeine::hal)
     endif()
 
+    # Apply direct IRQ delegation definitions if requested by the application
+    cfn_apply_direct_irq(${PROJECT_NAME})
+
     add_library(caffeine::hal-ports ALIAS ${PROJECT_NAME})
 else()
     message(FATAL_ERROR "Port implementation not found: ${PORT_DIR}")

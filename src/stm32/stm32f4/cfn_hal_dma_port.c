@@ -243,6 +243,8 @@ void HAL_DMA_XferErrorCallback(const DMA_HandleTypeDef *hdma) // NOLINT(readabil
 
 /* Raw ISR Handlers -------------------------------------------------*/
 
+#ifndef CFN_HAL_PORT_DISABLE_IRQ_DMA
+
 void DMA1_Stream0_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
     HAL_DMA_IRQHandler(&port_hdmas[CFN_HAL_DMA_PORT_DMA1_STREAM0]);
@@ -307,6 +309,8 @@ void DMA2_Stream7_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
     HAL_DMA_IRQHandler(&port_hdmas[CFN_HAL_DMA_PORT_DMA2_STREAM7]);
 }
+
+#endif /* CFN_HAL_PORT_DISABLE_IRQ_DMA */
 
 /* DMA Specific Functions */
 

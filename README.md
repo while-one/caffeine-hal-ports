@@ -59,6 +59,17 @@ Example `cacheVariables` in an application's `CMakePresets.json`:
 }
 ```
 
+### Direct IRQ Delegation
+If your application requires custom, low-latency, or specialized interrupt handlers, you can bypass the framework's default ISRs by defining the `CFN_APP_DIRECT_IRQ` list in your CMake configuration.
+
+Example `cacheVariables` in your `CMakePresets.json`:
+```json
+"cacheVariables": {
+  "CFN_APP_DIRECT_IRQ": "uart;gpio;timer"
+}
+```
+When this is set, the framework will exclude its own handlers for those specific peripherals, allowing you to safely define standard ISRs (e.g., `void USART1_IRQHandler(void)`) in your application code without linker conflicts.
+
 ### Overriding the Default Linker Script
 By default, the HAL Ports library automatically propagates a standard memory map to your application via the `CAFFEINE_LINKER_SCRIPT` cache variable defined in your preset.
 
