@@ -34,55 +34,6 @@
 
 /* VMT Implementations ----------------------------------------------*/
 
-static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
-{
-    CFN_HAL_UNUSED(base);
-    return CFN_HAL_ERROR_OK;
-}
-
-static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
-{
-    CFN_HAL_UNUSED(base);
-    return CFN_HAL_ERROR_OK;
-}
-
-static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(state);
-    return CFN_HAL_ERROR_OK;
-}
-
-static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(config);
-    return CFN_HAL_ERROR_OK;
-}
-
-static cfn_hal_error_code_t
-port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(callback);
-    CFN_HAL_UNUSED(user_arg);
-    return CFN_HAL_ERROR_OK;
-}
-
-static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
-    return CFN_HAL_ERROR_OK;
-}
-
-static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
-    return CFN_HAL_ERROR_OK;
-}
-
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
     CFN_HAL_UNUSED(base);
@@ -90,20 +41,6 @@ static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t
     {
         *event_mask = 0;
     }
-    return CFN_HAL_ERROR_OK;
-}
-
-static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
-    return CFN_HAL_ERROR_OK;
-}
-
-static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
     return CFN_HAL_ERROR_OK;
 }
 
@@ -173,20 +110,6 @@ static cfn_hal_error_code_t port_base_unlock(cfn_hal_driver_t *base)
 
 /* UART Specific Extensions */
 
-static cfn_hal_error_code_t port_uart_tx_irq(cfn_hal_uart_t *driver, const uint8_t *data, size_t nbr_of_bytes)
-{
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(data);
-    CFN_HAL_UNUSED(nbr_of_bytes);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_uart_tx_irq_abort(cfn_hal_uart_t *driver)
-{
-    CFN_HAL_UNUSED(driver);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
 static cfn_hal_error_code_t port_uart_rx_n_irq(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes)
 {
     if (driver)
@@ -209,88 +132,35 @@ static cfn_hal_error_code_t port_uart_rx_irq(cfn_hal_uart_t *driver)
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
 
-static cfn_hal_error_code_t port_uart_rx_irq_abort(cfn_hal_uart_t *driver)
-{
-    CFN_HAL_UNUSED(driver);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t
-port_uart_tx_polling(cfn_hal_uart_t *driver, const uint8_t *data, size_t nbr_of_bytes, uint32_t timeout)
-{
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(data);
-    CFN_HAL_UNUSED(nbr_of_bytes);
-    CFN_HAL_UNUSED(timeout);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t
-port_uart_rx_polling(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes, uint32_t timeout)
-{
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(data);
-    CFN_HAL_UNUSED(nbr_of_bytes);
-    CFN_HAL_UNUSED(timeout);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t
-port_uart_rx_to_idle(cfn_hal_uart_t *driver, uint8_t *data, size_t max_bytes, size_t *received_bytes, uint32_t timeout)
-{
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(data);
-    CFN_HAL_UNUSED(max_bytes);
-    CFN_HAL_UNUSED(received_bytes);
-    CFN_HAL_UNUSED(timeout);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_uart_tx_dma(cfn_hal_uart_t *driver, const uint8_t *data, size_t nbr_of_bytes)
-{
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(data);
-    CFN_HAL_UNUSED(nbr_of_bytes);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_uart_rx_dma(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes)
-{
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(data);
-    CFN_HAL_UNUSED(nbr_of_bytes);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
 /* API --------------------------------------------------------------*/
 static const cfn_hal_uart_api_t UART_API = {
     .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = port_base_power_state_set,
-        .config_set = port_base_config_set,
-        .callback_register = port_base_callback_register,
-        .event_enable = port_base_event_enable,
-        .event_disable = port_base_event_disable,
+        .init = NULL,
+        .deinit = NULL,
+        .power_state_set = NULL,
+        .config_set = NULL,
+        .callback_register = NULL,
+        .event_enable = NULL,
+        .event_disable = NULL,
         .event_get = port_base_event_get,
-        .error_enable = port_base_error_enable,
-        .error_disable = port_base_error_disable,
+        .error_enable = NULL,
+        .error_disable = NULL,
         .error_get = port_base_error_get,
 #if (CFN_HAL_USE_LOCK == 1)
         .lock = port_base_lock,
         .unlock = port_base_unlock,
 #endif
     },
-    .tx_irq = port_uart_tx_irq,
-    .tx_irq_abort = port_uart_tx_irq_abort,
+    .tx_irq = NULL,
+    .tx_irq_abort = NULL,
     .rx_n_irq = port_uart_rx_n_irq,
     .rx_irq = port_uart_rx_irq,
-    .rx_irq_abort = port_uart_rx_irq_abort,
-    .tx_polling = port_uart_tx_polling,
-    .rx_polling = port_uart_rx_polling,
-    .rx_to_idle = port_uart_rx_to_idle,
-    .tx_dma = port_uart_tx_dma,
-    .rx_dma = port_uart_rx_dma
+    .rx_irq_abort = NULL,
+    .tx_polling = NULL,
+    .rx_polling = NULL,
+    .rx_to_idle = NULL,
+    .tx_dma = NULL,
+    .rx_dma = NULL
 };
 
 /* Instantiation ----------------------------------------------------*/
