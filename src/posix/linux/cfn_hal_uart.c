@@ -187,11 +187,25 @@ static cfn_hal_error_code_t port_uart_tx_irq_abort(cfn_hal_uart_t *driver)
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
 
-static cfn_hal_error_code_t port_uart_rx_irq(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes)
+static cfn_hal_error_code_t port_uart_rx_n_irq(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes)
 {
+    if (driver)
+    {
+        driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX;
+    }
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(data);
     CFN_HAL_UNUSED(nbr_of_bytes);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+}
+
+static cfn_hal_error_code_t port_uart_rx_irq(cfn_hal_uart_t *driver)
+{
+    if (driver)
+    {
+        driver->base.flags |= CFN_HAL_UART_FLAG_CONTINUOUS_RX;
+    }
+    CFN_HAL_UNUSED(driver);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
 
@@ -269,6 +283,7 @@ static const cfn_hal_uart_api_t UART_API = {
     },
     .tx_irq = port_uart_tx_irq,
     .tx_irq_abort = port_uart_tx_irq_abort,
+    .rx_n_irq = port_uart_rx_n_irq,
     .rx_irq = port_uart_rx_irq,
     .rx_irq_abort = port_uart_rx_irq_abort,
     .tx_polling = port_uart_tx_polling,
