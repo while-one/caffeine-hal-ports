@@ -6,63 +6,28 @@
 #include "cfn_hal_dac.h"
 #include "cfn_hal_dac_port.h"
 
-static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base) { CFN_HAL_UNUSED(base); return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base) { CFN_HAL_UNUSED(base); return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(state); return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(config); return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(callback); CFN_HAL_UNUSED(user_arg); return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(event_mask); return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(event_mask); return CFN_HAL_ERROR_OK; }
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask) { CFN_HAL_UNUSED(base); if (event_mask) { *event_mask = 0; } return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(error_mask); return CFN_HAL_ERROR_OK; }
-static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask) { CFN_HAL_UNUSED(base); CFN_HAL_UNUSED(error_mask); return CFN_HAL_ERROR_OK; }
+
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask) { CFN_HAL_UNUSED(base); if (error_mask) { *error_mask = 0; } return CFN_HAL_ERROR_OK; }
-
-static cfn_hal_error_code_t port_dac_set_value(cfn_hal_dac_t *driver, uint32_t value)
-{
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(value);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_dac_start(cfn_hal_dac_t *driver)
-{
-    CFN_HAL_UNUSED(driver);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_dac_stop(cfn_hal_dac_t *driver)
-{
-    CFN_HAL_UNUSED(driver);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_dac_write_dma(cfn_hal_dac_t *driver, const uint32_t *data, size_t nbr_of_samples)
-{
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(data);
-    CFN_HAL_UNUSED(nbr_of_samples);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
 
 static const cfn_hal_dac_api_t dac_api = {
     .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = port_base_power_state_set,
-        .config_set = port_base_config_set,
-        .callback_register = port_base_callback_register,
-        .event_enable = port_base_event_enable,
-        .event_disable = port_base_event_disable,
+        .init = NULL,
+        .deinit = NULL,
+        .power_state_set = NULL,
+        .config_set = NULL,
+        .callback_register = NULL,
+        .event_enable = NULL,
+        .event_disable = NULL,
         .event_get = port_base_event_get,
-        .error_enable = port_base_error_enable,
-        .error_disable = port_base_error_disable,
+        .error_enable = NULL,
+        .error_disable = NULL,
         .error_get = port_base_error_get,
     },
-    .set_value = port_dac_set_value,
-    .start = port_dac_start,
-    .stop = port_dac_stop,
-    .write_dma = port_dac_write_dma
+    .set_value = NULL,
+    .start = NULL,
+    .stop = NULL,
+    .write_dma = NULL
 };
 
 cfn_hal_error_code_t cfn_hal_dac_construct(cfn_hal_dac_t *driver, const cfn_hal_dac_config_t *config, const cfn_hal_dac_phy_t *phy)

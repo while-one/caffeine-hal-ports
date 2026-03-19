@@ -98,25 +98,11 @@ static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
     return cfn_hal_stm32_map_error(HAL_I2C_DeInit(&port_hi2cs[port_id]));
 }
 
-static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(state);
-    return CFN_HAL_ERROR_OK;
-}
 static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(config);
     return port_base_init(base);
-}
-static cfn_hal_error_code_t
-port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(callback);
-    CFN_HAL_UNUSED(user_arg);
-    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
@@ -397,21 +383,15 @@ static cfn_hal_error_code_t port_i2c_xfr_irq_abort(cfn_hal_i2c_t *driver)
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     return cfn_hal_stm32_map_error(HAL_I2C_Master_Abort_IT(&port_hi2cs[port_id], 0));
 }
-static cfn_hal_error_code_t port_i2c_xfr_dma(cfn_hal_i2c_t *driver, const cfn_hal_i2c_transaction_t *xfr)
-{
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(xfr);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_i2c_api_t I2C_API = {
     .base = {
         .init = port_base_init,
         .deinit = port_base_deinit,
-        .power_state_set = port_base_power_state_set,
+        .power_state_set = NULL,
         .config_set = port_base_config_set,
-        .callback_register = port_base_callback_register,
+        .callback_register = NULL,
         .event_enable = port_base_event_enable,
         .event_disable = port_base_event_disable,
         .event_get = port_base_event_get,
@@ -424,7 +404,7 @@ static const cfn_hal_i2c_api_t I2C_API = {
     .xfr_polling = port_i2c_xfr_polling,
     .mem_read = port_i2c_mem_read,
     .mem_write = port_i2c_mem_write,
-    .xfr_dma = port_i2c_xfr_dma
+    .xfr_dma = NULL
 };
 
 #endif /* HAL_I2C_MODULE_ENABLED */

@@ -10,48 +10,13 @@
 
 #ifdef HAL_COMP_MODULE_ENABLED
 
-static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
-{
-    CFN_HAL_UNUSED(base);
-    return CFN_HAL_ERROR_OK;
-}
-static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
-{
-    CFN_HAL_UNUSED(base);
-    return CFN_HAL_ERROR_OK;
-}
-static cfn_hal_error_code_t port_base_power_state_set(cfn_hal_driver_t *base, cfn_hal_power_state_t state)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(state);
-    return CFN_HAL_ERROR_OK;
-}
 static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
 {
     CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(config);
     return port_base_init(base);
 }
-static cfn_hal_error_code_t
-port_base_callback_register(cfn_hal_driver_t *base, cfn_hal_callback_t callback, void *user_arg)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(callback);
-    CFN_HAL_UNUSED(user_arg);
-    return CFN_HAL_ERROR_OK;
-}
-static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
-    return CFN_HAL_ERROR_OK;
-}
-static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(event_mask);
-    return CFN_HAL_ERROR_OK;
-}
+
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
     CFN_HAL_UNUSED(base);
@@ -61,18 +26,7 @@ static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t
     }
     return CFN_HAL_ERROR_OK;
 }
-static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
-    return CFN_HAL_ERROR_OK;
-}
-static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
-{
-    CFN_HAL_UNUSED(base);
-    CFN_HAL_UNUSED(error_mask);
-    return CFN_HAL_ERROR_OK;
-}
+
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
 {
     CFN_HAL_UNUSED(base);
@@ -83,50 +37,24 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
     return CFN_HAL_ERROR_OK;
 }
 
-static cfn_hal_error_code_t port_comp_read_output(cfn_hal_comp_t *driver, cfn_hal_comp_level_t *level)
-{
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(level);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_comp_set_threshold(cfn_hal_comp_t *driver, uint32_t threshold)
-{
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(threshold);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_comp_start(cfn_hal_comp_t *driver)
-{
-    CFN_HAL_UNUSED(driver);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
-static cfn_hal_error_code_t port_comp_stop(cfn_hal_comp_t *driver)
-{
-    CFN_HAL_UNUSED(driver);
-    return CFN_HAL_ERROR_NOT_SUPPORTED;
-}
-
 static const cfn_hal_comp_api_t COMP_API = {
     .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = port_base_power_state_set,
+        .init = NULL,
+        .deinit = NULL,
+        .power_state_set = NULL,
         .config_set = port_base_config_set,
-        .callback_register = port_base_callback_register,
-        .event_enable = port_base_event_enable,
-        .event_disable = port_base_event_disable,
+        .callback_register = NULL,
+        .event_enable = NULL,
+        .event_disable = NULL,
         .event_get = port_base_event_get,
-        .error_enable = port_base_error_enable,
-        .error_disable = port_base_error_disable,
+        .error_enable = NULL,
+        .error_disable = NULL,
         .error_get = port_base_error_get,
     },
-    .read_output = port_comp_read_output,
-    .set_threshold = port_comp_set_threshold,
-    .start = port_comp_start,
-    .stop = port_comp_stop
+    .read_output = NULL,
+    .set_threshold = NULL,
+    .start = NULL,
+    .stop = NULL
 };
 
 #endif /* HAL_COMP_MODULE_ENABLED */
