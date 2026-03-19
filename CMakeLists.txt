@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 project(caffeine-hal-ports VERSION 0.2.6 LANGUAGES C ASM)
+include(${PROJECT_SOURCE_DIR}/caffeine-build/cmake/CaffeineMacros.cmake)
 
 # Global standards for the Caffeine Framework
 set(CMAKE_C_STANDARD 11)
