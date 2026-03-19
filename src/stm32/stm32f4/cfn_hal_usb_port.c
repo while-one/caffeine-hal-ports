@@ -229,6 +229,8 @@ void HAL_PCD_ResumeCallback(PCD_HandleTypeDef *hpcd)
 
 /* Raw ISR Handlers -------------------------------------------------*/
 
+#ifndef CFN_HAL_PORT_DISABLE_IRQ_USB
+
 #if defined(USB_OTG_FS)
 void OTG_FS_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
@@ -242,6 +244,8 @@ void OTG_HS_IRQHandler(void) // NOLINT(readability-identifier-naming)
     HAL_PCD_IRQHandler(&port_hpcds[CFN_HAL_USB_PORT_OTG_HS]);
 }
 #endif
+
+#endif /* CFN_HAL_PORT_DISABLE_IRQ_USB */
 
 /* USB Specific Functions */
 

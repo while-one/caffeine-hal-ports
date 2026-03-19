@@ -304,6 +304,8 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
 
 /* Raw ISR Handlers -------------------------------------------------*/
 
+#ifndef CFN_HAL_PORT_DISABLE_IRQ_SPI
+
 #if defined(SPI1)
 void SPI1_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
@@ -324,6 +326,8 @@ void SPI3_IRQHandler(void) // NOLINT(readability-identifier-naming)
     HAL_SPI_IRQHandler(&port_hspis[CFN_HAL_SPI_PORT_3]);
 }
 #endif
+
+#endif /* CFN_HAL_PORT_DISABLE_IRQ_SPI */
 
 /* SPI Specific Functions */
 

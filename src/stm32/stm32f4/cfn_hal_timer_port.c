@@ -258,6 +258,8 @@ void HAL_TIM_ErrorCallback(TIM_HandleTypeDef *htim)
 
 /* Raw ISR Handlers -------------------------------------------------*/
 
+#ifndef CFN_HAL_PORT_DISABLE_IRQ_TIMER
+
 #if defined(TIM1)
 void TIM1_UP_TIM10_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
@@ -329,6 +331,8 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // NOLINT(readability-identifier-naming
     HAL_TIM_IRQHandler(&port_htims[CFN_HAL_TIMER_PORT_TIM14]);
 }
 #endif
+
+#endif /* CFN_HAL_PORT_DISABLE_IRQ_TIMER */
 
 /* Timer Specific Functions */
 

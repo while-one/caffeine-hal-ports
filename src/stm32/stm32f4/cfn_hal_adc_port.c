@@ -231,6 +231,8 @@ void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc)
 
 /* Raw ISR Handlers -------------------------------------------------*/
 
+#ifndef CFN_HAL_PORT_DISABLE_IRQ_ADC
+
 #if defined(ADC1) || defined(ADC2) || defined(ADC3)
 void ADC_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
@@ -245,6 +247,8 @@ void ADC_IRQHandler(void) // NOLINT(readability-identifier-naming)
 #endif
 }
 #endif
+
+#endif /* CFN_HAL_PORT_DISABLE_IRQ_ADC */
 
 /* ADC Specific Functions */
 

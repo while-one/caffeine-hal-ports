@@ -319,6 +319,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 
 /* Raw ISR Handlers -------------------------------------------------*/
 
+#ifndef CFN_HAL_PORT_DISABLE_IRQ_UART
+
 #if defined(USART1)
 void USART1_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
@@ -360,6 +362,8 @@ void USART6_IRQHandler(void) // NOLINT(readability-identifier-naming)
     HAL_UART_IRQHandler(&port_huarts[CFN_HAL_UART_PORT_USART6]);
 }
 #endif
+
+#endif /* CFN_HAL_PORT_DISABLE_IRQ_UART */
 
 /* UART Specific Functions */
 

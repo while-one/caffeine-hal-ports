@@ -185,12 +185,16 @@ void HAL_ETH_ErrorCallback(ETH_HandleTypeDef *heth)
 
 /* Raw ISR Handlers -------------------------------------------------*/
 
+#ifndef CFN_HAL_PORT_DISABLE_IRQ_ETH
+
 #if defined(ETH)
 void ETH_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
     HAL_ETH_IRQHandler(&port_heths[CFN_HAL_ETH_PORT_ETH1]);
 }
 #endif
+
+#endif /* CFN_HAL_PORT_DISABLE_IRQ_ETH */
 
 /* ETH Specific Functions */
 

@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 project(caffeine-hal-ports VERSION 0.2.6 LANGUAGES C ASM)
+include(${PROJECT_SOURCE_DIR}/caffeine-build/cmake/CaffeineMacros.cmake)
 
 # Global standards for the Caffeine Framework
 set(CMAKE_C_STANDARD 11)
@@ -66,6 +67,9 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${PORT_DIR}")
         target_compile_options(${PROJECT_NAME} INTERFACE ${CAFFEINE_COMPILE_OPTIONS})
         target_link_libraries(${PROJECT_NAME} PUBLIC caffeine::hal)
     endif()
+
+    # Apply direct IRQ delegation definitions if requested by the application
+    cfn_apply_direct_irq(${PROJECT_NAME})
 
     add_library(caffeine::hal-ports ALIAS ${PROJECT_NAME})
 else()

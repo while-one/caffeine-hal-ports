@@ -168,10 +168,12 @@ void HAL_RTCEx_AlarmBEventCallback(RTC_HandleTypeDef *hrtc)
 
 /* Raw ISR Handlers -------------------------------------------------*/
 
+#ifndef CFN_HAL_PORT_DISABLE_IRQ_RTC
 void RTC_Alarm_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
     HAL_RTC_AlarmIRQHandler(&port_hrtcs[CFN_HAL_RTC_PORT_RTC1]);
 }
+#endif /* CFN_HAL_PORT_DISABLE_IRQ_RTC */
 
 /* RTC Specific Functions */
 

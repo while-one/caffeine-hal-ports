@@ -272,6 +272,8 @@ void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
 
 /* Raw ISR Handlers -------------------------------------------------*/
 
+#ifndef CFN_HAL_PORT_DISABLE_IRQ_I2C
+
 #if defined(I2C1)
 void I2C1_EV_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
@@ -304,6 +306,8 @@ void I2C3_ER_IRQHandler(void) // NOLINT(readability-identifier-naming)
     HAL_I2C_ER_IRQHandler(&port_hi2cs[CFN_HAL_I2C_PORT_I2C3]);
 }
 #endif
+
+#endif /* CFN_HAL_PORT_DISABLE_IRQ_I2C */
 
 /* I2C Specific Functions */
 
