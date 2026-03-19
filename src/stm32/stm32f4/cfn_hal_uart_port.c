@@ -321,45 +321,81 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 
 #ifndef CFN_HAL_PORT_DISABLE_IRQ_UART
 
+static void port_uart_handle_isr(UART_HandleTypeDef *huart)
+{
+    int32_t port_id = get_port_id_from_handle(huart);
+    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    {
+        cfn_hal_uart_t *driver = port_drivers[port_id];
+        uint32_t isrflags = READ_REG(huart->Instance->SR);
+        uint32_t cr1its   = READ_REG(huart->Instance->CR1);
+
+        if ((driver->base.flags & CFN_HAL_UART_FLAG_CONTINUOUS_RX) &&
+            ((isrflags & USART_SR_RXNE) != RESET) && ((cr1its & USART_CR1_RXNEIE) != RESET))
+        {
+            uint32_t error_mask = CFN_HAL_UART_ERROR_NONE;
+            if (isrflags & USART_SR_ORE) error_mask |= CFN_HAL_UART_ERROR_OVERRUN;
+            if (isrflags & USART_SR_FE)  error_mask |= CFN_HAL_UART_ERROR_FRAMING;
+            if (isrflags & USART_SR_NE)  error_mask |= CFN_HAL_UART_ERROR_GENERAL;
+            if (isrflags & USART_SR_PE)  error_mask |= CFN_HAL_UART_ERROR_PARITY;
+
+            /* Read DR to get byte and clear RXNE flag. */
+#if defined(USART_SR_RXNE)
+            uint8_t byte = (uint8_t)(huart->Instance->DR & (uint8_t)0x00FF);
+#else
+            uint8_t byte = (uint8_t)(huart->Instance->RDR & (uint8_t)0x00FF);
+#endif
+            if (driver->cb)
+            {
+                driver->cb(driver, CFN_HAL_UART_EVENT_RX_BYTE, error_mask, &byte, 1, driver->cb_user_arg);
+            }
+            /* Return early to avoid HAL overhead. Any concurrent interrupt sources 
+               (TXE, TC, etc.) will cause the NVIC to immediately re-trigger the ISR. */
+            return;
+        }
+    }
+    HAL_UART_IRQHandler(huart);
+}
+
 #if defined(USART1)
 void USART1_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
-    HAL_UART_IRQHandler(&port_huarts[CFN_HAL_UART_PORT_USART1]);
+    port_uart_handle_isr(&port_huarts[CFN_HAL_UART_PORT_USART1]);
 }
 #endif
 
 #if defined(USART2)
 void USART2_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
-    HAL_UART_IRQHandler(&port_huarts[CFN_HAL_UART_PORT_USART2]);
+    port_uart_handle_isr(&port_huarts[CFN_HAL_UART_PORT_USART2]);
 }
 #endif
 
 #if defined(USART3)
 void USART3_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
-    HAL_UART_IRQHandler(&port_huarts[CFN_HAL_UART_PORT_USART3]);
+    port_uart_handle_isr(&port_huarts[CFN_HAL_UART_PORT_USART3]);
 }
 #endif
 
 #if defined(UART4)
 void UART4_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
-    HAL_UART_IRQHandler(&port_huarts[CFN_HAL_UART_PORT_UART4]);
+    port_uart_handle_isr(&port_huarts[CFN_HAL_UART_PORT_UART4]);
 }
 #endif
 
 #if defined(UART5)
 void UART5_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
-    HAL_UART_IRQHandler(&port_huarts[CFN_HAL_UART_PORT_UART5]);
+    port_uart_handle_isr(&port_huarts[CFN_HAL_UART_PORT_UART5]);
 }
 #endif
 
 #if defined(USART6)
 void USART6_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
-    HAL_UART_IRQHandler(&port_huarts[CFN_HAL_UART_PORT_USART6]);
+    port_uart_handle_isr(&port_huarts[CFN_HAL_UART_PORT_USART6]);
 }
 #endif
 
@@ -378,6 +414,7 @@ port_uart_tx_polling(cfn_hal_uart_t *driver, const uint8_t *data, size_t length,
 static cfn_hal_error_code_t
 port_uart_rx_polling(cfn_hal_uart_t *driver, uint8_t *buffer, size_t length, uint32_t timeout)
 {
+    if (driver) { driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX; }
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     return cfn_hal_stm32_map_error(HAL_UART_Receive(&port_huarts[port_id], buffer, (uint16_t) length, timeout));
 }
@@ -385,6 +422,7 @@ port_uart_rx_polling(cfn_hal_uart_t *driver, uint8_t *buffer, size_t length, uin
 static cfn_hal_error_code_t
 port_uart_rx_to_idle(cfn_hal_uart_t *driver, uint8_t *data, size_t max_bytes, size_t *received_bytes, uint32_t timeout)
 {
+    if (driver) { driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX; }
     uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     UART_HandleTypeDef *huart = &port_huarts[port_id];
     CFN_HAL_UNUSED(timeout);
@@ -406,15 +444,27 @@ static cfn_hal_error_code_t port_uart_tx_irq_abort(cfn_hal_uart_t *driver)
     return cfn_hal_stm32_map_error(HAL_UART_AbortTransmit_IT(&port_huarts[port_id]));
 }
 
-static cfn_hal_error_code_t port_uart_rx_irq(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes)
+static cfn_hal_error_code_t port_uart_rx_n_irq(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes)
 {
+    if (driver) { driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX; }
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     return cfn_hal_stm32_map_error(HAL_UART_Receive_IT(&port_huarts[port_id], data, (uint16_t) nbr_of_bytes));
 }
 
+static cfn_hal_error_code_t port_uart_rx_irq(cfn_hal_uart_t *driver)
+{
+    if (!driver || !driver->phy || !driver->phy->instance) return CFN_HAL_ERROR_BAD_PARAM;
+    driver->base.flags |= CFN_HAL_UART_FLAG_CONTINUOUS_RX;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    __HAL_UART_ENABLE_IT(&port_huarts[port_id], UART_IT_RXNE);
+    return CFN_HAL_ERROR_OK;
+}
+
 static cfn_hal_error_code_t port_uart_rx_irq_abort(cfn_hal_uart_t *driver)
 {
+    if (driver) { driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX; }
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    __HAL_UART_DISABLE_IT(&port_huarts[port_id], UART_IT_RXNE);
     return cfn_hal_stm32_map_error(HAL_UART_AbortReceive_IT(&port_huarts[port_id]));
 }
 static cfn_hal_error_code_t port_uart_tx_dma(cfn_hal_uart_t *driver, const uint8_t *data, size_t nbr_of_bytes)
@@ -426,6 +476,7 @@ static cfn_hal_error_code_t port_uart_tx_dma(cfn_hal_uart_t *driver, const uint8
 }
 static cfn_hal_error_code_t port_uart_rx_dma(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes)
 {
+    if (driver) { driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX; }
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(data);
     CFN_HAL_UNUSED(nbr_of_bytes);
@@ -449,6 +500,7 @@ static const cfn_hal_uart_api_t UART_API = {
     },
     .tx_irq = port_uart_tx_irq,
     .tx_irq_abort = port_uart_tx_irq_abort,
+    .rx_n_irq = port_uart_rx_n_irq,
     .rx_irq = port_uart_rx_irq,
     .rx_irq_abort = port_uart_rx_irq_abort,
     .tx_polling = port_uart_tx_polling,

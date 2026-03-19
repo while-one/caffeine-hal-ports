@@ -133,8 +133,10 @@ static const cfn_hal_uart_api_t uart_api = {
         .deinit = port_uart_deinit,
         // ... generic base functions
     },
-    .tx_polling = stm32f4_uart_tx_polling,
-    // ... uart specific functions
+    .tx_irq = stm32f4_uart_tx_irq,
+    .rx_n_irq = stm32f4_uart_rx_n_irq,
+    .rx_irq = stm32f4_uart_rx_irq,
+    // ... other uart specific functions
 };
 
 // 4. Construction
