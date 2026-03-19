@@ -21,19 +21,33 @@ Before you modify any CMake recipes or write any C code, you MUST follow this se
 
 ## 2. Architectural Execution Plan
 
+### Step 0: Scaffolding (Automated)
+Before manually creating files, use the scaffolding script to generate the deterministic structure:
+```bash
+python3 scripts/port_to_new_mcu.py \\
+    --vendor stm32 \\
+    --family stm32h7 \\
+    --sdk_url https://github.com/STMicroelectronics/STM32CubeH7.git \\
+    --sdk_tag v1.11.0 \\
+    --mcu_macro STM32H743xx \\
+    --part_number STM32H743VIT6 \\
+    --core cortex-m7
+```
+*Note: You can also pass a `--json` file with these keys.*
+
 ### Step 1: Create the Dynamic Vendor Configuration Header
-*   **Location:** Create `src/stm32/<family>/stm32<fam>xx_hal_conf.h.in`.
+*   **Location:** (Generated) `src/stm32/<family>/stm32<fam>xx_hal_conf.h.in`.
 *   **Module Selection:** Use `#cmakedefine HAL_<PERIPH>_MODULE_ENABLED` for every module.
 *   **Zero Assumption:** Do NOT enable any modules by default in the template.
 
 ### Step 2: Update the Port Recipe (`cmake/ports/stm32/<family>.cmake`)
-*   **Dynamic Source Selection:** Implement a mapping logic that adds vendor `.c` files and port `.c` files only when the corresponding `CFN_HAL_<PERIPH>` flag is `ON`.
+*   **Dynamic Source Selection:** (Scaffolded) Implement a mapping logic that adds vendor `.c` files and port `.c` files only when the corresponding `CFN_HAL_<PERIPH>` flag is `ON`.
 *   **Header Generation:** Use `configure_file()` to generate the final `.h` from the `.in` template.
 *   **Port Files:** ALWAYS include port wrapper files in the `PORT_SOURCES_LIST` to ensure constructor symbols exist, but wrap their implementation in guards.
 
 ### Step 3: Create Build Presets (Hierarchical)
-*   **Master Defaults:** Ensure the target inherits from `base-hardware-defaults` (defined in `base.json`).
-*   **Feature Sets:** Create hidden presets (e.g., `<family>-base-peripheral-set`) to group common peripherals.
+*   **Master Defaults:** (Scaffolded in `cmake/presets/stm32/<family>.json`) Ensure the target inherits from `base-hardware-defaults` (defined in `base.json`).
+*   **Registration:** Add the generated preset file to the `include` list in the root `CMakePresets.json`.
 *   **Concrete Targets:** Final presets MUST use the full silicon part number and inherit from the feature set and architecture base.
 
 ### Step 4: Implement the VMT Wrappers (C Code)

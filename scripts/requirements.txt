@@ -1,0 +1,2 @@
+# No external dependencies required for the scaffolding script.
+# Standard library (argparse, json, os, pathlib) is sufficient.
