@@ -1,8 +1,9 @@
 <p align="center">
-    <img src="./caffeine-build/assets/logo.png" alt="Caffeine Logo" width="50%">
+  <a href="https://whileone.me">
+    <img src="https://raw.githubusercontent.com/while-one/caffeine-build/main/assets/logo.png" alt="Caffeine Logo" width="50%">
+  </a>
 <h1 align="center">The Caffeine Framework</h1>
 </p>
-
 
 
 <p align="center">
