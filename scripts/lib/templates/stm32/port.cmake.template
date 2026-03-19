@@ -1,0 +1,138 @@
+include(FetchContent)
+
+# Fetch the Vendor SDK dynamically.
+FetchContent_Declare(
+    vendor_stm32cube{family_short}
+    GIT_REPOSITORY {sdk_url}
+    GIT_TAG        {sdk_tag}
+    GIT_SUBMODULES 
+        "Drivers/STM32{family_short_upper}xx_HAL_Driver"
+        "Drivers/CMSIS/Device/ST/STM32{family_short_upper}xx"
+)
+FetchContent_MakeAvailable(vendor_stm32cube{family_short})
+
+set(SDK_DIR ${{vendor_stm32cube{family_short}_SOURCE_DIR}})
+set(HAL_SRC_DIR "${{SDK_DIR}}/Drivers/STM32{family_short_upper}xx_HAL_Driver/Src")
+
+if(NOT DEFINED CAFFEINE_MCU_MACRO)
+    message(FATAL_ERROR "CAFFEINE_MCU_MACRO is required to build the {family_name_upper} port (e.g., {mcu_macro}). Please define it in your CMakePreset.")
+endif()
+
+# --- Dynamic Assembly Startup Resolution ---
+string(TOLOWER "${{CAFFEINE_MCU_MACRO}}" LOWERCASE_MCU_MACRO)
+set(STARTUP_FILE "${{SDK_DIR}}/Drivers/CMSIS/Device/ST/STM32{family_short_upper}xx/Source/Templates/gcc/startup_${{LOWERCASE_MCU_MACRO}}.s")
+
+# --- Modular Source Collection Logic ---
+set(VENDOR_SOURCES_LIST "")
+set(PORT_SOURCES_LIST "")
+
+# Helper to conditionally add modules
+macro(cfn_add_{family_name}_module NAME VENDOR_FILES PORT_FILES)
+    # Port files are ALWAYS added to ensure construct/destruct symbols exist
+    foreach(PFILE IN ITEMS ${{PORT_FILES}})
+        list(APPEND PORT_SOURCES_LIST "${{CMAKE_CURRENT_SOURCE_DIR}}/${{PFILE}}")
+    endforeach()
+
+    if(CFN_HAL_${{NAME}} STREQUAL "ON")
+        foreach(VFILE IN ITEMS ${{VENDOR_FILES}})
+            list(APPEND VENDOR_SOURCES_LIST "${{HAL_SRC_DIR}}/${{VFILE}}")
+        endforeach()
+        set(HAL_${{NAME}}_MODULE_ENABLED 1)
+    else()
+        set(HAL_${{NAME}}_MODULE_ENABLED 0)
+    endif()
+endmacro()
+
+# Always enable foundational modules
+list(APPEND VENDOR_SOURCES_LIST 
+    "${{HAL_SRC_DIR}}/stm32{family_short}xx_hal.c"
+    "${{HAL_SRC_DIR}}/stm32{family_short}xx_hal_cortex.c"
+    "${{HAL_SRC_DIR}}/stm32{family_short}xx_hal_rcc.c"
+    "${{HAL_SRC_DIR}}/stm32{family_short}xx_hal_rcc_ex.c"
+    "${{HAL_SRC_DIR}}/stm32{family_short}xx_hal_pwr.c"
+    "${{HAL_SRC_DIR}}/stm32{family_short}xx_hal_pwr_ex.c"
+    "${{HAL_SRC_DIR}}/stm32{family_short}xx_hal_flash.c"
+    "${{HAL_SRC_DIR}}/stm32{family_short}xx_hal_flash_ex.c"
+    "${{SDK_DIR}}/Drivers/CMSIS/Device/ST/STM32{family_short_upper}xx/Source/Templates/system_stm32{family_short}xx.c"
+)
+
+# Map CFN_HAL flags to Vendor and Port files
+cfn_add_{family_name}_module(ADC    "stm32{family_short}xx_hal_adc.c" "src/stm32/{family_name}/cfn_hal_adc_port.c")
+cfn_add_{family_name}_module(GPIO   "stm32{family_short}xx_hal_gpio.c" "src/stm32/{family_name}/cfn_hal_gpio_port.c")
+cfn_add_{family_name}_module(UART   "stm32{family_short}xx_hal_uart.c" "src/stm32/{family_name}/cfn_hal_uart_port.c")
+# Add more modules here...
+
+# --- Generate stm32{family_short}xx_hal_conf.h ---
+configure_file(
+    "${{CMAKE_CURRENT_SOURCE_DIR}}/src/stm32/{family_name}/stm32{family_short}xx_hal_conf.h.in"
+    "${{CMAKE_CURRENT_BINARY_DIR}}/generated/stm32{family_short}xx_hal_conf.h"
+)
+
+# --- 1. Vendor SDK Isolation Target ---
+add_library(vendor_sdk OBJECT ${{VENDOR_SOURCES_LIST}} ${{STARTUP_FILE}})
+target_compile_options(vendor_sdk PRIVATE -w)
+target_link_libraries(vendor_sdk PRIVATE caffeine::hal)
+
+set(CPU_FLAGS -mcpu=${{CAFFEINE_MCU_CORE}} -mthumb)
+target_compile_options(vendor_sdk PUBLIC ${{CPU_FLAGS}})
+target_compile_options(vendor_sdk PRIVATE ${{CPU_FLAGS}})
+
+if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
+    separate_arguments(MCU_FLAGS_LIST NATIVE_COMMAND ${{CAFFEINE_MCU_COMPILE_OPTIONS}})
+    target_compile_options(vendor_sdk PUBLIC ${{MCU_FLAGS_LIST}})
+    target_compile_options(vendor_sdk PRIVATE ${{MCU_FLAGS_LIST}})
+endif()
+
+target_include_directories(vendor_sdk SYSTEM PRIVATE
+    ${{SDK_DIR}}/Drivers/STM32{family_short_upper}xx_HAL_Driver/Inc
+    ${{SDK_DIR}}/Drivers/CMSIS/Device/ST/STM32{family_short_upper}xx/Include
+    ${{SDK_DIR}}/Drivers/CMSIS/Include
+)
+target_include_directories(vendor_sdk PRIVATE ${{CMAKE_CURRENT_BINARY_DIR}/generated)
+
+target_compile_definitions(vendor_sdk PUBLIC USE_HAL_DRIVER ${{CAFFEINE_MCU_MACRO}})
+
+# --- 2. Main Port Library ---
+add_library(${{PROJECT_NAME}} STATIC ${{PORT_SOURCES_LIST}})
+target_compile_options(${{PROJECT_NAME}} PRIVATE ${{CPU_FLAGS}})
+target_compile_options(${{PROJECT_NAME}} INTERFACE ${{CPU_FLAGS}})
+target_link_options(${{PROJECT_NAME}} INTERFACE ${{CPU_FLAGS}})
+
+if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
+    separate_arguments(MCU_FLAGS_LIST NATIVE_COMMAND ${{CAFFEINE_MCU_COMPILE_OPTIONS}})
+    target_compile_options(${{PROJECT_NAME}} PRIVATE ${{MCU_FLAGS_LIST}})
+    target_compile_options(${{PROJECT_NAME}} INTERFACE ${{MCU_FLAGS_LIST}})
+    target_link_options(${{PROJECT_NAME}} INTERFACE ${{MCU_FLAGS_LIST}})
+endif()
+
+# Link vendor_sdk objects
+target_link_libraries(${{PROJECT_NAME}} INTERFACE $<TARGET_OBJECTS:vendor_sdk>)
+target_link_libraries(${{PROJECT_NAME}} PRIVATE $<TARGET_OBJECTS:vendor_sdk>)
+
+# Export port-specific headers and generated config
+target_include_directories(${{PROJECT_NAME}} PUBLIC 
+    $<BUILD_INTERFACE:${{CMAKE_CURRENT_LIST_DIR}}/../../../src/stm32/{family_name}>
+    $<BUILD_INTERFACE:${{CMAKE_CURRENT_BINARY_DIR}/generated>
+)
+
+target_include_directories(${{PROJECT_NAME}} SYSTEM PRIVATE
+    ${{SDK_DIR}}/Drivers/STM32{family_short_upper}xx_HAL_Driver/Inc
+    ${{SDK_DIR}}/Drivers/CMSIS/Device/ST/STM32{family_short_upper}xx/Include
+    ${{SDK_DIR}}/Drivers/CMSIS/Include
+)
+target_include_directories(${{PROJECT_NAME}} PRIVATE ${{CMAKE_CURRENT_BINARY_DIR}/generated)
+
+target_compile_definitions(${{PROJECT_NAME}} PUBLIC USE_HAL_DRIVER ${{CAFFEINE_MCU_MACRO}})
+
+if(DEFINED CAFFEINE_LINKER_SCRIPT)
+    find_file(LINKER_SCRIPT_FULL_PATH 
+        NAMES ${{CAFFEINE_LINKER_SCRIPT}}
+        PATHS "${{CMAKE_CURRENT_LIST_DIR}}/../../../linker"
+        NO_DEFAULT_PATH
+    )
+    if(LINKER_SCRIPT_FULL_PATH)
+        target_link_options(${{PROJECT_NAME}} INTERFACE
+            -T "${{LINKER_SCRIPT_FULL_PATH}}"
+        )
+    endif()
+endif()

@@ -1,0 +1,41 @@
+{{
+  "version": 4,
+  "configurePresets": [
+    {{
+      "name": "{family_name}-base-peripheral-set",
+      "hidden": true,
+      "inherits": "base-hardware-defaults",
+      "cacheVariables": {{
+        "CFN_HAL_CLOCK": "ON",
+        "CFN_HAL_GPIO": "ON",
+        "CFN_HAL_UART": "ON"
+      }}
+    }},
+    {{
+      "name": "{family_name}-release",
+      "inherits": [
+        "base-arm",
+        "{family_name}-base-peripheral-set"
+      ],
+      "displayName": "{family_name_upper} Generic (ARM {core})",
+      "binaryDir": "${{sourceDir}}/build/{family_name}-release",
+      "cacheVariables": {{
+        "CMAKE_BUILD_TYPE": "Release",
+        "CFN_HAL_PORT_VENDOR": "stm32",
+        "CFN_HAL_PORT_FAMILY": "{family_name}",
+        "CAFFEINE_MCU_CORE": "{core}",
+        "CAFFEINE_MCU_MACRO": "{mcu_macro}",
+        "CAFFEINE_MCU_COMPILE_OPTIONS": "{compile_options}"
+      }}
+    }},
+    {{
+      "name": "{part_number_lower}-release",
+      "inherits": "{family_name}-release",
+      "displayName": "{part_number} (ARM {core})",
+      "binaryDir": "${{sourceDir}}/build/{part_number_lower}-release",
+      "cacheVariables": {{
+        "CAFFEINE_LINKER_SCRIPT": "{part_number}_FLASH.ld"
+      }}
+    }}
+  ]
+}}
