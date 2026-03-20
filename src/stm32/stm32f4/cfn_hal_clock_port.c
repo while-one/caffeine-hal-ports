@@ -328,6 +328,12 @@ void cfn_hal_port_clock_enable_gate(cfn_hal_port_peripheral_id_t periph_id)
 cfn_hal_error_code_t
 cfn_hal_clock_construct(cfn_hal_clock_t *driver, const cfn_hal_clock_config_t *config, const cfn_hal_clock_phy_t *phy)
 {
+    cfn_hal_error_code_t err = cfn_hal_clock_config_validate(config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;

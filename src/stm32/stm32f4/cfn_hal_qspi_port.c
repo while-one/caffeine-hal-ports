@@ -37,8 +37,13 @@ static QSPI_HandleTypeDef port_hqspi;
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_qspi_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_qspi_t *driver)
 {
+    if (driver == NULL || driver->phy == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     /* 1. Enable Clock */
     __HAL_RCC_QSPI_CLK_ENABLE();
 
@@ -67,15 +72,36 @@ static void low_level_init(cfn_hal_qspi_t *driver)
     {
         (void) cfn_hal_gpio_init(driver->phy->io3->port);
     }
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
     cfn_hal_qspi_t *driver = (cfn_hal_qspi_t *) base;
 
-    low_level_init(driver);
+    cfn_hal_error_code_t err = cfn_hal_qspi_config_validate(driver->config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
 
-    port_hqspi.Instance                = QUADSPI;
+    if (driver->api->base.config_validate != NULL)
+    {
+        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
+    err = low_level_init(driver);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+    port_hqspi.Instance = QUADSPI;
     port_hqspi.Init.ClockPrescaler     = 1;
     port_hqspi.Init.FifoThreshold      = 4;
     port_hqspi.Init.SampleShifting     = QSPI_SAMPLE_SHIFTING_HALFCYCLE;

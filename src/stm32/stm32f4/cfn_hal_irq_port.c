@@ -30,6 +30,28 @@
 
 /* VMT Implementations ----------------------------------------------*/
 
+static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
+{
+    cfn_hal_irq_t *driver = (cfn_hal_irq_t *) base;
+
+    cfn_hal_error_code_t err = cfn_hal_irq_config_validate(driver->config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+    if (driver->api->base.config_validate != NULL)
+    {
+        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
+    return CFN_HAL_ERROR_OK;
+}
+
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
     CFN_HAL_UNUSED(base);
@@ -95,7 +117,7 @@ static cfn_hal_error_code_t port_irq_clear_pending(cfn_hal_irq_t *driver, uint32
 /* API --------------------------------------------------------------*/
 static const cfn_hal_irq_api_t IRQ_API = {
     .base = {
-        .init = NULL,
+        .init = port_base_init,
         .deinit = NULL,
         .power_state_set = NULL,
         .config_set = NULL,

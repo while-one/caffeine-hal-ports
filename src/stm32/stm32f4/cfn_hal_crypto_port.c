@@ -48,12 +48,58 @@ static RNG_HandleTypeDef port_hrng;
 
 /* VMT Implementations ----------------------------------------------*/
 
-static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
+static cfn_hal_error_code_t low_level_init(cfn_hal_crypto_t *driver)
 {
-    CFN_HAL_UNUSED(base);
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
 
 #ifdef HAL_CRYP_MODULE_ENABLED
     __HAL_RCC_CRYP_CLK_ENABLE();
+#endif
+
+#ifdef HAL_HASH_MODULE_ENABLED
+    __HAL_RCC_HASH_CLK_ENABLE();
+#endif
+
+#ifdef HAL_RNG_MODULE_ENABLED
+    __HAL_RCC_RNG_CLK_ENABLE();
+#endif
+
+    return CFN_HAL_ERROR_OK;
+}
+
+static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
+{
+    cfn_hal_crypto_t *driver = (cfn_hal_crypto_t *) base;
+    if ((driver == NULL) || (driver->phy == NULL) || (driver->config == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    cfn_hal_error_code_t err = cfn_hal_crypto_config_validate(driver->config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+    if (driver->api->base.config_validate != NULL)
+    {
+        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
+    err = low_level_init(driver);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+#ifdef HAL_CRYP_MODULE_ENABLED
     port_hcryp.Instance       = CRYP;
     port_hcryp.Init.DataType  = CRYP_DATATYPE_8B;
     port_hcryp.Init.KeySize   = CRYP_KEYSIZE_128B;
@@ -66,7 +112,6 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 #endif
 
 #ifdef HAL_HASH_MODULE_ENABLED
-    __HAL_RCC_HASH_CLK_ENABLE();
     if (HAL_HASH_Init(&port_hhash) != HAL_OK)
     {
         return CFN_HAL_ERROR_FAIL;
@@ -74,7 +119,6 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 #endif
 
 #ifdef HAL_RNG_MODULE_ENABLED
-    __HAL_RCC_RNG_CLK_ENABLE();
     port_hrng.Instance = RNG;
     if (HAL_RNG_Init(&port_hrng) != HAL_OK)
     {
@@ -87,7 +131,12 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 {
-    CFN_HAL_UNUSED(base);
+    cfn_hal_crypto_t *driver = (cfn_hal_crypto_t *) base;
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
 #ifdef HAL_CRYP_MODULE_ENABLED
     (void) HAL_CRYP_DeInit(&port_hcryp);
 #endif
@@ -102,7 +151,12 @@ static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 
 static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
 {
-    CFN_HAL_UNUSED(config);
+    cfn_hal_crypto_t *driver = (cfn_hal_crypto_t *) base;
+    if ((driver == NULL) || (config == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    driver->config = (const cfn_hal_crypto_config_t *) config;
     return port_base_init(base);
 }
 

@@ -47,22 +47,30 @@ static cfn_hal_eth_t    *port_drivers[CFN_HAL_ETH_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
-static int32_t get_port_id_from_handle(ETH_HandleTypeDef *heth)
+static uint32_t get_port_id_from_handle(ETH_HandleTypeDef *heth)
 {
-    for (uint32_t i = 0; i < CFN_HAL_ETH_PORT_MAX; i++)
+    if ((heth < &port_heths[0]) || (heth >= &port_heths[CFN_HAL_ETH_PORT_MAX]))
     {
-        if (&port_heths[i] == heth)
-        {
-            return (int32_t) i;
-        }
+        return UINT32_MAX;
     }
-    return -1;
+    return (uint32_t) (heth - port_heths);
 }
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_eth_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_eth_t *driver)
 {
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_ETH_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     /* 1. Enable Clock */
     cfn_hal_port_clock_enable_gate(CFN_HAL_PORT_PERIPH_ETH);
 
@@ -103,15 +111,41 @@ static void low_level_init(cfn_hal_eth_t *driver)
     {
         (void) cfn_hal_gpio_init(driver->phy->txd1->port);
     }
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_eth_t     *driver  = (cfn_hal_eth_t *) base;
+    cfn_hal_eth_t *driver = (cfn_hal_eth_t *) base;
+    if ((driver == NULL) || (driver->phy == NULL) || (driver->config == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    cfn_hal_error_code_t err = cfn_hal_eth_config_validate(driver->config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+    if (driver->api->base.config_validate != NULL)
+    {
+        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     ETH_HandleTypeDef *heth    = &port_heths[port_id];
 
-    low_level_init(driver);
+    err = low_level_init(driver);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
 
     heth->Instance            = PORT_INSTANCES[port_id];
     heth->Init.MACAddr        = (uint8_t *) driver->config->mac_addr;
@@ -122,8 +156,18 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 {
-    cfn_hal_eth_t *driver  = (cfn_hal_eth_t *) base;
-    uint32_t       port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    cfn_hal_eth_t *driver = (cfn_hal_eth_t *) base;
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_ETH_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     return cfn_hal_stm32_map_error(HAL_ETH_DeInit(&port_heths[port_id]));
 }
 
@@ -158,8 +202,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 void HAL_ETH_RxCpltCallback(ETH_HandleTypeDef *heth)
 {
-    int32_t port_id = get_port_id_from_handle(heth);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(heth);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_eth_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -171,8 +215,8 @@ void HAL_ETH_RxCpltCallback(ETH_HandleTypeDef *heth)
 
 void HAL_ETH_TxCpltCallback(ETH_HandleTypeDef *heth)
 {
-    int32_t port_id = get_port_id_from_handle(heth);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(heth);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_eth_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -184,8 +228,8 @@ void HAL_ETH_TxCpltCallback(ETH_HandleTypeDef *heth)
 
 void HAL_ETH_ErrorCallback(ETH_HandleTypeDef *heth)
 {
-    int32_t port_id = get_port_id_from_handle(heth);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(heth);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_eth_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)

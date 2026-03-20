@@ -43,6 +43,32 @@ static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_A
     [CFN_HAL_ADC_PORT_ADC3] = CFN_HAL_PORT_PERIPH_ADC3,
 };
 
+static const uint32_t PORT_MAP_RESOLUTION[CFN_HAL_ADC_RESOLUTION_BIT_MAX] = {
+    [CFN_HAL_ADC_RESOLUTION_BIT_4]  = UINT32_MAX,         //
+    [CFN_HAL_ADC_RESOLUTION_BIT_6]  = ADC_RESOLUTION_6B,  //
+    [CFN_HAL_ADC_RESOLUTION_BIT_8]  = ADC_RESOLUTION_8B,  //
+    [CFN_HAL_ADC_RESOLUTION_BIT_10] = ADC_RESOLUTION_10B, //
+    [CFN_HAL_ADC_RESOLUTION_BIT_12] = ADC_RESOLUTION_12B, //
+    [CFN_HAL_ADC_RESOLUTION_BIT_14] = UINT32_MAX,         //
+    [CFN_HAL_ADC_RESOLUTION_BIT_16] = UINT32_MAX,         //
+    [CFN_HAL_ADC_RESOLUTION_BIT_24] = UINT32_MAX,         //
+};
+
+static const uint32_t PORT_MAP_ALIGN[CFN_HAL_ADC_ALIGN_MAX] = {
+    [CFN_HAL_ADC_ALIGN_RIGHT] = ADC_DATAALIGN_RIGHT,
+    [CFN_HAL_ADC_ALIGN_LEFT]  = ADC_DATAALIGN_LEFT,
+};
+
+static const uint32_t PORT_MAP_SCAN[CFN_HAL_SCAN_MAX] = {
+    [CFN_HAL_SCAN_ENABLED]  = ENABLE,
+    [CFN_HAL_SCAN_DISABLED] = DISABLE,
+};
+
+static const uint32_t PORT_MAP_MODE[CFN_HAL_ADC_MODE_MAX] = {
+    [CFN_HAL_ADC_MODE_SINGLE]     = ENABLE,
+    [CFN_HAL_ADC_MODE_CONTINUOUS] = DISABLE,
+};
+
 static ADC_TypeDef *const PORT_INSTANCES[CFN_HAL_ADC_PORT_MAX] = {
 #if defined(ADC1)
     [CFN_HAL_ADC_PORT_ADC1] = ADC1,
@@ -60,23 +86,30 @@ static cfn_hal_adc_t    *port_drivers[CFN_HAL_ADC_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
-static int32_t get_port_id_from_handle(ADC_HandleTypeDef *hadc)
+static uint32_t get_port_id_from_handle(ADC_HandleTypeDef *handle)
 {
-    for (uint32_t i = 0; i < CFN_HAL_ADC_PORT_MAX; i++)
+    if ((handle < &port_hadcs[0]) || (handle >= &port_hadcs[CFN_HAL_ADC_PORT_MAX]))
     {
-        if (&port_hadcs[i] == hadc)
-        {
-            return (int32_t) i;
-        }
+        return UINT32_MAX;
     }
-    return -1;
+    return (uint32_t) (handle - port_hadcs);
 }
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_adc_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_adc_t *driver)
 {
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_ADC_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     /* 1. Enable Clock */
     cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
 
@@ -85,28 +118,78 @@ static void low_level_init(cfn_hal_adc_t *driver)
     {
         (void) cfn_hal_gpio_init(driver->phy->gpio->port);
     }
+
+    return CFN_HAL_ERROR_OK;
 }
+
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_adc_t     *driver  = (cfn_hal_adc_t *) base;
-    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    ADC_HandleTypeDef *hadc    = &port_hadcs[port_id];
+    cfn_hal_adc_t *driver = (cfn_hal_adc_t *) base;
+    if ((driver == NULL) || (driver->phy == NULL) || (driver->config == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
 
-    low_level_init(driver);
+    cfn_hal_error_code_t err = cfn_hal_adc_config_validate(driver->config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+    if (driver->api->base.config_validate != NULL)
+    {
+        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_ADC_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    ADC_HandleTypeDef *hadc = &port_hadcs[port_id];
+
+    err = low_level_init(driver);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+
+    uint32_t resolution = PORT_MAP_RESOLUTION[driver->config->resolution];
+    uint32_t align      = PORT_MAP_ALIGN[driver->config->alignment];
+    uint32_t scan       = PORT_MAP_SCAN[driver->config->scan];
+    uint32_t mode       = PORT_MAP_MODE[driver->config->mode];
+    uint32_t eoc        = ADC_EOC_SINGLE_CONV;
+    if (CFN_HAL_BIT_CHECK(driver->config->eoc, CFN_HAL_ADC_EOC_SEQUENCE))
+    {
+        if (CFN_HAL_BIT_CHECK(driver->config->eoc, CFN_HAL_ADC_EOC_SINGLE))
+        {
+            eoc = ADC_EOC_SINGLE_SEQ_CONV;
+        }
+        else
+        {
+            eoc = ADC_EOC_SEQ_CONV;
+        }
+    }
 
     hadc->Instance                   = PORT_INSTANCES[port_id];
     hadc->Init.ClockPrescaler        = ADC_CLOCK_SYNC_PCLK_DIV4;
-    hadc->Init.Resolution            = ADC_RESOLUTION_12B;
-    hadc->Init.ScanConvMode          = DISABLE;
-    hadc->Init.ContinuousConvMode    = DISABLE;
+    hadc->Init.Resolution            = resolution;
+    hadc->Init.ScanConvMode          = scan;
+    hadc->Init.ContinuousConvMode    = mode;
     hadc->Init.DiscontinuousConvMode = DISABLE;
     hadc->Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_NONE;
     hadc->Init.ExternalTrigConv      = ADC_SOFTWARE_START;
-    hadc->Init.DataAlign             = ADC_DATAALIGN_RIGHT;
+    hadc->Init.DataAlign             = align;
     hadc->Init.NbrOfConversion       = 1;
     hadc->Init.DMAContinuousRequests = DISABLE;
-    hadc->Init.EOCSelection          = ADC_EOC_SINGLE_CONV;
+    hadc->Init.EOCSelection          = eoc;
 
     return cfn_hal_stm32_map_error(HAL_ADC_Init(hadc));
 }
@@ -223,8 +306,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
-    int32_t port_id = get_port_id_from_handle(hadc);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hadc);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_adc_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -237,8 +320,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 
 void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc)
 {
-    int32_t port_id = get_port_id_from_handle(hadc);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hadc);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_adc_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)

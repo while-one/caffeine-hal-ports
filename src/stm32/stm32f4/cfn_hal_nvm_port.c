@@ -97,6 +97,41 @@ static uint32_t get_sector(uint32_t address)
 
 /* VMT Implementations ----------------------------------------------*/
 
+static cfn_hal_error_code_t low_level_init(cfn_hal_nvm_t *driver)
+{
+    if (driver == NULL || driver->phy == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    return CFN_HAL_ERROR_OK;
+}
+
+static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
+{
+    if (base == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    cfn_hal_nvm_t *driver = (cfn_hal_nvm_t *) base;
+
+    cfn_hal_error_code_t err = cfn_hal_nvm_config_validate(driver->config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+    if (driver->api->base.config_validate != NULL)
+    {
+        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
+    return low_level_init(driver);
+}
+
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
     CFN_HAL_UNUSED(base);
@@ -204,10 +239,11 @@ static cfn_hal_error_code_t port_nvm_get_info(cfn_hal_nvm_t *driver, cfn_hal_nvm
 /* API --------------------------------------------------------------*/
 static const cfn_hal_nvm_api_t NVM_API = {
     .base = {
-        .init = NULL,
+        .init = port_base_init,
         .deinit = NULL,
         .power_state_set = NULL,
         .config_set = NULL,
+        .config_validate = NULL,
         .callback_register = NULL,
         .event_enable = NULL,
         .event_disable = NULL,

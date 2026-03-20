@@ -46,22 +46,30 @@ static cfn_hal_dac_t    *port_drivers[CFN_HAL_DAC_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
-static int32_t get_port_id_from_handle(DAC_HandleTypeDef *hdac)
+static uint32_t get_port_id_from_handle(DAC_HandleTypeDef *hdac)
 {
-    for (uint32_t i = 0; i < CFN_HAL_DAC_PORT_MAX; i++)
+    if ((hdac < &port_hdacs[0]) || (hdac >= &port_hdacs[CFN_HAL_DAC_PORT_MAX]))
     {
-        if (&port_hdacs[i] == hdac)
-        {
-            return (int32_t) i;
-        }
+        return UINT32_MAX;
     }
-    return -1;
+    return (uint32_t) (hdac - port_hdacs);
 }
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_dac_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_dac_t *driver)
 {
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_DAC_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     /* 1. Enable Clock */
     cfn_hal_port_clock_enable_gate(CFN_HAL_PORT_PERIPH_DAC1);
 
@@ -70,15 +78,41 @@ static void low_level_init(cfn_hal_dac_t *driver)
     {
         (void) cfn_hal_gpio_init(driver->phy->pin->port);
     }
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_dac_t     *driver  = (cfn_hal_dac_t *) base;
+    cfn_hal_dac_t *driver = (cfn_hal_dac_t *) base;
+    if ((driver == NULL) || (driver->phy == NULL) || (driver->config == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    cfn_hal_error_code_t err = cfn_hal_dac_config_validate(driver->config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+    if (driver->api->base.config_validate != NULL)
+    {
+        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     DAC_HandleTypeDef *hdac    = &port_hdacs[port_id];
 
-    low_level_init(driver);
+    err = low_level_init(driver);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
 
     hdac->Instance = PORT_INSTANCES[port_id];
 
@@ -87,8 +121,18 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 {
-    cfn_hal_dac_t *driver  = (cfn_hal_dac_t *) base;
-    uint32_t       port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    cfn_hal_dac_t *driver = (cfn_hal_dac_t *) base;
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_DAC_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     return cfn_hal_stm32_map_error(HAL_DAC_DeInit(&port_hdacs[port_id]));
 }
 
@@ -163,8 +207,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 void HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac)
 {
-    int32_t port_id = get_port_id_from_handle(hdac);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hdac);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_dac_t *driver = port_drivers[port_id];
         if ((driver->cb != NULL) && (driver->phy->channel == 1))
@@ -176,8 +220,8 @@ void HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac)
 
 void HAL_DACEx_ConvCpltCallbackCh2(DAC_HandleTypeDef *hdac)
 {
-    int32_t port_id = get_port_id_from_handle(hdac);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hdac);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_dac_t *driver = port_drivers[port_id];
         if ((driver->cb != NULL) && (driver->phy->channel == 2))
@@ -189,8 +233,8 @@ void HAL_DACEx_ConvCpltCallbackCh2(DAC_HandleTypeDef *hdac)
 
 void HAL_DAC_ErrorCallbackCh1(DAC_HandleTypeDef *hdac)
 {
-    int32_t port_id = get_port_id_from_handle(hdac);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hdac);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_dac_t *driver = port_drivers[port_id];
         if ((driver->cb != NULL) && (driver->phy->channel == 1))
@@ -204,8 +248,8 @@ void HAL_DAC_ErrorCallbackCh1(DAC_HandleTypeDef *hdac)
 
 void HAL_DACEx_ErrorCallbackCh2(DAC_HandleTypeDef *hdac)
 {
-    int32_t port_id = get_port_id_from_handle(hdac);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hdac);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_dac_t *driver = port_drivers[port_id];
         if ((driver->cb != NULL) && (driver->phy->channel == 2))

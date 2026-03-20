@@ -48,23 +48,29 @@ static cfn_hal_i2s_t    *port_drivers[CFN_HAL_I2S_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
-static int32_t get_port_id_from_handle(I2S_HandleTypeDef *hi2s)
+static uint32_t get_port_id_from_handle(I2S_HandleTypeDef *hi2s)
 {
-    for (uint32_t i = 0; i < CFN_HAL_I2S_PORT_MAX; i++)
+    if ((hi2s < &port_hi2ss[0]) || (hi2s >= &port_hi2ss[CFN_HAL_I2S_PORT_MAX]))
     {
-        if (&port_hi2ss[i] == hi2s)
-        {
-            return (int32_t) i;
-        }
+        return UINT32_MAX;
     }
-    return -1;
+    return (uint32_t) (hi2s - port_hi2ss);
 }
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_i2s_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_i2s_t *driver)
 {
+    if (driver == NULL || driver->phy == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_I2S_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     if (PORT_INSTANCES[port_id] == SPI2)
     {
         __HAL_RCC_SPI2_CLK_ENABLE();
@@ -95,6 +101,8 @@ static void low_level_init(cfn_hal_i2s_t *driver)
     {
         (void) cfn_hal_gpio_init(driver->phy->mck->port);
     }
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
@@ -103,7 +111,26 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     I2S_HandleTypeDef *hi2s    = &port_hi2ss[port_id];
 
-    low_level_init(driver);
+    cfn_hal_error_code_t err = cfn_hal_i2s_config_validate(driver->config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+    if (driver->api->base.config_validate != NULL)
+    {
+        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
+    err = low_level_init(driver);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
 
     hi2s->Instance         = PORT_INSTANCES[port_id];
     hi2s->Init.Mode        = I2S_MODE_MASTER_TX; /* Default, can be changed via config if needed */
@@ -154,8 +181,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s)
 {
-    int32_t port_id = get_port_id_from_handle(hi2s);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hi2s);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_i2s_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -167,8 +194,8 @@ void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s)
 
 void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s)
 {
-    int32_t port_id = get_port_id_from_handle(hi2s);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hi2s);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_i2s_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -180,8 +207,8 @@ void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s)
 
 void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s)
 {
-    int32_t port_id = get_port_id_from_handle(hi2s);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hi2s);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_i2s_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)

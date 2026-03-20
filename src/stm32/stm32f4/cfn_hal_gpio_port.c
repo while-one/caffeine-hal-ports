@@ -75,15 +75,38 @@ static GPIO_TypeDef *const PORT_INSTANCES[CFN_HAL_GPIO_PORT_MAX] = {
 
 /* VMT Implementations ----------------------------------------------*/
 
-static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
+static cfn_hal_error_code_t low_level_init(cfn_hal_gpio_t *driver)
 {
-    cfn_hal_gpio_t *driver  = (cfn_hal_gpio_t *) base;
-    uint32_t        port_id = (uint32_t) (uintptr_t) driver->phy->port;
+    if (driver == NULL || driver->phy == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->port;
+    if (port_id >= CFN_HAL_GPIO_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
 
     /* 1. Enable Clock */
     cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
 
     return CFN_HAL_ERROR_OK;
+}
+
+static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
+{
+    cfn_hal_gpio_t *driver = (cfn_hal_gpio_t *) base;
+
+    if (driver->api->base.config_validate != NULL)
+    {
+        cfn_hal_error_code_t err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
+    return low_level_init(driver);
 }
 
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
@@ -118,6 +141,12 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 static cfn_hal_error_code_t port_gpio_pin_config(cfn_hal_gpio_t *port, const cfn_hal_gpio_pin_config_t *pin_cfg)
 {
+    cfn_hal_error_code_t err = cfn_hal_gpio_pin_config_validate(pin_cfg);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
     uint32_t         port_id = (uint32_t) (uintptr_t) port->phy->port;
     GPIO_InitTypeDef st_cfg  = { 0 };
 

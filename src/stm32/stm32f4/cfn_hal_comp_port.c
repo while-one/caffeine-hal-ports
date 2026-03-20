@@ -32,8 +32,13 @@
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_comp_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_comp_t *driver)
 {
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     /* 1. Enable Clock */
     __HAL_RCC_COMP_CLK_ENABLE();
 
@@ -50,13 +55,34 @@ static void low_level_init(cfn_hal_comp_t *driver)
     {
         (void) cfn_hal_gpio_init(driver->phy->output->port);
     }
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
     cfn_hal_comp_t *driver = (cfn_hal_comp_t *) base;
-    low_level_init(driver);
-    return CFN_HAL_ERROR_OK;
+    if ((driver == NULL) || (driver->phy == NULL) || (driver->config == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    cfn_hal_error_code_t err = cfn_hal_comp_config_validate(driver->config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+    if (driver->api->base.config_validate != NULL)
+    {
+        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
+    return low_level_init(driver);
 }
 
 static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)

@@ -61,23 +61,30 @@ static cfn_hal_spi_t    *port_drivers[CFN_HAL_SPI_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
-static int32_t get_port_id_from_handle(SPI_HandleTypeDef *hspi)
+static uint32_t get_port_id_from_handle(SPI_HandleTypeDef *handle)
 {
-    for (uint32_t i = 0; i < CFN_HAL_SPI_PORT_MAX; i++)
+    if ((handle < &port_hspis[0]) || (handle >= &port_hspis[CFN_HAL_SPI_PORT_MAX]))
     {
-        if (&port_hspis[i] == hspi)
-        {
-            return (int32_t) i;
-        }
+        return UINT32_MAX;
     }
-    return -1;
+    return (uint32_t) (handle - port_hspis);
 }
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_spi_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_spi_t *driver)
 {
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_SPI_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     /* 1. Enable Clock */
     cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
 
@@ -94,15 +101,37 @@ static void low_level_init(cfn_hal_spi_t *driver)
     {
         (void) cfn_hal_gpio_init(driver->phy->sck->port);
     }
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_spi_t     *driver  = (cfn_hal_spi_t *) base;
+    cfn_hal_spi_t *driver = (cfn_hal_spi_t *) base;
+
+    cfn_hal_error_code_t err = cfn_hal_spi_config_validate(driver->config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+    if (driver->api->base.config_validate != NULL)
+    {
+        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
+    err = low_level_init(driver);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     SPI_HandleTypeDef *hspi    = &port_hspis[port_id];
-
-    low_level_init(driver);
 
     hspi->Instance       = PORT_INSTANCES[port_id];
     hspi->Init.Mode      = SPI_MODE_MASTER;
@@ -148,7 +177,6 @@ static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 
 static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
 {
-    CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(config);
     return port_base_init(base);
 }
@@ -271,8 +299,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-    int32_t port_id = get_port_id_from_handle(hspi);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hspi);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_spi_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -284,8 +312,8 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-    int32_t port_id = get_port_id_from_handle(hspi);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hspi);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_spi_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -297,8 +325,8 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-    int32_t port_id = get_port_id_from_handle(hspi);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hspi);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_spi_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -315,8 +343,8 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
 
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
 {
-    int32_t port_id = get_port_id_from_handle(hspi);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hspi);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_spi_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)

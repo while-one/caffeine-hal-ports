@@ -136,9 +136,18 @@ static uint32_t get_timer_clock(const TIM_TypeDef *instance)
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_pwm_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_pwm_t *driver)
 {
+    if (driver == NULL || driver->phy == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_TIMER_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     /* 1. Enable Clock */
     cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
 
@@ -147,6 +156,8 @@ static void low_level_init(cfn_hal_pwm_t *driver)
     {
         (void) cfn_hal_gpio_init(driver->phy->pin->port);
     }
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
@@ -156,7 +167,26 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
     TIM_HandleTypeDef *htim        = &port_htims[port_id];
     TIM_OC_InitTypeDef s_config_oc = { 0 };
 
-    low_level_init(driver);
+    cfn_hal_error_code_t err = cfn_hal_pwm_config_validate(driver->config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+    if (driver->api->base.config_validate != NULL)
+    {
+        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
+    err = low_level_init(driver);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
 
     uint32_t timer_clk = get_timer_clock(PORT_INSTANCES[port_id]);
     uint32_t prescaler = 0;

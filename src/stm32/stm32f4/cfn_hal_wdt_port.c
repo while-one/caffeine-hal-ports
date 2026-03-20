@@ -48,11 +48,52 @@ static IWDG_HandleTypeDef port_hiwdgs[CFN_HAL_WDT_PORT_MAX];
 
 /* VMT Implementations ----------------------------------------------*/
 
+static cfn_hal_error_code_t low_level_init(cfn_hal_wdt_t *driver)
+{
+    if (driver == NULL || driver->phy == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+
+    if (port_id >= CFN_HAL_WDT_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    return CFN_HAL_ERROR_OK;
+}
+
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
+    if (base == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     cfn_hal_wdt_t      *driver  = (cfn_hal_wdt_t *) base;
     uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     IWDG_HandleTypeDef *hiwdg   = &port_hiwdgs[port_id];
+
+    cfn_hal_error_code_t err = cfn_hal_wdt_config_validate(driver->config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+    if (driver->api->base.config_validate != NULL)
+    {
+        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
+    err = low_level_init(driver);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
 
     hiwdg->Instance             = PORT_INSTANCES[port_id];
     hiwdg->Init.Prescaler       = IWDG_PRESCALER_4;

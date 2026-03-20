@@ -134,15 +134,15 @@ static cfn_hal_uart_t *port_drivers[CFN_HAL_UART_PORT_MAX];
 /**
  * @brief Calculates the port ID from an STM32 HAL UART handle pointer using O(1) arithmetic.
  * @param huart Pointer to the STM32 HAL UART handle.
- * @return The 0-based port ID, or -1 if the handle is not part of the port array.
+ * @return The 0-based port ID, or UINT32_MAX if the handle is not part of the port array.
  */
-static int32_t get_port_id_from_handle(UART_HandleTypeDef *huart)
+static uint32_t get_port_id_from_handle(UART_HandleTypeDef *huart)
 {
     if ((huart < &port_huarts[0]) || (huart >= &port_huarts[CFN_HAL_UART_PORT_MAX]))
     {
-        return -1;
+        return UINT32_MAX;
     }
-    return (int32_t) (huart - port_huarts);
+    return (uint32_t) (huart - port_huarts);
 }
 
 /* VMT Implementations ----------------------------------------------*/
@@ -193,18 +193,22 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
     uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     UART_HandleTypeDef *huart   = &port_huarts[port_id];
 
-    if (driver->config == NULL ||
-        ((driver->config->data_len != CFN_HAL_UART_CONFIG_DATA_LEN_8) &&
-         (driver->config->data_len != CFN_HAL_UART_CONFIG_DATA_LEN_9)) ||
-        (driver->config->stop_bits >= CFN_HAL_UART_CONFIG_STOP_MAX) ||
-        (driver->config->parity >= CFN_HAL_UART_CONFIG_PARITY_MAX) ||
-        (driver->config->direction >= CFN_HAL_UART_CONFIG_DIRECTION_MAX) ||
-        (driver->config->flow_ctrl >= CFN_HAL_UART_CONFIG_FLOW_CTRL_MAX))
+    cfn_hal_error_code_t error = cfn_hal_uart_config_validate(driver->config);
+    if (error != CFN_HAL_ERROR_OK)
     {
-        return CFN_HAL_ERROR_BAD_CONFIG;
+        return error;
     }
 
-    cfn_hal_error_code_t error = low_level_init(driver);
+    if (driver->api->base.config_validate != NULL)
+    {
+        error = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (error != CFN_HAL_ERROR_OK)
+        {
+            return error;
+        }
+    }
+
+    error = low_level_init(driver);
 
     if (error != CFN_HAL_ERROR_OK)
     {
@@ -426,8 +430,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
  */
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
-    int32_t port_id = get_port_id_from_handle(huart);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(huart);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_uart_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -443,8 +447,8 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
  */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-    int32_t port_id = get_port_id_from_handle(huart);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(huart);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_uart_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -460,8 +464,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
  */
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
-    int32_t port_id = get_port_id_from_handle(huart);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(huart);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_uart_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -480,8 +484,8 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
  */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 {
-    int32_t port_id = get_port_id_from_handle(huart);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(huart);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_uart_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)

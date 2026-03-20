@@ -61,23 +61,30 @@ static cfn_hal_can_t    *port_drivers[CFN_HAL_CAN_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
-static int32_t get_port_id_from_handle(CAN_HandleTypeDef *hcan)
+static uint32_t get_port_id_from_handle(CAN_HandleTypeDef *handle)
 {
-    for (uint32_t i = 0; i < CFN_HAL_CAN_PORT_MAX; i++)
+    if ((handle < &port_hcans[0]) || (handle >= &port_hcans[CFN_HAL_CAN_PORT_MAX]))
     {
-        if (&port_hcans[i] == hcan)
-        {
-            return (int32_t) i;
-        }
+        return UINT32_MAX;
     }
-    return -1;
+    return (uint32_t) (handle - port_hcans);
 }
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_can_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_can_t *driver)
 {
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_CAN_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     /* 1. Enable Clock */
     cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
 
@@ -90,17 +97,47 @@ static void low_level_init(cfn_hal_can_t *driver)
     {
         (void) cfn_hal_gpio_init(driver->phy->rx->port);
     }
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_can_t     *driver  = (cfn_hal_can_t *) base;
+    cfn_hal_can_t *driver = (cfn_hal_can_t *) base;
+    if ((driver == NULL) || (driver->phy == NULL) || (driver->config == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    cfn_hal_error_code_t err = cfn_hal_can_config_validate(driver->config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+    if (driver->api->base.config_validate != NULL)
+    {
+        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_CAN_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     CAN_HandleTypeDef *hcan    = &port_hcans[port_id];
 
-    low_level_init(driver);
+    err = low_level_init(driver);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
 
-    hcan->Instance                  = PORT_INSTANCES[port_id];
+    hcan->Instance = PORT_INSTANCES[port_id];
 
     /* Simple default bit timing for F4 @ 42MHz APB1, 500kbps */
     hcan->Init.Prescaler            = 3;
@@ -249,8 +286,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan)
 {
-    int32_t port_id = get_port_id_from_handle(hcan);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hcan);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_can_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -262,8 +299,8 @@ void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan)
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-    int32_t port_id = get_port_id_from_handle(hcan);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hcan);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_can_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -277,8 +314,8 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
 void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
 {
-    int32_t port_id = get_port_id_from_handle(hcan);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hcan);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_can_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)

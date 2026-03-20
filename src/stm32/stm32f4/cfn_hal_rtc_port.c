@@ -45,36 +45,65 @@ static cfn_hal_rtc_t    *port_drivers[CFN_HAL_RTC_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
-static int32_t get_port_id_from_handle(RTC_HandleTypeDef *hrtc)
+static uint32_t get_port_id_from_handle(RTC_HandleTypeDef *handle)
 {
-    for (uint32_t i = 0; i < CFN_HAL_RTC_PORT_MAX; i++)
+    if ((handle < &port_hrtcs[0]) || (handle >= &port_hrtcs[CFN_HAL_RTC_PORT_MAX]))
     {
-        if (&port_hrtcs[i] == hrtc)
-        {
-            return (int32_t) i;
-        }
+        return UINT32_MAX;
     }
-    return -1;
+    return (uint32_t) (handle - port_hrtcs);
 }
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_rtc_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_rtc_t *driver)
 {
-    CFN_HAL_UNUSED(driver);
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_RTC_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     /* Note: RTC clock enablement usually involves PWR and Backup Domain access */
     __HAL_RCC_PWR_CLK_ENABLE();
     HAL_PWR_EnableBkUpAccess();
     __HAL_RCC_RTC_ENABLE();
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_rtc_t     *driver  = (cfn_hal_rtc_t *) base;
+    cfn_hal_rtc_t *driver = (cfn_hal_rtc_t *) base;
+
+    cfn_hal_error_code_t err = cfn_hal_rtc_config_validate(driver->config);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
+    if (driver->api->base.config_validate != NULL)
+    {
+        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
+        if (err != CFN_HAL_ERROR_OK)
+        {
+            return err;
+        }
+    }
+
+    err = low_level_init(driver);
+    if (err != CFN_HAL_ERROR_OK)
+    {
+        return err;
+    }
+
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     RTC_HandleTypeDef *hrtc    = &port_hrtcs[port_id];
-
-    low_level_init(driver);
 
     hrtc->Instance = PORT_INSTANCES[port_id];
     hrtc->Init.HourFormat =
@@ -126,8 +155,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc)
 {
-    int32_t port_id = get_port_id_from_handle(hrtc);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hrtc);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_rtc_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -139,8 +168,8 @@ void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc)
 
 void HAL_RTCEx_AlarmBEventCallback(RTC_HandleTypeDef *hrtc)
 {
-    int32_t port_id = get_port_id_from_handle(hrtc);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hrtc);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_rtc_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
