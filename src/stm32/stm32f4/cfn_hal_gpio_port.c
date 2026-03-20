@@ -32,6 +32,17 @@
 
 /* Private Data -----------------------------------------------------*/
 
+/**
+ * @brief Mapping from Caffeine GPIO port IDs to global clock peripheral IDs.
+ */
+static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_GPIO_PORT_MAX] = {
+    [CFN_HAL_GPIO_PORT_A] = CFN_HAL_PORT_PERIPH_GPIOA, [CFN_HAL_GPIO_PORT_B] = CFN_HAL_PORT_PERIPH_GPIOB,
+    [CFN_HAL_GPIO_PORT_C] = CFN_HAL_PORT_PERIPH_GPIOC, [CFN_HAL_GPIO_PORT_D] = CFN_HAL_PORT_PERIPH_GPIOD,
+    [CFN_HAL_GPIO_PORT_E] = CFN_HAL_PORT_PERIPH_GPIOE, [CFN_HAL_GPIO_PORT_F] = CFN_HAL_PORT_PERIPH_GPIOF,
+    [CFN_HAL_GPIO_PORT_G] = CFN_HAL_PORT_PERIPH_GPIOG, [CFN_HAL_GPIO_PORT_H] = CFN_HAL_PORT_PERIPH_GPIOH,
+    [CFN_HAL_GPIO_PORT_I] = CFN_HAL_PORT_PERIPH_GPIOI,
+};
+
 static GPIO_TypeDef *const PORT_INSTANCES[CFN_HAL_GPIO_PORT_MAX] = {
 #if defined(GPIOA)
     [CFN_HAL_GPIO_PORT_A] = GPIOA,
@@ -70,7 +81,7 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
     uint32_t        port_id = (uint32_t) (uintptr_t) driver->phy->port;
 
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate((cfn_hal_port_peripheral_id_t) (CFN_HAL_PORT_PERIPH_GPIOA + port_id));
+    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
 
     return CFN_HAL_ERROR_OK;
 }

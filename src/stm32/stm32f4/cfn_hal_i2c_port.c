@@ -35,6 +35,15 @@
 
 /* Private Data -----------------------------------------------------*/
 
+/**
+ * @brief Mapping from Caffeine I2C port IDs to global clock peripheral IDs.
+ */
+static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_I2C_PORT_MAX] = {
+    [CFN_HAL_I2C_PORT_I2C1] = CFN_HAL_PORT_PERIPH_I2C1,
+    [CFN_HAL_I2C_PORT_I2C2] = CFN_HAL_PORT_PERIPH_I2C2,
+    [CFN_HAL_I2C_PORT_I2C3] = CFN_HAL_PORT_PERIPH_I2C3,
+};
+
 static I2C_TypeDef *const PORT_INSTANCES[CFN_HAL_I2C_PORT_MAX] = {
 #if defined(I2C1)
     [CFN_HAL_I2C_PORT_I2C1] = I2C1,
@@ -70,11 +79,17 @@ static void low_level_init(cfn_hal_i2c_t *driver)
 {
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate((cfn_hal_port_peripheral_id_t) (CFN_HAL_PORT_PERIPH_I2C1 + port_id));
+    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
 
     /* 2. Initialize Pins */
-    /* Note: In a real app, user would have already initialized these via pin_config */
-    CFN_HAL_UNUSED(driver);
+    if (driver->phy->sda)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->sda->port);
+    }
+    if (driver->phy->scl)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->scl->port);
+    }
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)

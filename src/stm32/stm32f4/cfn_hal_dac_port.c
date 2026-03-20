@@ -68,7 +68,7 @@ static void low_level_init(cfn_hal_dac_t *driver)
     /* 2. Initialize Pin (Mapped via DAC channel in STM32F4) */
     if (driver->phy->pin)
     {
-        (void) cfn_hal_base_init((cfn_hal_driver_t *) driver->phy->pin, CFN_HAL_PERIPHERAL_TYPE_GPIO);
+        (void) cfn_hal_gpio_init(driver->phy->pin->port);
     }
 }
 

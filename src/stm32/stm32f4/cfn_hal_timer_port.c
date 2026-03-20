@@ -34,6 +34,19 @@
 
 /* Private Data -----------------------------------------------------*/
 
+/**
+ * @brief Mapping from Caffeine Timer port IDs to global clock peripheral IDs.
+ */
+static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_TIMER_PORT_MAX] = {
+    [CFN_HAL_TIMER_PORT_TIM1] = CFN_HAL_PORT_PERIPH_TIM1,   [CFN_HAL_TIMER_PORT_TIM2] = CFN_HAL_PORT_PERIPH_TIM2,
+    [CFN_HAL_TIMER_PORT_TIM3] = CFN_HAL_PORT_PERIPH_TIM3,   [CFN_HAL_TIMER_PORT_TIM4] = CFN_HAL_PORT_PERIPH_TIM4,
+    [CFN_HAL_TIMER_PORT_TIM5] = CFN_HAL_PORT_PERIPH_TIM5,   [CFN_HAL_TIMER_PORT_TIM6] = CFN_HAL_PORT_PERIPH_TIM6,
+    [CFN_HAL_TIMER_PORT_TIM7] = CFN_HAL_PORT_PERIPH_TIM7,   [CFN_HAL_TIMER_PORT_TIM8] = CFN_HAL_PORT_PERIPH_TIM8,
+    [CFN_HAL_TIMER_PORT_TIM9] = CFN_HAL_PORT_PERIPH_TIM9,   [CFN_HAL_TIMER_PORT_TIM10] = CFN_HAL_PORT_PERIPH_TIM10,
+    [CFN_HAL_TIMER_PORT_TIM11] = CFN_HAL_PORT_PERIPH_TIM11, [CFN_HAL_TIMER_PORT_TIM12] = CFN_HAL_PORT_PERIPH_TIM12,
+    [CFN_HAL_TIMER_PORT_TIM13] = CFN_HAL_PORT_PERIPH_TIM13, [CFN_HAL_TIMER_PORT_TIM14] = CFN_HAL_PORT_PERIPH_TIM14,
+};
+
 static TIM_TypeDef *const PORT_INSTANCES[CFN_HAL_TIMER_PORT_MAX] = {
 #if defined(TIM1)
     [CFN_HAL_TIMER_PORT_TIM1] = TIM1,
@@ -102,7 +115,7 @@ static void low_level_init(cfn_hal_timer_t *driver)
 {
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate((cfn_hal_port_peripheral_id_t) (CFN_HAL_PORT_PERIPH_TIM1 + port_id));
+    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)

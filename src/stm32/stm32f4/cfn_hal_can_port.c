@@ -35,6 +35,15 @@
 
 /* Private Data -----------------------------------------------------*/
 
+/**
+ * @brief Mapping from Caffeine CAN port IDs to global clock peripheral IDs.
+ */
+static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_CAN_PORT_MAX] = {
+    [CFN_HAL_CAN_PORT_CAN1] = CFN_HAL_PORT_PERIPH_CAN1,
+    [CFN_HAL_CAN_PORT_CAN2] = CFN_HAL_PORT_PERIPH_CAN2,
+    [CFN_HAL_CAN_PORT_CAN3] = CFN_HAL_PORT_PERIPH_CAN3,
+};
+
 static CAN_TypeDef *const PORT_INSTANCES[CFN_HAL_CAN_PORT_MAX] = {
 #if defined(CAN1)
     [CFN_HAL_CAN_PORT_CAN1] = CAN1,
@@ -70,16 +79,16 @@ static void low_level_init(cfn_hal_can_t *driver)
 {
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate((cfn_hal_port_peripheral_id_t) (CFN_HAL_PORT_PERIPH_CAN1 + port_id));
+    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
 
     /* 2. Initialize Pins */
     if (driver->phy->tx)
     {
-        (void) cfn_hal_base_init((cfn_hal_driver_t *) driver->phy->tx, CFN_HAL_PERIPHERAL_TYPE_GPIO);
+        (void) cfn_hal_gpio_init(driver->phy->tx->port);
     }
     if (driver->phy->rx)
     {
-        (void) cfn_hal_base_init((cfn_hal_driver_t *) driver->phy->rx, CFN_HAL_PERIPHERAL_TYPE_GPIO);
+        (void) cfn_hal_gpio_init(driver->phy->rx->port);
     }
 }
 
