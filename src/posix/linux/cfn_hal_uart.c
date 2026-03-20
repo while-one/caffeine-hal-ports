@@ -187,11 +187,11 @@ cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *conf
     driver->base.lock_obj = mutex;
 #endif
 
-    driver->api = &UART_API;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_UART;
+    driver->api         = &UART_API;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_UART;
     driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config = config;
-    driver->phy = phy;
+    driver->config      = config;
+    driver->phy         = phy;
 
     return CFN_HAL_ERROR_OK;
 }
@@ -212,11 +212,11 @@ cfn_hal_error_code_t cfn_hal_uart_destruct(cfn_hal_uart_t *driver)
     }
 #endif
 
-    driver->api = NULL;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_UART;
+    driver->api         = NULL;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_UART;
     driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config = NULL;
-    driver->phy = NULL;
+    driver->config      = NULL;
+    driver->phy         = NULL;
 
     return CFN_HAL_ERROR_OK;
 }
