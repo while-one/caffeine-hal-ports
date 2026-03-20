@@ -35,6 +35,15 @@
 
 /* Private Data -----------------------------------------------------*/
 
+/**
+ * @brief Mapping from Caffeine SPI port IDs to global clock peripheral IDs.
+ */
+static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_SPI_PORT_MAX] = {
+    [CFN_HAL_SPI_PORT_1] = CFN_HAL_PORT_PERIPH_SPI1,
+    [CFN_HAL_SPI_PORT_2] = CFN_HAL_PORT_PERIPH_SPI2,
+    [CFN_HAL_SPI_PORT_3] = CFN_HAL_PORT_PERIPH_SPI3,
+};
+
 static SPI_TypeDef *const PORT_INSTANCES[CFN_HAL_SPI_PORT_MAX] = {
 #if defined(SPI1)
     [CFN_HAL_SPI_PORT_1] = SPI1,
@@ -70,10 +79,21 @@ static void low_level_init(cfn_hal_spi_t *driver)
 {
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate((cfn_hal_port_peripheral_id_t) (CFN_HAL_PORT_PERIPH_SPI1 + port_id));
+    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
 
     /* 2. Initialize Pins */
-    CFN_HAL_UNUSED(driver);
+    if (driver->phy->mosi)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->mosi->port);
+    }
+    if (driver->phy->miso)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->miso->port);
+    }
+    if (driver->phy->sck)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->sck->port);
+    }
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)

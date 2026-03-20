@@ -34,6 +34,15 @@
 
 /* Private Data -----------------------------------------------------*/
 
+/**
+ * @brief Mapping from Caffeine ADC port IDs to global clock peripheral IDs.
+ */
+static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_ADC_PORT_MAX] = {
+    [CFN_HAL_ADC_PORT_ADC1] = CFN_HAL_PORT_PERIPH_ADC1,
+    [CFN_HAL_ADC_PORT_ADC2] = CFN_HAL_PORT_PERIPH_ADC2,
+    [CFN_HAL_ADC_PORT_ADC3] = CFN_HAL_PORT_PERIPH_ADC3,
+};
+
 static ADC_TypeDef *const PORT_INSTANCES[CFN_HAL_ADC_PORT_MAX] = {
 #if defined(ADC1)
     [CFN_HAL_ADC_PORT_ADC1] = ADC1,
@@ -69,7 +78,13 @@ static void low_level_init(cfn_hal_adc_t *driver)
 {
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate((cfn_hal_port_peripheral_id_t) (CFN_HAL_PORT_PERIPH_ADC1 + port_id));
+    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
+
+    /* 2. Initialize GPIO */
+    if (driver->phy->gpio)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->gpio->port);
+    }
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)

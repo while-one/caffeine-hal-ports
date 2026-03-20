@@ -84,11 +84,16 @@ static const uint32_t PORT_MAP_FLOW_CONTROL[CFN_HAL_UART_CONFIG_FLOW_CTRL_MAX] =
 };
 
 static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_UART_PORT_MAX] = {
-    [CFN_HAL_UART_PORT_USART1] = CFN_HAL_PORT_PERIPH_USART1, [CFN_HAL_UART_PORT_USART2] = CFN_HAL_PORT_PERIPH_USART2,
-    [CFN_HAL_UART_PORT_USART3] = CFN_HAL_PORT_PERIPH_USART3, [CFN_HAL_UART_PORT_UART4] = CFN_HAL_PORT_PERIPH_UART4,
-    [CFN_HAL_UART_PORT_UART5] = CFN_HAL_PORT_PERIPH_UART5,   [CFN_HAL_UART_PORT_USART6] = CFN_HAL_PORT_PERIPH_USART6,
-    [CFN_HAL_UART_PORT_UART7] = CFN_HAL_PORT_PERIPH_UART7,   [CFN_HAL_UART_PORT_UART8] = CFN_HAL_PORT_PERIPH_UART8,
-    [CFN_HAL_UART_PORT_UART9] = CFN_HAL_PORT_PERIPH_UART9,   [CFN_HAL_UART_PORT_UART10] = CFN_HAL_PORT_PERIPH_UART10,
+    [CFN_HAL_UART_PORT_USART1] = CFN_HAL_PORT_PERIPH_USART1, // Useless comment, disable clang-format from wrapping
+    [CFN_HAL_UART_PORT_USART2] = CFN_HAL_PORT_PERIPH_USART2, // Useless comment, disable clang-format from wrapping
+    [CFN_HAL_UART_PORT_USART3] = CFN_HAL_PORT_PERIPH_USART3, // Useless comment, disable clang-format from wrapping
+    [CFN_HAL_UART_PORT_UART4]  = CFN_HAL_PORT_PERIPH_UART4,  // Useless comment, disable clang-format from wrapping
+    [CFN_HAL_UART_PORT_UART5]  = CFN_HAL_PORT_PERIPH_UART5,  // Useless comment, disable clang-format from wrapping
+    [CFN_HAL_UART_PORT_USART6] = CFN_HAL_PORT_PERIPH_USART6, // Useless comment, disable clang-format from wrapping
+    [CFN_HAL_UART_PORT_UART7]  = CFN_HAL_PORT_PERIPH_UART7,  // Useless comment, disable clang-format from wrapping
+    [CFN_HAL_UART_PORT_UART8]  = CFN_HAL_PORT_PERIPH_UART8,  // Useless comment, disable clang-format from wrapping
+    [CFN_HAL_UART_PORT_UART9]  = CFN_HAL_PORT_PERIPH_UART9,  // Useless comment, disable clang-format from wrapping
+    [CFN_HAL_UART_PORT_UART10] = CFN_HAL_PORT_PERIPH_UART10, // Useless comment, disable clang-format from wrapping
 };
 /**
  * @brief Table of physical peripheral register base addresses.
@@ -146,7 +151,7 @@ static int32_t get_port_id_from_handle(UART_HandleTypeDef *huart)
  * @brief Performs low-level hardware initialization (Clocks and GPIOs).
  * @param driver Pointer to the UART driver instance.
  */
-static enum cfn_hal_error_codes low_level_init(cfn_hal_uart_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_uart_t *driver)
 {
     if (driver == NULL || driver->phy == NULL)
     {

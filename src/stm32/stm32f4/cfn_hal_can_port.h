@@ -43,9 +43,8 @@ typedef enum
 {
     CFN_HAL_CAN_PORT_CAN1,
     CFN_HAL_CAN_PORT_CAN2,
-#if defined(CAN3)
     CFN_HAL_CAN_PORT_CAN3,
-#endif
+
     CFN_HAL_CAN_PORT_MAX
 } cfn_hal_can_port_t;
 
