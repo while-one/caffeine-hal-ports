@@ -44,8 +44,6 @@ extern "C"
  * @param phy Pointer to the physical mapping structure.
  * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
  */
-cfn_hal_error_code_t
-cfn_hal_comp_construct(cfn_hal_comp_t *driver, const cfn_hal_comp_config_t *config, const cfn_hal_comp_phy_t *phy);
 
 /**
  * @brief Destruct the comp driver.
@@ -53,7 +51,6 @@ cfn_hal_comp_construct(cfn_hal_comp_t *driver, const cfn_hal_comp_config_t *conf
  * @param driver Pointer to the peripheral driver instance.
  * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
  */
-cfn_hal_error_code_t cfn_hal_comp_destruct(cfn_hal_comp_t *driver);
 
 #ifdef __cplusplus
 }

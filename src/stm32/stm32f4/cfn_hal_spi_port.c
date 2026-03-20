@@ -25,25 +25,17 @@
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_spi_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_spi.h"
 #include "cfn_hal_stm32_error.h"
 #include "stm32f4xx_hal.h"
 
+/* Private Prototypes ----------------------------------------------*/
 #ifdef HAL_SPI_MODULE_ENABLED
 
 /* Private Data -----------------------------------------------------*/
-
-/**
- * @brief Mapping from Caffeine SPI port IDs to global clock peripheral IDs.
- */
-static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_SPI_PORT_MAX] = {
-    [CFN_HAL_SPI_PORT_1] = CFN_HAL_PORT_PERIPH_SPI1,
-    [CFN_HAL_SPI_PORT_2] = CFN_HAL_PORT_PERIPH_SPI2,
-    [CFN_HAL_SPI_PORT_3] = CFN_HAL_PORT_PERIPH_SPI3,
-};
-
 static SPI_TypeDef *const PORT_INSTANCES[CFN_HAL_SPI_PORT_MAX] = {
 #if defined(SPI1)
     [CFN_HAL_SPI_PORT_1] = SPI1,
@@ -79,14 +71,14 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_spi_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    if (port_id >= CFN_HAL_SPI_PORT_MAX)
+    struct cfn_hal_clock_s *clk = driver->base.clock_driver;
+    if (clk == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
+    cfn_hal_clock_enable_gate((cfn_hal_clock_t *) clk, driver->base.peripheral_id);
 
     /* 2. Initialize Pins */
     if (driver->phy->mosi)
@@ -347,6 +339,9 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
 /* Raw ISR Handlers -------------------------------------------------*/
 
 #ifndef CFN_HAL_PORT_DISABLE_IRQ_SPI
+void SPI1_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void SPI2_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void SPI3_IRQHandler(void); // NOLINT(readability-identifier-naming)
 
 #if defined(SPI1)
 void SPI1_IRQHandler(void) // NOLINT(readability-identifier-naming)
@@ -459,8 +454,7 @@ static const cfn_hal_spi_api_t SPI_API = {
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_spi_construct(cfn_hal_spi_t *driver, const cfn_hal_spi_config_t *config, const cfn_hal_spi_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_spi_construct(cfn_hal_spi_t *driver, const cfn_hal_spi_config_t *config, const cfn_hal_spi_phy_t *phy, struct cfn_hal_clock_s *clock, cfn_hal_spi_callback_t callback, void *user_arg)
 {
 #ifdef HAL_SPI_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
@@ -474,11 +468,7 @@ cfn_hal_spi_construct(cfn_hal_spi_t *driver, const cfn_hal_spi_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api                  = &SPI_API;
-    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_SPI;
-    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config               = config;
-    driver->phy                  = phy;
+    cfn_hal_spi_populate(driver, clock, &SPI_API, phy, config, callback, user_arg);
 
     port_hspis[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -488,6 +478,9 @@ cfn_hal_spi_construct(cfn_hal_spi_t *driver, const cfn_hal_spi_config_t *config,
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
@@ -506,12 +499,8 @@ cfn_hal_error_code_t cfn_hal_spi_destruct(cfn_hal_spi_t *driver)
         port_drivers[port_id] = NULL;
     }
 
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_SPI;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

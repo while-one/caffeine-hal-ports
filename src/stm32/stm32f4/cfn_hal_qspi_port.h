@@ -23,8 +23,8 @@
  * @brief STM32F4 QSPI HAL Port Header
  */
 
-#ifndef CAFFEINE_HAL_PORT_QSPI_H
-#define CAFFEINE_HAL_PORT_QSPI_H
+#ifndef CAFFEINE_HAL_PORT_QSPI_STM32F4_H
+#define CAFFEINE_HAL_PORT_QSPI_STM32F4_H
 
 #ifdef __cplusplus
 extern "C"
@@ -34,29 +34,21 @@ extern "C"
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_qspi.h"
 
+/* Types Enums ------------------------------------------------------*/
+
+/**
+ * @brief STM32F4 Physical QSPI instances.
+ */
+typedef enum
+{
+    CFN_HAL_QSPI_PORT_QSPI1,
+    CFN_HAL_QSPI_PORT_MAX
+} cfn_hal_qspi_port_t;
+
 /* Functions prototypes ---------------------------------------------*/
-
-/**
- * @brief Construct the qspi driver.
- *
- * @param driver Pointer to the peripheral driver instance.
- * @param config Pointer to the configuration structure.
- * @param phy Pointer to the physical mapping structure.
- * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
- */
-cfn_hal_error_code_t
-cfn_hal_qspi_construct(cfn_hal_qspi_t *driver, const cfn_hal_qspi_config_t *config, const cfn_hal_qspi_phy_t *phy);
-
-/**
- * @brief Destruct the qspi driver.
- *
- * @param driver Pointer to the peripheral driver instance.
- * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
- */
-cfn_hal_error_code_t cfn_hal_qspi_destruct(cfn_hal_qspi_t *driver);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* CAFFEINE_HAL_PORT_QSPI_H */
+#endif /* CAFFEINE_HAL_PORT_QSPI_STM32F4_H */

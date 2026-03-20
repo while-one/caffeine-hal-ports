@@ -25,6 +25,7 @@
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_comp_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_comp.h"
 #include "stm32f4xx_hal.h"
 
@@ -122,24 +123,35 @@ static const cfn_hal_comp_api_t COMP_API = {
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_comp_construct(cfn_hal_comp_t *driver, const cfn_hal_comp_config_t *config, const cfn_hal_comp_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_comp_construct(cfn_hal_comp_t *driver, const cfn_hal_comp_config_t *config,
+                                         const cfn_hal_comp_phy_t *phy, struct cfn_hal_clock_s *clock,
+                                         cfn_hal_comp_callback_t callback, void *user_arg)
 {
 #ifdef HAL_COMP_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    driver->api         = &COMP_API;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_COMP;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config      = config;
-    driver->phy         = phy;
+
+    cfn_hal_comp_populate(driver, clock, &COMP_API, phy, config, callback, user_arg);
+
+    /* Port ID bounds checking if applicable */
+#ifdef CFN_HAL_COMP_PORT_MAX
+    uint32_t port_id = (uint32_t) (uintptr_t) phy->instance;
+    if (port_id >= CFN_HAL_COMP_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+#endif
+
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
@@ -151,11 +163,8 @@ cfn_hal_error_code_t cfn_hal_comp_destruct(cfn_hal_comp_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_COMP;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

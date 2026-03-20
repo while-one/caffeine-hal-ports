@@ -25,6 +25,8 @@
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_clock_port.h"
+
+void cfn_hal_port_clock_enable_gate(cfn_hal_port_peripheral_id_t periph_id);
 #include "cfn_hal_clock.h"
 #include "stm32f4xx_hal.h"
 
@@ -75,6 +77,14 @@ static cfn_hal_error_code_t port_clock_get_system_freq(cfn_hal_clock_t *driver, 
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
+
+
+
+
+
+
+
+
     *freq_hz = HAL_RCC_GetSysClockFreq();
     return CFN_HAL_ERROR_OK;
 }
@@ -93,6 +103,7 @@ port_clock_get_peripheral_freq(cfn_hal_clock_t *driver, uint32_t peripheral_id, 
     switch (periph_id)
     {
         /* AHB1 Peripherals */
+        /* AHB2 Peripherals */
         case CFN_HAL_PORT_PERIPH_GPIOA:
         case CFN_HAL_PORT_PERIPH_GPIOB:
         case CFN_HAL_PORT_PERIPH_GPIOC:
@@ -106,10 +117,6 @@ port_clock_get_peripheral_freq(cfn_hal_clock_t *driver, uint32_t peripheral_id, 
         case CFN_HAL_PORT_PERIPH_GPIOK:
         case CFN_HAL_PORT_PERIPH_ETH:
         case CFN_HAL_PORT_PERIPH_USB_OTG_HS:
-            *freq_hz = HAL_RCC_GetHCLKFreq();
-            break;
-
-        /* AHB2 Peripherals */
         case CFN_HAL_PORT_PERIPH_USB_OTG_FS:
             *freq_hz = HAL_RCC_GetHCLKFreq();
             break;
@@ -510,19 +517,16 @@ void cfn_hal_port_clock_enable_gate(cfn_hal_port_peripheral_id_t periph_id)
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_clock_construct(cfn_hal_clock_t *driver, const cfn_hal_clock_config_t *config, const cfn_hal_clock_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_clock_construct(cfn_hal_clock_t *driver, const cfn_hal_clock_config_t *config,
+                                           const cfn_hal_clock_phy_t *phy, struct cfn_hal_clock_s *clock,
+                                           cfn_hal_clock_callback_t callback, void *user_arg)
 {
-    if (driver == NULL)
+    if (driver == NULL || phy == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api         = &CLOCK_API;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_CLOCK;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config      = config;
-    driver->phy         = phy;
+    cfn_hal_clock_populate(driver, clock, &CLOCK_API, phy, config, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
 }
@@ -534,11 +538,8 @@ cfn_hal_error_code_t cfn_hal_clock_destruct(cfn_hal_clock_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_CLOCK;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
+    driver->config = NULL;
+    driver->phy    = NULL;
 
     return CFN_HAL_ERROR_OK;
 }

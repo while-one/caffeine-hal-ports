@@ -44,8 +44,6 @@ extern "C"
  * @param phy Pointer to the physical mapping structure.
  * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
  */
-cfn_hal_error_code_t
-cfn_hal_pwm_construct(cfn_hal_pwm_t *driver, const cfn_hal_pwm_config_t *config, const cfn_hal_pwm_phy_t *phy);
 
 /**
  * @brief Destruct the pwm driver.
@@ -53,7 +51,6 @@ cfn_hal_pwm_construct(cfn_hal_pwm_t *driver, const cfn_hal_pwm_config_t *config,
  * @param driver Pointer to the peripheral driver instance.
  * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
  */
-cfn_hal_error_code_t cfn_hal_pwm_destruct(cfn_hal_pwm_t *driver);
 
 #ifdef __cplusplus
 }

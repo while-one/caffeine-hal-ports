@@ -25,6 +25,7 @@
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_dac_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_dac.h"
 #include "cfn_hal_gpio.h"
@@ -64,6 +65,12 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_dac_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
+    struct cfn_hal_clock_s *clk = driver->base.clock_driver;
+    if (clk == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     if (port_id >= CFN_HAL_DAC_PORT_MAX)
     {
@@ -71,7 +78,7 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_dac_t *driver)
     }
 
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate(CFN_HAL_PORT_PERIPH_DAC1);
+    cfn_hal_clock_enable_gate((cfn_hal_clock_t *) clk, driver->base.peripheral_id);
 
     /* 2. Initialize Pin (Mapped via DAC channel in STM32F4) */
     if (driver->phy->pin)
@@ -305,8 +312,7 @@ static const cfn_hal_dac_api_t DAC_API = {
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_dac_construct(cfn_hal_dac_t *driver, const cfn_hal_dac_config_t *config, const cfn_hal_dac_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_dac_construct(cfn_hal_dac_t *driver, const cfn_hal_dac_config_t *config, const cfn_hal_dac_phy_t *phy, struct cfn_hal_clock_s *clock, cfn_hal_dac_callback_t callback, void *user_arg)
 {
 #ifdef HAL_DAC_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
@@ -320,11 +326,7 @@ cfn_hal_dac_construct(cfn_hal_dac_t *driver, const cfn_hal_dac_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api                  = &DAC_API;
-    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_DAC;
-    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config               = config;
-    driver->phy                  = phy;
+    cfn_hal_dac_populate(driver, clock, &DAC_API, phy, config, callback, user_arg);
 
     port_hdacs[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -334,6 +336,9 @@ cfn_hal_dac_construct(cfn_hal_dac_t *driver, const cfn_hal_dac_config_t *config,
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
@@ -346,18 +351,17 @@ cfn_hal_error_code_t cfn_hal_dac_destruct(cfn_hal_dac_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    if (port_id < CFN_HAL_DAC_PORT_MAX)
+    if (driver->phy != NULL)
     {
-        port_drivers[port_id] = NULL;
+        uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+        if (port_id < CFN_HAL_DAC_PORT_MAX)
+        {
+            port_drivers[port_id] = NULL;
+        }
     }
 
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_DAC;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

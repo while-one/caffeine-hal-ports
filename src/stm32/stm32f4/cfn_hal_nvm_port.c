@@ -25,6 +25,7 @@
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_nvm_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_nvm.h"
 #include "cfn_hal_stm32_error.h"
 #include "stm32f4xx_hal.h"
@@ -103,6 +104,7 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_nvm_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
+
     return CFN_HAL_ERROR_OK;
 }
 
@@ -140,8 +142,7 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 static cfn_hal_error_code_t port_nvm_read(cfn_hal_nvm_t *driver, uint32_t addr, uint8_t *buffer, size_t size)
 {
     CFN_HAL_UNUSED(driver);
-    memcpy(buffer, (const void *) (uintptr_t) addr,
-           size); // NOLINT(performance-no-int-to-ptr)
+    memcpy(buffer, (const void *) (uintptr_t) addr, size); // NOLINT(performance-no-int-to-ptr)
     return CFN_HAL_ERROR_OK;
 }
 
@@ -246,19 +247,14 @@ static const cfn_hal_nvm_api_t NVM_API = {
     .get_info = port_nvm_get_info};
 
 /* Instantiation ----------------------------------------------------*/
-cfn_hal_error_code_t
-cfn_hal_nvm_construct(cfn_hal_nvm_t *driver, const cfn_hal_nvm_config_t *config, const cfn_hal_nvm_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_nvm_construct(cfn_hal_nvm_t *driver, const cfn_hal_nvm_config_t *config, const cfn_hal_nvm_phy_t *phy, struct cfn_hal_clock_s *clock, cfn_hal_nvm_callback_t callback, void *user_arg)
 {
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api         = &NVM_API;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_NVM;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config      = config;
-    driver->phy         = phy;
+    cfn_hal_nvm_populate(driver, clock, &NVM_API, phy, config, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
 }
@@ -269,12 +265,9 @@ cfn_hal_error_code_t cfn_hal_nvm_destruct(cfn_hal_nvm_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_NVM;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
+    driver->config = NULL;
+    driver->phy    = NULL;
 
     return CFN_HAL_ERROR_OK;
 }
+

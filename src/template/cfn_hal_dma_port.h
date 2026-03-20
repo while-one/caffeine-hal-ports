@@ -33,8 +33,8 @@ extern "C"
 
 #include "cfn_hal_dma.h"
 
-cfn_hal_error_code_t cfn_hal_dma_construct(cfn_hal_dma_t *driver, const cfn_hal_dma_config_t *config, const cfn_hal_dma_phy_t *phy);
-cfn_hal_error_code_t cfn_hal_dma_destruct(cfn_hal_dma_t *driver);
+
+
 
 #ifdef __cplusplus
 }

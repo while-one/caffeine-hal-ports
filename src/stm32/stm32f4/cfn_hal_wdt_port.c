@@ -25,6 +25,7 @@
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_wdt_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_stm32_error.h"
 #include "cfn_hal_wdt.h"
 #include "stm32f4xx_hal.h"
@@ -54,6 +55,7 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_wdt_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
+
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
 
     if (port_id >= CFN_HAL_WDT_PORT_MAX)
@@ -74,7 +76,7 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
     uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     IWDG_HandleTypeDef *hiwdg   = &port_hiwdgs[port_id];
 
-    error                       = low_level_init(driver);
+    cfn_hal_error_code_t error = low_level_init(driver);
     if (error != CFN_HAL_ERROR_OK)
     {
         return error;
@@ -146,8 +148,17 @@ static const cfn_hal_wdt_api_t WDT_API = {
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_wdt_construct(cfn_hal_wdt_t *driver, const cfn_hal_wdt_config_t *config, const cfn_hal_wdt_phy_t *phy)
+/**
+ * @brief Constructs a new WDT driver instance.
+ * @param driver Pointer to the driver structure to construct.
+ * @param config Pointer to the WDT configuration.
+ * @param phy Pointer to the physical WDT mapping.
+ * @param clock Pointer to the clock driver instance.
+ * @param callback User callback function.
+ * @param user_arg User argument for the callback.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
+cfn_hal_error_code_t cfn_hal_wdt_construct(cfn_hal_wdt_t *driver, const cfn_hal_wdt_config_t *config, const cfn_hal_wdt_phy_t *phy, struct cfn_hal_clock_s *clock, cfn_hal_wdt_callback_t callback, void *user_arg)
 {
 #if defined(HAL_IWDG_MODULE_ENABLED) || defined(HAL_WWDG_MODULE_ENABLED)
     if ((driver == NULL) || (phy == NULL))
@@ -161,33 +172,40 @@ cfn_hal_wdt_construct(cfn_hal_wdt_t *driver, const cfn_hal_wdt_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api         = &WDT_API;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_WDT;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config      = config;
-    driver->phy         = phy;
+    cfn_hal_wdt_populate(driver, clock, &WDT_API, phy, config, callback, user_arg);
+
+    port_hiwdgs[port_id].Instance = PORT_INSTANCES[port_id];
 
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
 
+/**
+ * @brief Destructs an existing WDT driver instance.
+ * @param driver Pointer to the driver instance to destruct.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 cfn_hal_error_code_t cfn_hal_wdt_destruct(cfn_hal_wdt_t *driver)
 {
+#if defined(HAL_IWDG_MODULE_ENABLED) || defined(HAL_WWDG_MODULE_ENABLED)
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_WDT;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }

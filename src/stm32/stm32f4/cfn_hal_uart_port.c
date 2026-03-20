@@ -25,12 +25,22 @@
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_uart_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
 #include "cfn_hal_uart.h"
 #include "stm32f4xx_hal.h"
 
+/* Private Prototypes ----------------------------------------------*/
+void UART4_IRQHandler(void);
+void UART5_IRQHandler(void);
+void USART1_IRQHandler(void);
+void USART2_IRQHandler(void);
+void USART3_IRQHandler(void);
+void USART6_IRQHandler(void);
+
+/* Private Prototypes ----------------------------------------------*/
 #ifdef HAL_UART_MODULE_ENABLED
 
 /* Private Data -----------------------------------------------------*/
@@ -86,28 +96,6 @@ static const uint32_t PORT_MAP_FLOW_CONTROL[CFN_HAL_UART_CONFIG_FLOW_CTRL_MAX] =
     [CFN_HAL_UART_CONFIG_FLOW_CTRL_RTS_CTS] = UART_HWCONTROL_RTS_CTS,
 };
 
-static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_UART_PORT_MAX] = {
-    [CFN_HAL_UART_PORT_USART1] = CFN_HAL_PORT_PERIPH_USART1, // Useless comment, disable clang-format
-                                                             // from wrapping
-    [CFN_HAL_UART_PORT_USART2] = CFN_HAL_PORT_PERIPH_USART2, // Useless comment, disable clang-format
-                                                             // from wrapping
-    [CFN_HAL_UART_PORT_USART3] = CFN_HAL_PORT_PERIPH_USART3, // Useless comment, disable clang-format
-                                                             // from wrapping
-    [CFN_HAL_UART_PORT_UART4]  = CFN_HAL_PORT_PERIPH_UART4,  // Useless comment, disable clang-format
-                                                             // from wrapping
-    [CFN_HAL_UART_PORT_UART5]  = CFN_HAL_PORT_PERIPH_UART5,  // Useless comment, disable clang-format
-                                                             // from wrapping
-    [CFN_HAL_UART_PORT_USART6] = CFN_HAL_PORT_PERIPH_USART6, // Useless comment, disable clang-format
-                                                             // from wrapping
-    [CFN_HAL_UART_PORT_UART7]  = CFN_HAL_PORT_PERIPH_UART7,  // Useless comment, disable clang-format
-                                                             // from wrapping
-    [CFN_HAL_UART_PORT_UART8]  = CFN_HAL_PORT_PERIPH_UART8,  // Useless comment, disable clang-format
-                                                             // from wrapping
-    [CFN_HAL_UART_PORT_UART9]  = CFN_HAL_PORT_PERIPH_UART9,  // Useless comment, disable clang-format
-                                                             // from wrapping
-    [CFN_HAL_UART_PORT_UART10] = CFN_HAL_PORT_PERIPH_UART10, // Useless comment, disable clang-format
-                                                             // from wrapping
-};
 /**
  * @brief Table of physical peripheral register base addresses.
  */
@@ -173,6 +161,12 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_uart_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
+
+    struct cfn_hal_clock_s *clk = driver->base.clock_driver;
+    if (clk == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
 
     if (port_id >= CFN_HAL_UART_PORT_MAX)
@@ -180,7 +174,7 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_uart_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
+    cfn_hal_clock_enable_gate((cfn_hal_clock_t *) clk, driver->base.peripheral_id);
 
     if (driver->phy->tx)
     {
@@ -502,6 +496,12 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 /* Raw ISR Handlers -------------------------------------------------*/
 
 #ifndef CFN_HAL_PORT_DISABLE_IRQ_UART
+void UART4_IRQHandler(void);  // NOLINT(readability-identifier-naming)
+void UART5_IRQHandler(void);  // NOLINT(readability-identifier-naming)
+void USART1_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void USART2_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void USART3_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void USART6_IRQHandler(void); // NOLINT(readability-identifier-naming)
 
 /**
  * @brief Unified internal ISR handler for all UART instances.
@@ -817,10 +817,12 @@ static const cfn_hal_uart_api_t UART_API = {
  * @param driver Pointer to the driver structure to construct.
  * @param config Pointer to the UART configuration.
  * @param phy Pointer to the physical UART mapping.
+ * @param clock Pointer to the clock driver instance.
+ * @param callback User callback function.
+ * @param user_arg User argument for the callback.
  * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
  */
-cfn_hal_error_code_t
-cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *config, const cfn_hal_uart_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *config, const cfn_hal_uart_phy_t *phy, struct cfn_hal_clock_s *clock, cfn_hal_uart_callback_t callback, void *user_arg)
 {
 #ifdef HAL_UART_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
@@ -834,11 +836,7 @@ cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *conf
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api                   = &UART_API;
-    driver->base.type             = CFN_HAL_PERIPHERAL_TYPE_UART;
-    driver->base.status           = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config                = config;
-    driver->phy                   = phy;
+    cfn_hal_uart_populate(driver, clock, &UART_API, phy, config, callback, user_arg);
 
     port_huarts[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]         = driver;
@@ -848,6 +846,9 @@ cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *conf
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
@@ -860,7 +861,7 @@ cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *conf
 cfn_hal_error_code_t cfn_hal_uart_destruct(cfn_hal_uart_t *driver)
 {
 #ifdef HAL_UART_MODULE_ENABLED
-    if (driver == NULL)
+    if (driver == NULL || driver->phy == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
@@ -871,12 +872,8 @@ cfn_hal_error_code_t cfn_hal_uart_destruct(cfn_hal_uart_t *driver)
         port_drivers[port_id] = NULL;
     }
 
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_UART;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

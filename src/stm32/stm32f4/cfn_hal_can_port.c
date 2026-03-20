@@ -25,25 +25,25 @@
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_can_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_can.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
 #include "stm32f4xx_hal.h"
 
+/* Private Prototypes ----------------------------------------------*/
+void CAN1_RX0_IRQHandler(void);
+void CAN1_SCE_IRQHandler(void);
+void CAN1_TX_IRQHandler(void);
+void CAN2_RX0_IRQHandler(void);
+void CAN2_SCE_IRQHandler(void);
+void CAN2_TX_IRQHandler(void);
+
+/* Private Prototypes ----------------------------------------------*/
 #ifdef HAL_CAN_MODULE_ENABLED
 
 /* Private Data -----------------------------------------------------*/
-
-/**
- * @brief Mapping from Caffeine CAN port IDs to global clock peripheral IDs.
- */
-static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_CAN_PORT_MAX] = {
-    [CFN_HAL_CAN_PORT_CAN1] = CFN_HAL_PORT_PERIPH_CAN1,
-    [CFN_HAL_CAN_PORT_CAN2] = CFN_HAL_PORT_PERIPH_CAN2,
-    [CFN_HAL_CAN_PORT_CAN3] = CFN_HAL_PORT_PERIPH_CAN3,
-};
-
 static CAN_TypeDef *const PORT_INSTANCES[CFN_HAL_CAN_PORT_MAX] = {
 #if defined(CAN1)
     [CFN_HAL_CAN_PORT_CAN1] = CAN1,
@@ -79,6 +79,12 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_can_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
+    struct cfn_hal_clock_s *clk = driver->base.clock_driver;
+    if (clk == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     if (port_id >= CFN_HAL_CAN_PORT_MAX)
     {
@@ -86,7 +92,7 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_can_t *driver)
     }
 
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
+    cfn_hal_clock_enable_gate((cfn_hal_clock_t *) clk, driver->base.peripheral_id);
 
     /* 2. Initialize Pins */
     if (driver->phy->tx)
@@ -315,6 +321,12 @@ void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
 /* Raw ISR Handlers -------------------------------------------------*/
 
 #ifndef CFN_HAL_PORT_DISABLE_IRQ_CAN
+void CAN1_RX0_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void CAN1_SCE_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void CAN1_TX_IRQHandler(void);  // NOLINT(readability-identifier-naming)
+void CAN2_RX0_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void CAN2_SCE_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void CAN2_TX_IRQHandler(void);  // NOLINT(readability-identifier-naming)
 
 #if defined(CAN1)
 void CAN1_TX_IRQHandler(void) // NOLINT(readability-identifier-naming)
@@ -448,8 +460,9 @@ static const cfn_hal_can_api_t CAN_API = {
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_can_construct(cfn_hal_can_t *driver, const cfn_hal_can_config_t *config, const cfn_hal_can_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_can_construct(cfn_hal_can_t *driver, const cfn_hal_can_config_t *config,
+                                         const cfn_hal_can_phy_t *phy, struct cfn_hal_clock_s *clock,
+                                         cfn_hal_can_callback_t callback, void *user_arg)
 {
 #ifdef HAL_CAN_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
@@ -457,17 +470,13 @@ cfn_hal_can_construct(cfn_hal_can_t *driver, const cfn_hal_can_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
+    cfn_hal_can_populate(driver, clock, &CAN_API, phy, config, callback, user_arg);
+
     uint32_t port_id = (uint32_t) (uintptr_t) phy->instance;
     if (port_id >= CFN_HAL_CAN_PORT_MAX || PORT_INSTANCES[port_id] == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-
-    driver->api                  = &CAN_API;
-    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_CAN;
-    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config               = config;
-    driver->phy                  = phy;
 
     port_hcans[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -477,6 +486,9 @@ cfn_hal_can_construct(cfn_hal_can_t *driver, const cfn_hal_can_config_t *config,
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
@@ -488,19 +500,8 @@ cfn_hal_error_code_t cfn_hal_can_destruct(cfn_hal_can_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-
-    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    if (port_id < CFN_HAL_CAN_PORT_MAX)
-    {
-        port_drivers[port_id] = NULL;
-    }
-
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_CAN;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

@@ -25,25 +25,25 @@
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_i2c_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_i2c.h"
 #include "cfn_hal_stm32_error.h"
 #include "stm32f4xx_hal.h"
 
+/* Private Prototypes ----------------------------------------------*/
+void I2C1_ER_IRQHandler(void);
+void I2C1_EV_IRQHandler(void);
+void I2C2_ER_IRQHandler(void);
+void I2C2_EV_IRQHandler(void);
+void I2C3_ER_IRQHandler(void);
+void I2C3_EV_IRQHandler(void);
+
+/* Private Prototypes ----------------------------------------------*/
 #ifdef HAL_I2C_MODULE_ENABLED
 
 /* Private Data -----------------------------------------------------*/
-
-/**
- * @brief Mapping from Caffeine I2C port IDs to global clock peripheral IDs.
- */
-static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_I2C_PORT_MAX] = {
-    [CFN_HAL_I2C_PORT_I2C1] = CFN_HAL_PORT_PERIPH_I2C1,
-    [CFN_HAL_I2C_PORT_I2C2] = CFN_HAL_PORT_PERIPH_I2C2,
-    [CFN_HAL_I2C_PORT_I2C3] = CFN_HAL_PORT_PERIPH_I2C3,
-};
-
 static I2C_TypeDef *const PORT_INSTANCES[CFN_HAL_I2C_PORT_MAX] = {
 #if defined(I2C1)
     [CFN_HAL_I2C_PORT_I2C1] = I2C1,
@@ -78,6 +78,12 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_i2c_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
+
+    struct cfn_hal_clock_s *clk = driver->base.clock_driver;
+    if (clk == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     if (port_id >= CFN_HAL_I2C_PORT_MAX)
     {
@@ -85,7 +91,7 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_i2c_t *driver)
     }
 
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
+    cfn_hal_clock_enable_gate((cfn_hal_clock_t *) clk, driver->base.peripheral_id);
 
     /* 2. Initialize Pins */
     if (driver->phy->sda)
@@ -306,6 +312,12 @@ void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
 /* Raw ISR Handlers -------------------------------------------------*/
 
 #ifndef CFN_HAL_PORT_DISABLE_IRQ_I2C
+void I2C1_ER_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void I2C1_EV_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void I2C2_ER_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void I2C2_EV_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void I2C3_ER_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void I2C3_EV_IRQHandler(void); // NOLINT(readability-identifier-naming)
 
 #if defined(I2C1)
 void I2C1_EV_IRQHandler(void) // NOLINT(readability-identifier-naming)
@@ -459,8 +471,7 @@ static const cfn_hal_i2c_api_t I2C_API = {
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_i2c_construct(cfn_hal_i2c_t *driver, const cfn_hal_i2c_config_t *config, const cfn_hal_i2c_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_i2c_construct(cfn_hal_i2c_t *driver, const cfn_hal_i2c_config_t *config, const cfn_hal_i2c_phy_t *phy, struct cfn_hal_clock_s *clock, cfn_hal_i2c_callback_t callback, void *user_arg)
 {
 #ifdef HAL_I2C_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
@@ -474,11 +485,7 @@ cfn_hal_i2c_construct(cfn_hal_i2c_t *driver, const cfn_hal_i2c_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api                  = &I2C_API;
-    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_I2C;
-    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config               = config;
-    driver->phy                  = phy;
+    cfn_hal_i2c_populate(driver, clock, &I2C_API, phy, config, callback, user_arg);
 
     port_hi2cs[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -488,6 +495,9 @@ cfn_hal_i2c_construct(cfn_hal_i2c_t *driver, const cfn_hal_i2c_config_t *config,
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
@@ -500,18 +510,17 @@ cfn_hal_error_code_t cfn_hal_i2c_destruct(cfn_hal_i2c_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    if (port_id < CFN_HAL_I2C_PORT_MAX)
+    if (driver->phy != NULL)
     {
-        port_drivers[port_id] = NULL;
+        uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+        if (port_id < CFN_HAL_I2C_PORT_MAX)
+        {
+            port_drivers[port_id] = NULL;
+        }
     }
 
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_I2C;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

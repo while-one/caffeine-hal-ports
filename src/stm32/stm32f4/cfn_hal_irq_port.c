@@ -25,6 +25,7 @@
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_irq_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_irq.h"
 #include "stm32f4xx_hal.h"
 
@@ -123,19 +124,14 @@ static const cfn_hal_irq_api_t IRQ_API = {
     .clear_pending = port_irq_clear_pending};
 
 /* Instantiation ----------------------------------------------------*/
-cfn_hal_error_code_t
-cfn_hal_irq_construct(cfn_hal_irq_t *driver, const cfn_hal_irq_config_t *config, const cfn_hal_irq_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_irq_construct(cfn_hal_irq_t *driver, const cfn_hal_irq_config_t *config, const cfn_hal_irq_phy_t *phy, struct cfn_hal_clock_s *clock, cfn_hal_irq_callback_t callback, void *user_arg)
 {
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api         = &IRQ_API;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_IRQ;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config      = config;
-    driver->phy         = phy;
+    cfn_hal_irq_populate(driver, clock, &IRQ_API, phy, config, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
 }
@@ -146,12 +142,9 @@ cfn_hal_error_code_t cfn_hal_irq_destruct(cfn_hal_irq_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_IRQ;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
+    driver->config = NULL;
+    driver->phy    = NULL;
 
     return CFN_HAL_ERROR_OK;
 }
+

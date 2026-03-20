@@ -25,6 +25,7 @@
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_i2s_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_i2s.h"
 #include "cfn_hal_stm32_error.h"
@@ -65,6 +66,7 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_i2s_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
+
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     if (port_id >= CFN_HAL_I2S_PORT_MAX)
     {
@@ -261,8 +263,7 @@ static const cfn_hal_i2s_api_t I2S_API = {
 #endif /* HAL_I2S_MODULE_ENABLED */
 
 /* Instantiation ----------------------------------------------------*/
-cfn_hal_error_code_t
-cfn_hal_i2s_construct(cfn_hal_i2s_t *driver, const cfn_hal_i2s_config_t *config, const cfn_hal_i2s_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_i2s_construct(cfn_hal_i2s_t *driver, const cfn_hal_i2s_config_t *config, const cfn_hal_i2s_phy_t *phy, struct cfn_hal_clock_s *clock, cfn_hal_i2s_callback_t callback, void *user_arg)
 {
 #ifdef HAL_I2S_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
@@ -276,11 +277,7 @@ cfn_hal_i2s_construct(cfn_hal_i2s_t *driver, const cfn_hal_i2s_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api                  = &I2S_API;
-    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_I2S;
-    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config               = config;
-    driver->phy                  = phy;
+    cfn_hal_i2s_populate(driver, clock, &I2S_API, phy, config, callback, user_arg);
 
     port_hi2ss[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -290,6 +287,9 @@ cfn_hal_i2s_construct(cfn_hal_i2s_t *driver, const cfn_hal_i2s_config_t *config,
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
@@ -302,18 +302,17 @@ cfn_hal_error_code_t cfn_hal_i2s_destruct(cfn_hal_i2s_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    if (port_id < CFN_HAL_I2S_PORT_MAX)
+    if (driver->phy != NULL)
     {
-        port_drivers[port_id] = NULL;
+        uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+        if (port_id < CFN_HAL_I2S_PORT_MAX)
+        {
+            port_drivers[port_id] = NULL;
+        }
     }
 
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_I2S;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

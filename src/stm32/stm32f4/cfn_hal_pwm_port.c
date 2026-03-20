@@ -25,6 +25,7 @@
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_pwm_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_pwm.h"
@@ -142,6 +143,19 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_pwm_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
+
+  cfn_hal_pwm_populate(driver, clock, &PWM_API, phy, config, callback, user_arg);
+
+  cfn_hal_pwm_populate(driver, clock, &PWM_API, phy, config, callback, user_arg);
+
+  cfn_hal_pwm_populate(driver, clock, &PWM_API, phy, config, callback, user_arg);
+
+  cfn_hal_pwm_populate(driver, clock, &PWM_API, phy, config, callback, user_arg);
+    struct cfn_hal_clock_s *clk = driver->base.clock_driver;
+    if (clk == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     if (port_id >= CFN_HAL_TIMER_PORT_MAX)
     {
@@ -149,7 +163,7 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_pwm_t *driver)
     }
 
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
+    cfn_hal_clock_enable_gate((cfn_hal_clock_t *) clk, driver->base.peripheral_id);
 
     /* 2. Initialize Pin */
     if (driver->phy->pin)
@@ -392,8 +406,7 @@ static const cfn_hal_pwm_api_t PWM_API = {
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_pwm_construct(cfn_hal_pwm_t *driver, const cfn_hal_pwm_config_t *config, const cfn_hal_pwm_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_pwm_construct(cfn_hal_pwm_t *driver, const cfn_hal_pwm_config_t *config, const cfn_hal_pwm_phy_t *phy, struct cfn_hal_clock_s *clock, cfn_hal_pwm_callback_t callback, void *user_arg)
 {
 #ifdef HAL_TIM_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
@@ -401,17 +414,13 @@ cfn_hal_pwm_construct(cfn_hal_pwm_t *driver, const cfn_hal_pwm_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
+    cfn_hal_pwm_populate(driver, clock, &PWM_API, phy, config, callback, user_arg);
+
     uint32_t port_id = (uint32_t) (uintptr_t) phy->instance;
     if (port_id >= CFN_HAL_TIMER_PORT_MAX || PORT_INSTANCES[port_id] == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-
-    driver->api                  = &PWM_API;
-    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_PWM;
-    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config               = config;
-    driver->phy                  = phy;
 
     port_htims[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -421,6 +430,9 @@ cfn_hal_pwm_construct(cfn_hal_pwm_t *driver, const cfn_hal_pwm_config_t *config,
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
@@ -432,22 +444,12 @@ cfn_hal_error_code_t cfn_hal_pwm_destruct(cfn_hal_pwm_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-
-    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    if (port_id < CFN_HAL_TIMER_PORT_MAX)
-    {
-        port_drivers[port_id] = NULL;
-    }
-
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_PWM;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
+

@@ -101,15 +101,9 @@ typedef enum
 
 /* Functions prototypes ---------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_clock_construct(cfn_hal_clock_t *driver, const cfn_hal_clock_config_t *config, const cfn_hal_clock_phy_t *phy);
-
-cfn_hal_error_code_t cfn_hal_clock_destruct(cfn_hal_clock_t *driver);
-
 /**
  * @brief Internal helper to enable peripheral clocks.
  */
-void cfn_hal_port_clock_enable_gate(cfn_hal_port_peripheral_id_t periph_id);
 
 #ifdef __cplusplus
 }

@@ -15,6 +15,7 @@ set(CAFFEINE_OPTIMIZATION_LEVEL "-Os" CACHE STRING "Compiler optimization level 
 set(CAFFEINE_COMPILE_OPTIONS
         -pedantic-errors
         -Wall -Wextra -Wpedantic -Wshadow
+        -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations
         -ffunction-sections -fdata-sections
         ${CAFFEINE_OPTIMIZATION_LEVEL}
 )
