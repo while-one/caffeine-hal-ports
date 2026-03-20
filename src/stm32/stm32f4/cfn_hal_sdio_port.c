@@ -38,11 +38,43 @@ static SD_HandleTypeDef port_hsd;
 
 /* VMT Implementations ----------------------------------------------*/
 
+static void low_level_init(cfn_hal_sdio_t *driver)
+{
+    /* 1. Enable Clock */
+    __HAL_RCC_SDIO_CLK_ENABLE();
+
+    /* 2. Initialize Pins */
+    if (driver->phy->ck)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->ck->port);
+    }
+    if (driver->phy->cmd)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->cmd->port);
+    }
+    if (driver->phy->d0)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->d0->port);
+    }
+    if (driver->phy->d1)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->d1->port);
+    }
+    if (driver->phy->d2)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->d2->port);
+    }
+    if (driver->phy->d3)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->d3->port);
+    }
+}
+
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
     cfn_hal_sdio_t *driver = (cfn_hal_sdio_t *) base;
 
-    __HAL_RCC_SDIO_CLK_ENABLE();
+    low_level_init(driver);
 
     port_hsd.Instance                 = SDIO;
     port_hsd.Init.ClockEdge           = SDIO_CLOCK_EDGE_RISING;

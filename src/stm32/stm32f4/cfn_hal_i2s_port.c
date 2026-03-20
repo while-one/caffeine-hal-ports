@@ -73,6 +73,28 @@ static void low_level_init(cfn_hal_i2s_t *driver)
     {
         __HAL_RCC_SPI3_CLK_ENABLE();
     }
+
+    /* 2. Initialize Pins */
+    if (driver->phy->ck)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->ck->port);
+    }
+    if (driver->phy->ws)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->ws->port);
+    }
+    if (driver->phy->sd)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->sd->port);
+    }
+    if (driver->phy->ext_sd)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->ext_sd->port);
+    }
+    if (driver->phy->mck)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->mck->port);
+    }
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)

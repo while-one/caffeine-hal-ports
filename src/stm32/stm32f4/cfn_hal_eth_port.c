@@ -67,7 +67,42 @@ static void low_level_init(cfn_hal_eth_t *driver)
     cfn_hal_port_clock_enable_gate(CFN_HAL_PORT_PERIPH_ETH);
 
     /* 2. Initialize Pins */
-    CFN_HAL_UNUSED(driver);
+    if (driver->phy->ref_clk)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->ref_clk->port);
+    }
+    if (driver->phy->mdio)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->mdio->port);
+    }
+    if (driver->phy->mdc)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->mdc->port);
+    }
+    if (driver->phy->crs_dv)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->crs_dv->port);
+    }
+    if (driver->phy->rxd0)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->rxd0->port);
+    }
+    if (driver->phy->rxd1)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->rxd1->port);
+    }
+    if (driver->phy->tx_en)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->tx_en->port);
+    }
+    if (driver->phy->txd0)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->txd0->port);
+    }
+    if (driver->phy->txd1)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->txd1->port);
+    }
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
