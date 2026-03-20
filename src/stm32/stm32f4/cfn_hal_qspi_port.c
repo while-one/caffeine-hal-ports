@@ -24,10 +24,10 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_qspi.h"
 #include "cfn_hal_qspi_port.h"
+#include "cfn_hal_qspi.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 
 #ifdef HAL_QSPI_MODULE_ENABLED
 
@@ -80,28 +80,13 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
     cfn_hal_qspi_t *driver = (cfn_hal_qspi_t *) base;
 
-    cfn_hal_error_code_t err = cfn_hal_qspi_config_validate(driver->config);
-    if (err != CFN_HAL_ERROR_OK)
+    error                  = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
     {
-        return err;
+        return error;
     }
 
-    if (driver->api->base.config_validate != NULL)
-    {
-        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (err != CFN_HAL_ERROR_OK)
-        {
-            return err;
-        }
-    }
-
-    err = low_level_init(driver);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
-    }
-
-    port_hqspi.Instance = QUADSPI;
+    port_hqspi.Instance                = QUADSPI;
     port_hqspi.Init.ClockPrescaler     = 1;
     port_hqspi.Init.FifoThreshold      = 4;
     port_hqspi.Init.SampleShifting     = QSPI_SAMPLE_SHIFTING_HALFCYCLE;
@@ -207,24 +192,25 @@ static cfn_hal_error_code_t port_qspi_memory_mapped_enable(cfn_hal_qspi_t *drive
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_qspi_api_t QSPI_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .command = port_qspi_command,
     .transmit = port_qspi_transmit,
     .receive = port_qspi_receive,
-    .memory_mapped_enable = port_qspi_memory_mapped_enable
-};
+    .memory_mapped_enable = port_qspi_memory_mapped_enable};
 
 #endif /* HAL_QSPI_MODULE_ENABLED */
 

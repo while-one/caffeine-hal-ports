@@ -24,12 +24,12 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_dac.h"
 #include "cfn_hal_dac_port.h"
 #include "cfn_hal_clock_port.h"
+#include "cfn_hal_dac.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 
 #ifdef HAL_DAC_MODULE_ENABLED
 
@@ -90,28 +90,13 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    cfn_hal_error_code_t err = cfn_hal_dac_config_validate(driver->config);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
-    }
-
-    if (driver->api->base.config_validate != NULL)
-    {
-        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (err != CFN_HAL_ERROR_OK)
-        {
-            return err;
-        }
-    }
-
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     DAC_HandleTypeDef *hdac    = &port_hdacs[port_id];
 
-    err = low_level_init(driver);
-    if (err != CFN_HAL_ERROR_OK)
+    error                      = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
     {
-        return err;
+        return error;
     }
 
     hdac->Instance = PORT_INSTANCES[port_id];
@@ -296,24 +281,25 @@ static cfn_hal_error_code_t port_dac_write_dma(cfn_hal_dac_t *driver, const uint
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_dac_api_t DAC_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = port_base_error_enable,
-        .error_disable = port_base_error_disable,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = port_base_error_enable,
+            .error_disable = port_base_error_disable,
+            .error_get = port_base_error_get,
+        },
     .set_value = port_dac_set_value,
     .start = port_dac_start,
     .stop = port_dac_stop,
-    .write_dma = port_dac_write_dma
-};
+    .write_dma = port_dac_write_dma};
 
 #endif /* HAL_DAC_MODULE_ENABLED */
 

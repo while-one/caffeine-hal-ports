@@ -24,19 +24,20 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_uart.h"
 #include "cfn_hal_uart_port.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
+#include "cfn_hal_uart.h"
+#include "stm32f4xx_hal.h"
 
 #ifdef HAL_UART_MODULE_ENABLED
 
 /* Private Data -----------------------------------------------------*/
 
 /**
- * @brief Mapping from Caffeine UART data length configuration to STM32 HAL WordLength.
+ * @brief Mapping from Caffeine UART data length configuration to STM32 HAL
+ * WordLength.
  */
 static const uint32_t PORT_MAP_DATA_LEN[CFN_HAL_UART_CONFIG_DATA_LEN_MAX] = {
     [CFN_HAL_UART_CONFIG_DATA_LEN_5] = UINT32_MAX,         // Not supported
@@ -47,7 +48,8 @@ static const uint32_t PORT_MAP_DATA_LEN[CFN_HAL_UART_CONFIG_DATA_LEN_MAX] = {
 };
 
 /**
- * @brief Mapping from Caffeine UART stop bits configuration to STM32 HAL StopBits.
+ * @brief Mapping from Caffeine UART stop bits configuration to STM32 HAL
+ * StopBits.
  */
 static const uint32_t PORT_MAP_STOP_BITS[CFN_HAL_UART_CONFIG_STOP_MAX] = {
     [CFN_HAL_UART_CONFIG_STOP_ONE_BIT]  = UART_STOPBITS_1,
@@ -74,7 +76,8 @@ static const uint32_t PORT_MAP_DIRECTION[CFN_HAL_UART_CONFIG_DIRECTION_MAX] = {
 };
 
 /**
- * @brief Mapping from Caffeine UART flow control configuration to STM32 HAL HwFlowCtl.
+ * @brief Mapping from Caffeine UART flow control configuration to STM32 HAL
+ * HwFlowCtl.
  */
 static const uint32_t PORT_MAP_FLOW_CONTROL[CFN_HAL_UART_CONFIG_FLOW_CTRL_MAX] = {
     [CFN_HAL_UART_CONFIG_FLOW_CTRL_NONE]    = UART_HWCONTROL_NONE,
@@ -84,16 +87,26 @@ static const uint32_t PORT_MAP_FLOW_CONTROL[CFN_HAL_UART_CONFIG_FLOW_CTRL_MAX] =
 };
 
 static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_UART_PORT_MAX] = {
-    [CFN_HAL_UART_PORT_USART1] = CFN_HAL_PORT_PERIPH_USART1, // Useless comment, disable clang-format from wrapping
-    [CFN_HAL_UART_PORT_USART2] = CFN_HAL_PORT_PERIPH_USART2, // Useless comment, disable clang-format from wrapping
-    [CFN_HAL_UART_PORT_USART3] = CFN_HAL_PORT_PERIPH_USART3, // Useless comment, disable clang-format from wrapping
-    [CFN_HAL_UART_PORT_UART4]  = CFN_HAL_PORT_PERIPH_UART4,  // Useless comment, disable clang-format from wrapping
-    [CFN_HAL_UART_PORT_UART5]  = CFN_HAL_PORT_PERIPH_UART5,  // Useless comment, disable clang-format from wrapping
-    [CFN_HAL_UART_PORT_USART6] = CFN_HAL_PORT_PERIPH_USART6, // Useless comment, disable clang-format from wrapping
-    [CFN_HAL_UART_PORT_UART7]  = CFN_HAL_PORT_PERIPH_UART7,  // Useless comment, disable clang-format from wrapping
-    [CFN_HAL_UART_PORT_UART8]  = CFN_HAL_PORT_PERIPH_UART8,  // Useless comment, disable clang-format from wrapping
-    [CFN_HAL_UART_PORT_UART9]  = CFN_HAL_PORT_PERIPH_UART9,  // Useless comment, disable clang-format from wrapping
-    [CFN_HAL_UART_PORT_UART10] = CFN_HAL_PORT_PERIPH_UART10, // Useless comment, disable clang-format from wrapping
+    [CFN_HAL_UART_PORT_USART1] = CFN_HAL_PORT_PERIPH_USART1, // Useless comment, disable clang-format
+                                                             // from wrapping
+    [CFN_HAL_UART_PORT_USART2] = CFN_HAL_PORT_PERIPH_USART2, // Useless comment, disable clang-format
+                                                             // from wrapping
+    [CFN_HAL_UART_PORT_USART3] = CFN_HAL_PORT_PERIPH_USART3, // Useless comment, disable clang-format
+                                                             // from wrapping
+    [CFN_HAL_UART_PORT_UART4]  = CFN_HAL_PORT_PERIPH_UART4,  // Useless comment, disable clang-format
+                                                             // from wrapping
+    [CFN_HAL_UART_PORT_UART5]  = CFN_HAL_PORT_PERIPH_UART5,  // Useless comment, disable clang-format
+                                                             // from wrapping
+    [CFN_HAL_UART_PORT_USART6] = CFN_HAL_PORT_PERIPH_USART6, // Useless comment, disable clang-format
+                                                             // from wrapping
+    [CFN_HAL_UART_PORT_UART7]  = CFN_HAL_PORT_PERIPH_UART7,  // Useless comment, disable clang-format
+                                                             // from wrapping
+    [CFN_HAL_UART_PORT_UART8]  = CFN_HAL_PORT_PERIPH_UART8,  // Useless comment, disable clang-format
+                                                             // from wrapping
+    [CFN_HAL_UART_PORT_UART9]  = CFN_HAL_PORT_PERIPH_UART9,  // Useless comment, disable clang-format
+                                                             // from wrapping
+    [CFN_HAL_UART_PORT_UART10] = CFN_HAL_PORT_PERIPH_UART10, // Useless comment, disable clang-format
+                                                             // from wrapping
 };
 /**
  * @brief Table of physical peripheral register base addresses.
@@ -125,16 +138,19 @@ static USART_TypeDef *const PORT_INSTANCES[CFN_HAL_UART_PORT_MAX] = {
 static UART_HandleTypeDef port_huarts[CFN_HAL_UART_PORT_MAX];
 
 /**
- * @brief Array of active Caffeine UART driver pointers, used by ISRs and callbacks.
+ * @brief Array of active Caffeine UART driver pointers, used by ISRs and
+ * callbacks.
  */
 static cfn_hal_uart_t *port_drivers[CFN_HAL_UART_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
 /**
- * @brief Calculates the port ID from an STM32 HAL UART handle pointer using O(1) arithmetic.
+ * @brief Calculates the port ID from an STM32 HAL UART handle pointer using
+ * O(1) arithmetic.
  * @param huart Pointer to the STM32 HAL UART handle.
- * @return The 0-based port ID, or UINT32_MAX if the handle is not part of the port array.
+ * @return The 0-based port ID, or UINT32_MAX if the handle is not part of the
+ * port array.
  */
 static uint32_t get_port_id_from_handle(UART_HandleTypeDef *huart)
 {
@@ -193,22 +209,7 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
     uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     UART_HandleTypeDef *huart   = &port_huarts[port_id];
 
-    cfn_hal_error_code_t error = cfn_hal_uart_config_validate(driver->config);
-    if (error != CFN_HAL_ERROR_OK)
-    {
-        return error;
-    }
-
-    if (driver->api->base.config_validate != NULL)
-    {
-        error = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (error != CFN_HAL_ERROR_OK)
-        {
-            return error;
-        }
-    }
-
-    error = low_level_init(driver);
+    cfn_hal_error_code_t error  = low_level_init(driver);
 
     if (error != CFN_HAL_ERROR_OK)
     {
@@ -478,7 +479,8 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 }
 
 /**
- * @brief Override of the ST HAL Rx Event callback (Idle/Half-Full) to fire Caffeine events.
+ * @brief Override of the ST HAL Rx Event callback (Idle/Half-Full) to fire
+ * Caffeine events.
  * @param huart Pointer to the ST HAL UART handle.
  * @param size Number of bytes received so far.
  */
@@ -547,7 +549,8 @@ static void port_uart_handle_isr(cfn_hal_uart_port_t port_id)
                 driver->cb(driver, CFN_HAL_UART_EVENT_RX_BYTE, error_mask, &byte, 1, driver->cb_user_arg);
             }
             /* Return early to avoid HAL overhead. Any concurrent interrupt sources
-               (TXE, TC, etc.) will cause the NVIC to immediately re-trigger the ISR. */
+               (TXE, TC, etc.) will cause the NVIC to immediately re-trigger the ISR.
+             */
             return;
         }
     }
@@ -658,7 +661,8 @@ port_uart_rx_polling(cfn_hal_uart_t *driver, uint8_t *buffer, size_t length, uin
  * @param driver Pointer to the UART driver instance.
  * @param data Pointer to the buffer to store received data.
  * @param max_bytes Maximum number of bytes to receive.
- * @param received_bytes Pointer to store the actual number of bytes received (optional).
+ * @param received_bytes Pointer to store the actual number of bytes received
+ * (optional).
  * @param timeout Timeout in milliseconds.
  * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
  */
@@ -778,19 +782,21 @@ static cfn_hal_error_code_t port_uart_rx_dma(cfn_hal_uart_t *driver, uint8_t *da
  * @brief UART API VMT instance for the STM32F4 port.
  */
 static const cfn_hal_uart_api_t UART_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = port_base_event_enable,
-        .event_disable = port_base_event_disable,
-        .event_get = port_base_event_get,
-        .error_enable = port_base_error_enable,
-        .error_disable = port_base_error_disable,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = port_base_event_enable,
+            .event_disable = port_base_event_disable,
+            .event_get = port_base_event_get,
+            .error_enable = port_base_error_enable,
+            .error_disable = port_base_error_disable,
+            .error_get = port_base_error_get,
+        },
     .tx_irq = port_uart_tx_irq,
     .tx_irq_abort = port_uart_tx_irq_abort,
     .rx_n_irq = port_uart_rx_n_irq,
@@ -800,8 +806,7 @@ static const cfn_hal_uart_api_t UART_API = {
     .rx_polling = port_uart_rx_polling,
     .rx_to_idle = port_uart_rx_to_idle,
     .tx_dma = NULL,
-    .rx_dma = port_uart_rx_dma
-};
+    .rx_dma = port_uart_rx_dma};
 
 #endif /* HAL_UART_MODULE_ENABLED */
 

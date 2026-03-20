@@ -45,8 +45,9 @@ extern "C"
 /* Private Data -----------------------------------------------------*/
 
 /**
- * @brief Internal mapping array from STM32 HAL_StatusTypeDef to cfn_hal_error_code_t.
- * The array is indexed by the actual HAL_StatusTypeDef enum constants.
+ * @brief Internal mapping array from STM32 HAL_StatusTypeDef to
+ * cfn_hal_error_code_t. The array is indexed by the actual HAL_StatusTypeDef
+ * enum constants.
  */
 static const cfn_hal_error_code_t STM32_ERROR_MAP[CFN_HAL_STM32_ERROR_MAX] = {
     [HAL_OK]      = CFN_HAL_ERROR_OK,

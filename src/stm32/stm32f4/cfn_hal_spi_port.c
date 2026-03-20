@@ -24,12 +24,12 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_spi.h"
 #include "cfn_hal_spi_port.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_gpio.h"
+#include "cfn_hal_spi.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 
 #ifdef HAL_SPI_MODULE_ENABLED
 
@@ -107,36 +107,21 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_spi_t *driver)
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_spi_t *driver = (cfn_hal_spi_t *) base;
+    cfn_hal_spi_t *driver      = (cfn_hal_spi_t *) base;
 
-    cfn_hal_error_code_t err = cfn_hal_spi_config_validate(driver->config);
-    if (err != CFN_HAL_ERROR_OK)
+    cfn_hal_error_code_t error = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
     {
-        return err;
-    }
-
-    if (driver->api->base.config_validate != NULL)
-    {
-        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (err != CFN_HAL_ERROR_OK)
-        {
-            return err;
-        }
-    }
-
-    err = low_level_init(driver);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
+        return error;
     }
 
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     SPI_HandleTypeDef *hspi    = &port_hspis[port_id];
 
-    hspi->Instance       = PORT_INSTANCES[port_id];
-    hspi->Init.Mode      = SPI_MODE_MASTER;
-    hspi->Init.Direction = SPI_DIRECTION_2LINES;
-    hspi->Init.DataSize  = (driver->config->data_size == 16) ? SPI_DATASIZE_16BIT : SPI_DATASIZE_8BIT;
+    hspi->Instance             = PORT_INSTANCES[port_id];
+    hspi->Init.Mode            = SPI_MODE_MASTER;
+    hspi->Init.Direction       = SPI_DIRECTION_2LINES;
+    hspi->Init.DataSize        = (driver->config->data_size == 16) ? SPI_DATASIZE_16BIT : SPI_DATASIZE_8BIT;
 
     switch (driver->config->fmt)
     {
@@ -156,6 +141,9 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
             hspi->Init.CLKPolarity = SPI_POLARITY_HIGH;
             hspi->Init.CLKPhase    = SPI_PHASE_2EDGE;
             break;
+
+        default:
+            return CFN_HAL_ERROR_BAD_PARAM;
     }
 
     hspi->Init.NSS               = SPI_NSS_SOFT;
@@ -447,24 +435,25 @@ static cfn_hal_error_code_t port_spi_xfr_irq_abort(cfn_hal_spi_t *driver)
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_spi_api_t SPI_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = port_base_event_enable,
-        .event_disable = port_base_event_disable,
-        .event_get = port_base_event_get,
-        .error_enable = port_base_error_enable,
-        .error_disable = port_base_error_disable,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = port_base_event_enable,
+            .event_disable = port_base_event_disable,
+            .event_get = port_base_event_get,
+            .error_enable = port_base_error_enable,
+            .error_disable = port_base_error_disable,
+            .error_get = port_base_error_get,
+        },
     .xfr_irq = port_spi_xfr_irq,
     .xfr_irq_abort = port_spi_xfr_irq_abort,
     .xfr_polling = port_spi_xfr_polling,
-    .xfr_dma = NULL
-};
+    .xfr_dma = NULL};
 
 #endif /* HAL_SPI_MODULE_ENABLED */
 

@@ -24,10 +24,10 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_nvm.h"
 #include "cfn_hal_nvm_port.h"
+#include "cfn_hal_nvm.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 #include <string.h>
 
 /* Private Data -----------------------------------------------------*/
@@ -114,21 +114,6 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
     }
     cfn_hal_nvm_t *driver = (cfn_hal_nvm_t *) base;
 
-    cfn_hal_error_code_t err = cfn_hal_nvm_config_validate(driver->config);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
-    }
-
-    if (driver->api->base.config_validate != NULL)
-    {
-        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (err != CFN_HAL_ERROR_OK)
-        {
-            return err;
-        }
-    }
-
     return low_level_init(driver);
 }
 
@@ -155,7 +140,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 static cfn_hal_error_code_t port_nvm_read(cfn_hal_nvm_t *driver, uint32_t addr, uint8_t *buffer, size_t size)
 {
     CFN_HAL_UNUSED(driver);
-    memcpy(buffer, (const void *) (uintptr_t) addr, size); // NOLINT(performance-no-int-to-ptr)
+    memcpy(buffer, (const void *) (uintptr_t) addr,
+           size); // NOLINT(performance-no-int-to-ptr)
     return CFN_HAL_ERROR_OK;
 }
 
@@ -238,26 +224,26 @@ static cfn_hal_error_code_t port_nvm_get_info(cfn_hal_nvm_t *driver, cfn_hal_nvm
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_nvm_api_t NVM_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = NULL,
-        .power_state_set = NULL,
-        .config_set = NULL,
-        .config_validate = NULL,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = NULL,
+            .power_state_set = NULL,
+            .config_set = NULL,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .read = port_nvm_read,
     .write = port_nvm_write,
     .erase_sector = port_nvm_erase_sector,
     .erase_chip = port_nvm_erase_chip,
-    .get_info = port_nvm_get_info
-};
+    .get_info = port_nvm_get_info};
 
 /* Instantiation ----------------------------------------------------*/
 cfn_hal_error_code_t

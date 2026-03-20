@@ -24,11 +24,11 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_sdio.h"
 #include "cfn_hal_sdio_port.h"
 #include "cfn_hal_clock_port.h"
+#include "cfn_hal_sdio.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 
 #ifdef HAL_SD_MODULE_ENABLED
 
@@ -81,25 +81,10 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
     cfn_hal_sdio_t *driver = (cfn_hal_sdio_t *) base;
 
-    cfn_hal_error_code_t err = cfn_hal_sdio_config_validate(driver->config);
-    if (err != CFN_HAL_ERROR_OK)
+    error                  = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
     {
-        return err;
-    }
-
-    if (driver->api->base.config_validate != NULL)
-    {
-        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (err != CFN_HAL_ERROR_OK)
-        {
-            return err;
-        }
-    }
-
-    err = low_level_init(driver);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
+        return error;
     }
 
     port_hsd.Instance                 = SDIO;
@@ -154,9 +139,9 @@ port_sdio_send_command(cfn_hal_sdio_t *driver, const cfn_hal_sdio_cmd_t *cmd, ui
     s_cmd.Argument            = cmd->arg;
     s_cmd.CmdIndex            = cmd->cmd_index;
     s_cmd.Response            = cmd->response_type;
-    s_cmd.WaitForInterrupt =
-        SDIO_WAIT_NO; /* Wait member exists in some F4 versions but might be named differently or used differently */
-    s_cmd.CPSM = SDIO_CPSM_ENABLE;
+    s_cmd.WaitForInterrupt    = SDIO_WAIT_NO; /* Wait member exists in some F4 versions but might be named
+                                                 differently or used differently */
+    s_cmd.CPSM                = SDIO_CPSM_ENABLE;
 
     (void) SDIO_SendCommand(port_hsd.Instance, &s_cmd);
 
@@ -220,25 +205,26 @@ static cfn_hal_error_code_t port_sdio_wait_card_ready(cfn_hal_sdio_t *driver, ui
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_sdio_api_t SDIO_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .send_command = port_sdio_send_command,
     .read_blocks = port_sdio_read_blocks,
     .write_blocks = port_sdio_write_blocks,
     .get_card_info = port_sdio_get_card_info,
-    .wait_card_ready = port_sdio_wait_card_ready
-};
+    .wait_card_ready = port_sdio_wait_card_ready};
 
 #endif /* HAL_SD_MODULE_ENABLED */
 

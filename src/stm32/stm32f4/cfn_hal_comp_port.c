@@ -24,9 +24,9 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_comp.h"
 #include "cfn_hal_comp_port.h"
+#include "cfn_hal_comp.h"
+#include "stm32f4xx_hal.h"
 
 #ifdef HAL_COMP_MODULE_ENABLED
 
@@ -67,21 +67,6 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    cfn_hal_error_code_t err = cfn_hal_comp_config_validate(driver->config);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
-    }
-
-    if (driver->api->base.config_validate != NULL)
-    {
-        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (err != CFN_HAL_ERROR_OK)
-        {
-            return err;
-        }
-    }
-
     return low_level_init(driver);
 }
 
@@ -113,24 +98,25 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 }
 
 static const cfn_hal_comp_api_t COMP_API = {
-    .base = {
-        .init = NULL,
-        .deinit = NULL,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = NULL,
+            .deinit = NULL,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .read_output = NULL,
     .set_threshold = NULL,
     .start = NULL,
-    .stop = NULL
-};
+    .stop = NULL};
 
 #endif /* HAL_COMP_MODULE_ENABLED */
 

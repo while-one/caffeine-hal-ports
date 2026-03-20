@@ -24,11 +24,11 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_gpio.h"
 #include "cfn_hal_gpio_port.h"
 #include "cfn_hal_clock_port.h"
+#include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 
 /* Private Data -----------------------------------------------------*/
 
@@ -97,15 +97,6 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
     cfn_hal_gpio_t *driver = (cfn_hal_gpio_t *) base;
 
-    if (driver->api->base.config_validate != NULL)
-    {
-        cfn_hal_error_code_t err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (err != CFN_HAL_ERROR_OK)
-        {
-            return err;
-        }
-    }
-
     return low_level_init(driver);
 }
 
@@ -141,12 +132,6 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 static cfn_hal_error_code_t port_gpio_pin_config(cfn_hal_gpio_t *port, const cfn_hal_gpio_pin_config_t *pin_cfg)
 {
-    cfn_hal_error_code_t err = cfn_hal_gpio_pin_config_validate(pin_cfg);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
-    }
-
     uint32_t         port_id = (uint32_t) (uintptr_t) port->phy->port;
     GPIO_InitTypeDef st_cfg  = { 0 };
 
@@ -174,6 +159,9 @@ static cfn_hal_error_code_t port_gpio_pin_config(cfn_hal_gpio_t *port, const cfn
         case CFN_HAL_GPIO_CONFIG_MODE_ANALOG:
             st_cfg.Mode = GPIO_MODE_ANALOG;
             break;
+
+        default:
+            return CFN_HAL_ERROR_BAD_PARAM;
     }
 
     switch (pin_cfg->pull)
@@ -187,6 +175,9 @@ static cfn_hal_error_code_t port_gpio_pin_config(cfn_hal_gpio_t *port, const cfn
         case CFN_HAL_GPIO_CONFIG_PULL_PULLDOWN:
             st_cfg.Pull = GPIO_PULLDOWN;
             break;
+
+        default:
+            return CFN_HAL_ERROR_BAD_PARAM;
     }
 
     switch (pin_cfg->speed)
@@ -203,6 +194,9 @@ static cfn_hal_error_code_t port_gpio_pin_config(cfn_hal_gpio_t *port, const cfn
         case CFN_HAL_GPIO_CONFIG_SPEED_VERY_HIGH:
             st_cfg.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
             break;
+
+        default:
+            return CFN_HAL_ERROR_BAD_PARAM;
     }
 
     HAL_GPIO_Init(PORT_INSTANCES[port_id], &st_cfg);
@@ -265,26 +259,26 @@ static cfn_hal_error_code_t port_gpio_port_read(cfn_hal_gpio_t *port, uint32_t *
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_gpio_api_t GPIO_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = NULL,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .pin_config = port_gpio_pin_config,
     .pin_read = port_gpio_pin_read,
     .pin_write = port_gpio_pin_write,
     .pin_toggle = port_gpio_pin_toggle,
     .port_read = port_gpio_port_read,
-    .port_write = port_gpio_port_write
-};
+    .port_write = port_gpio_port_write};
 
 /* Instantiation ----------------------------------------------------*/
 

@@ -24,11 +24,11 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_timer.h"
 #include "cfn_hal_timer_port.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_stm32_error.h"
+#include "cfn_hal_timer.h"
+#include "stm32f4xx_hal.h"
 
 #ifdef HAL_TIM_MODULE_ENABLED
 
@@ -131,29 +131,14 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
     cfn_hal_timer_t *driver = (cfn_hal_timer_t *) base;
 
-    cfn_hal_error_code_t err = cfn_hal_timer_config_validate(driver->config);
-    if (err != CFN_HAL_ERROR_OK)
+    error                   = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
     {
-        return err;
+        return error;
     }
 
-    if (driver->api->base.config_validate != NULL)
-    {
-        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (err != CFN_HAL_ERROR_OK)
-        {
-            return err;
-        }
-    }
-
-    err = low_level_init(driver);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
-    }
-
-    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    TIM_HandleTypeDef *htim    = &port_htims[port_id];
+    uint32_t           port_id   = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim      = &port_htims[port_id];
 
     htim->Instance               = PORT_INSTANCES[port_id];
     htim->Init.Prescaler         = driver->config->prescaler;
@@ -409,13 +394,13 @@ static cfn_hal_error_code_t port_timer_get_ticks(cfn_hal_timer_t *driver, uint32
 
 static cfn_hal_error_code_t port_timer_get_ticks_u64(cfn_hal_timer_t *driver, uint32_t ch, uint64_t *ticks)
 {
-    uint32_t             t32 = 0;
-    cfn_hal_error_code_t err = port_timer_get_ticks(driver, ch, &t32);
-    if (err == CFN_HAL_ERROR_OK)
+    uint32_t             t32   = 0;
+    cfn_hal_error_code_t error = port_timer_get_ticks(driver, ch, &t32);
+    if (error == CFN_HAL_ERROR_OK)
     {
         *ticks = (uint64_t) t32;
     }
-    return err;
+    return error;
 }
 
 static cfn_hal_error_code_t port_timer_set_period(cfn_hal_timer_t *driver, const cfn_hal_timer_period_t *period)
@@ -427,25 +412,26 @@ static cfn_hal_error_code_t port_timer_set_period(cfn_hal_timer_t *driver, const
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_timer_api_t TIMER_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = port_base_event_enable,
-        .event_disable = port_base_event_disable,
-        .event_get = port_base_event_get,
-        .error_enable = port_base_error_enable,
-        .error_disable = port_base_error_disable,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = port_base_event_enable,
+            .event_disable = port_base_event_disable,
+            .event_get = port_base_event_get,
+            .error_enable = port_base_error_enable,
+            .error_disable = port_base_error_disable,
+            .error_get = port_base_error_get,
+        },
     .start = port_timer_start,
     .stop = port_timer_stop,
     .get_ticks = port_timer_get_ticks,
     .get_ticks_u64 = port_timer_get_ticks_u64,
-    .set_period = port_timer_set_period
-};
+    .set_period = port_timer_set_period};
 
 #endif /* HAL_TIM_MODULE_ENABLED */
 

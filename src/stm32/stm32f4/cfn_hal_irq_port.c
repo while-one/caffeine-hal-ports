@@ -24,30 +24,15 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_irq.h"
 #include "cfn_hal_irq_port.h"
+#include "cfn_hal_irq.h"
+#include "stm32f4xx_hal.h"
 
 /* VMT Implementations ----------------------------------------------*/
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_irq_t *driver = (cfn_hal_irq_t *) base;
-
-    cfn_hal_error_code_t err = cfn_hal_irq_config_validate(driver->config);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
-    }
-
-    if (driver->api->base.config_validate != NULL)
-    {
-        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (err != CFN_HAL_ERROR_OK)
-        {
-            return err;
-        }
-    }
+    CFN_HAL_UNUSED(base);
 
     return CFN_HAL_ERROR_OK;
 }
@@ -116,26 +101,26 @@ static cfn_hal_error_code_t port_irq_clear_pending(cfn_hal_irq_t *driver, uint32
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_irq_api_t IRQ_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = NULL,
-        .power_state_set = NULL,
-        .config_set = NULL,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = NULL,
+            .power_state_set = NULL,
+            .config_set = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .global_enable = port_irq_global_enable,
     .global_disable = port_irq_global_disable,
     .enable_vector = port_irq_enable_vector,
     .disable_vector = port_irq_disable_vector,
     .set_priority = port_irq_set_priority,
-    .clear_pending = port_irq_clear_pending
-};
+    .clear_pending = port_irq_clear_pending};
 
 /* Instantiation ----------------------------------------------------*/
 cfn_hal_error_code_t

@@ -24,12 +24,12 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_can.h"
 #include "cfn_hal_can_port.h"
+#include "cfn_hal_can.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 
 #ifdef HAL_CAN_MODULE_ENABLED
 
@@ -109,35 +109,20 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    cfn_hal_error_code_t err = cfn_hal_can_config_validate(driver->config);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
-    }
-
-    if (driver->api->base.config_validate != NULL)
-    {
-        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (err != CFN_HAL_ERROR_OK)
-        {
-            return err;
-        }
-    }
-
-    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     if (port_id >= CFN_HAL_CAN_PORT_MAX)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
     CAN_HandleTypeDef *hcan    = &port_hcans[port_id];
 
-    err = low_level_init(driver);
-    if (err != CFN_HAL_ERROR_OK)
+    cfn_hal_error_code_t error = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
     {
-        return err;
+        return error;
     }
 
-    hcan->Instance = PORT_INSTANCES[port_id];
+    hcan->Instance                  = PORT_INSTANCES[port_id];
 
     /* Simple default bit timing for F4 @ 42MHz APB1, 500kbps */
     hcan->Init.Prescaler            = 3;
@@ -440,23 +425,24 @@ static cfn_hal_error_code_t port_can_add_filter(cfn_hal_can_t *driver, const cfn
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_can_api_t CAN_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = port_base_event_enable,
-        .event_disable = port_base_event_disable,
-        .event_get = port_base_event_get,
-        .error_enable = port_base_error_enable,
-        .error_disable = port_base_error_disable,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = port_base_event_enable,
+            .event_disable = port_base_event_disable,
+            .event_get = port_base_event_get,
+            .error_enable = port_base_error_enable,
+            .error_disable = port_base_error_disable,
+            .error_get = port_base_error_get,
+        },
     .transmit = port_can_transmit,
     .receive = port_can_receive,
-    .add_filter = port_can_add_filter
-};
+    .add_filter = port_can_add_filter};
 
 #endif /* HAL_CAN_MODULE_ENABLED */
 

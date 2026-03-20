@@ -24,10 +24,10 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_crypto.h"
 #include "cfn_hal_crypto_port.h"
+#include "cfn_hal_crypto.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 #include <string.h>
 
 #if defined(HAL_CRYP_MODULE_ENABLED) || defined(HAL_HASH_MODULE_ENABLED) || defined(HAL_RNG_MODULE_ENABLED)
@@ -78,25 +78,10 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    cfn_hal_error_code_t err = cfn_hal_crypto_config_validate(driver->config);
-    if (err != CFN_HAL_ERROR_OK)
+    cfn_hal_error_code_t error = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
     {
-        return err;
-    }
-
-    if (driver->api->base.config_validate != NULL)
-    {
-        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (err != CFN_HAL_ERROR_OK)
-        {
-            return err;
-        }
-    }
-
-    err = low_level_init(driver);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
+        return error;
     }
 
 #ifdef HAL_CRYP_MODULE_ENABLED
@@ -294,28 +279,30 @@ static cfn_hal_error_code_t port_crypto_set_key(cfn_hal_crypto_t *driver, const 
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_crypto_api_t CRYPTO_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .encrypt = port_crypto_encrypt,
     .decrypt = port_crypto_decrypt,
     .hash_update = port_crypto_hash_update,
     .hash_finish = port_crypto_hash_finish,
     .generate_random = port_crypto_generate_random,
-    .set_key = port_crypto_set_key
-};
+    .set_key = port_crypto_set_key};
 
-#endif /* HAL_CRYP_MODULE_ENABLED || HAL_HASH_MODULE_ENABLED || HAL_RNG_MODULE_ENABLED */
+#endif /* HAL_CRYP_MODULE_ENABLED || HAL_HASH_MODULE_ENABLED ||                                                        \
+          HAL_RNG_MODULE_ENABLED */
 
 /* Instantiation ----------------------------------------------------*/
 cfn_hal_error_code_t cfn_hal_crypto_construct(cfn_hal_crypto_t              *driver,

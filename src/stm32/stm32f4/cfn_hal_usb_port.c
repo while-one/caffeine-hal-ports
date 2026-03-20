@@ -24,12 +24,12 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_usb.h"
 #include "cfn_hal_usb_port.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
+#include "cfn_hal_usb.h"
+#include "stm32f4xx_hal.h"
 #include <string.h>
 
 #if defined(HAL_PCD_MODULE_ENABLED)
@@ -114,22 +114,7 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     PCD_HandleTypeDef *hpcd    = &port_hpcds[port_id];
 
-    cfn_hal_error_code_t error = cfn_hal_usb_config_validate(driver->config);
-    if (error != CFN_HAL_ERROR_OK)
-    {
-        return error;
-    }
-
-    if (driver->api->base.config_validate != NULL)
-    {
-        error = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (error != CFN_HAL_ERROR_OK)
-        {
-            return error;
-        }
-    }
-
-    error = low_level_init(driver);
+    error                      = low_level_init(driver);
     if (error != CFN_HAL_ERROR_OK)
     {
         return error;
@@ -378,19 +363,21 @@ static cfn_hal_error_code_t port_usb_get_rx_data_size(cfn_hal_usb_t *driver, uin
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_usb_api_t USB_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .start = port_usb_start,
     .stop = port_usb_stop,
     .set_address = port_usb_set_address,
@@ -400,8 +387,7 @@ static const cfn_hal_usb_api_t USB_API = {
     .ep_receive = port_usb_ep_receive,
     .ep_stall = port_usb_ep_stall,
     .read_setup_packet = port_usb_read_setup_packet,
-    .get_rx_data_size = port_usb_get_rx_data_size
-};
+    .get_rx_data_size = port_usb_get_rx_data_size};
 
 #endif /* HAL_PCD_MODULE_ENABLED */
 

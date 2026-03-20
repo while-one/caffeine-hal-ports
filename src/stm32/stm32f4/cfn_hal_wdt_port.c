@@ -24,10 +24,10 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_wdt.h"
 #include "cfn_hal_wdt_port.h"
 #include "cfn_hal_stm32_error.h"
+#include "cfn_hal_wdt.h"
+#include "stm32f4xx_hal.h"
 
 #if defined(HAL_IWDG_MODULE_ENABLED) || defined(HAL_WWDG_MODULE_ENABLED)
 
@@ -74,30 +74,15 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
     uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     IWDG_HandleTypeDef *hiwdg   = &port_hiwdgs[port_id];
 
-    cfn_hal_error_code_t err = cfn_hal_wdt_config_validate(driver->config);
-    if (err != CFN_HAL_ERROR_OK)
+    error                       = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
     {
-        return err;
+        return error;
     }
 
-    if (driver->api->base.config_validate != NULL)
-    {
-        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (err != CFN_HAL_ERROR_OK)
-        {
-            return err;
-        }
-    }
-
-    err = low_level_init(driver);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
-    }
-
-    hiwdg->Instance             = PORT_INSTANCES[port_id];
-    hiwdg->Init.Prescaler       = IWDG_PRESCALER_4;
-    hiwdg->Init.Reload          = 4095;
+    hiwdg->Instance       = PORT_INSTANCES[port_id];
+    hiwdg->Init.Prescaler = IWDG_PRESCALER_4;
+    hiwdg->Init.Reload    = 4095;
 
     return cfn_hal_stm32_map_error(HAL_IWDG_Init(hiwdg));
 }
@@ -138,23 +123,24 @@ static cfn_hal_error_code_t port_wdt_feed(cfn_hal_wdt_t *driver)
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_wdt_api_t WDT_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = NULL,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = NULL,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .start = NULL,
     .stop = NULL,
-    .feed = port_wdt_feed
-};
+    .feed = port_wdt_feed};
 
 #endif /* HAL_IWDG_MODULE_ENABLED || HAL_WWDG_MODULE_ENABLED */
 

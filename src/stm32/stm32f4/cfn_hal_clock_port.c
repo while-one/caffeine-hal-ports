@@ -24,9 +24,9 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
+#include "cfn_hal_clock.h"
+#include "stm32f4xx_hal.h"
 
 /* VMT Implementations ----------------------------------------------*/
 
@@ -101,26 +101,26 @@ static cfn_hal_error_code_t port_clock_enable_gate(cfn_hal_clock_t *driver, uint
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_clock_api_t CLOCK_API = {
-    .base = {
-        .init = NULL,
-        .deinit = NULL,
-        .power_state_set = NULL,
-        .config_set = NULL,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = NULL,
+            .deinit = NULL,
+            .power_state_set = NULL,
+            .config_set = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .suspend_tick = port_clock_suspend_tick,
     .resume_tick = port_clock_resume_tick,
     .get_system_freq = port_clock_get_system_freq,
     .get_peripheral_freq = port_clock_get_peripheral_freq,
     .enable_gate = port_clock_enable_gate,
-    .disable_gate = NULL
-};
+    .disable_gate = NULL};
 
 /* Internal Helper --------------------------------------------------*/
 
@@ -328,12 +328,6 @@ void cfn_hal_port_clock_enable_gate(cfn_hal_port_peripheral_id_t periph_id)
 cfn_hal_error_code_t
 cfn_hal_clock_construct(cfn_hal_clock_t *driver, const cfn_hal_clock_config_t *config, const cfn_hal_clock_phy_t *phy)
 {
-    cfn_hal_error_code_t err = cfn_hal_clock_config_validate(config);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
-    }
-
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;

@@ -24,11 +24,11 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_adc.h"
 #include "cfn_hal_adc_port.h"
+#include "cfn_hal_adc.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 
 #ifdef HAL_ADC_MODULE_ENABLED
 
@@ -122,7 +122,6 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_adc_t *driver)
     return CFN_HAL_ERROR_OK;
 }
 
-
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
     cfn_hal_adc_t *driver = (cfn_hal_adc_t *) base;
@@ -131,35 +130,19 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    cfn_hal_error_code_t err = cfn_hal_adc_config_validate(driver->config);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
-    }
-
-    if (driver->api->base.config_validate != NULL)
-    {
-        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (err != CFN_HAL_ERROR_OK)
-        {
-            return err;
-        }
-    }
-
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     if (port_id >= CFN_HAL_ADC_PORT_MAX)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    ADC_HandleTypeDef *hadc = &port_hadcs[port_id];
+    ADC_HandleTypeDef *hadc    = &port_hadcs[port_id];
 
-    err = low_level_init(driver);
-    if (err != CFN_HAL_ERROR_OK)
+    cfn_hal_error_code_t error = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
     {
-        return err;
+        return error;
     }
-
 
     uint32_t resolution = PORT_MAP_RESOLUTION[driver->config->resolution];
     uint32_t align      = PORT_MAP_ALIGN[driver->config->alignment];
@@ -398,24 +381,25 @@ static cfn_hal_error_code_t port_adc_read_dma(cfn_hal_adc_t *driver, uint32_t *d
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_adc_api_t ADC_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = port_base_event_enable,
-        .event_disable = port_base_event_disable,
-        .event_get = port_base_event_get,
-        .error_enable = port_base_error_enable,
-        .error_disable = port_base_error_disable,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = port_base_event_enable,
+            .event_disable = port_base_event_disable,
+            .event_get = port_base_event_get,
+            .error_enable = port_base_error_enable,
+            .error_disable = port_base_error_disable,
+            .error_get = port_base_error_get,
+        },
     .read = port_adc_read,
     .start = port_adc_start,
     .stop = port_adc_stop,
-    .read_dma = port_adc_read_dma
-};
+    .read_dma = port_adc_read_dma};
 
 #endif /* HAL_ADC_MODULE_ENABLED */
 

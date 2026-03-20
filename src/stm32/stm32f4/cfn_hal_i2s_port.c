@@ -24,11 +24,11 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_i2s.h"
 #include "cfn_hal_i2s_port.h"
 #include "cfn_hal_clock_port.h"
+#include "cfn_hal_i2s.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 
 #ifdef HAL_I2S_MODULE_ENABLED
 
@@ -111,25 +111,10 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     I2S_HandleTypeDef *hi2s    = &port_hi2ss[port_id];
 
-    cfn_hal_error_code_t err = cfn_hal_i2s_config_validate(driver->config);
-    if (err != CFN_HAL_ERROR_OK)
+    cfn_hal_error_code_t error = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
     {
-        return err;
-    }
-
-    if (driver->api->base.config_validate != NULL)
-    {
-        err = driver->api->base.config_validate((cfn_hal_driver_t *) driver, driver->config);
-        if (err != CFN_HAL_ERROR_OK)
-        {
-            return err;
-        }
-    }
-
-    err = low_level_init(driver);
-    if (err != CFN_HAL_ERROR_OK)
-    {
-        return err;
+        return error;
     }
 
     hi2s->Instance         = PORT_INSTANCES[port_id];
@@ -252,25 +237,26 @@ static cfn_hal_error_code_t port_i2s_stop(cfn_hal_i2s_t *driver)
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_i2s_api_t I2S_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .transmit_dma = port_i2s_transmit_dma,
     .receive_dma = port_i2s_receive_dma,
     .pause = port_i2s_pause,
     .resume = port_i2s_resume,
-    .stop = port_i2s_stop
-};
+    .stop = port_i2s_stop};
 
 #endif /* HAL_I2S_MODULE_ENABLED */
 
