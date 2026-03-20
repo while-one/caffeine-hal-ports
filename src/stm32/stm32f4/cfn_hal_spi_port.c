@@ -1,6 +1,26 @@
 /**
+ * Copyright (c) 2026 Hisham Moussa Daou <https://www.whileone.me>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
  * @file cfn_hal_spi_port.c
- * @brief STM32F4 SPI HAL Port Implementation.
+ * @brief STM32F4 SPI HAL Port Implementation
  */
 
 /* Includes ---------------------------------------------------------*/
@@ -58,50 +78,50 @@ static void low_level_init(cfn_hal_spi_t *driver)
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_spi_t     *driver = (cfn_hal_spi_t *) base;
+    cfn_hal_spi_t     *driver  = (cfn_hal_spi_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    SPI_HandleTypeDef *hspi = &port_hspis[port_id];
+    SPI_HandleTypeDef *hspi    = &port_hspis[port_id];
 
     low_level_init(driver);
 
-    hspi->Instance = PORT_INSTANCES[port_id];
-    hspi->Init.Mode = SPI_MODE_MASTER;
+    hspi->Instance       = PORT_INSTANCES[port_id];
+    hspi->Init.Mode      = SPI_MODE_MASTER;
     hspi->Init.Direction = SPI_DIRECTION_2LINES;
-    hspi->Init.DataSize = (driver->config->data_size == 16) ? SPI_DATASIZE_16BIT : SPI_DATASIZE_8BIT;
+    hspi->Init.DataSize  = (driver->config->data_size == 16) ? SPI_DATASIZE_16BIT : SPI_DATASIZE_8BIT;
 
     switch (driver->config->fmt)
     {
         case CFN_HAL_SPI_CONFIG_FMT_POL0_PHA0:
             hspi->Init.CLKPolarity = SPI_POLARITY_LOW;
-            hspi->Init.CLKPhase = SPI_PHASE_1EDGE;
+            hspi->Init.CLKPhase    = SPI_PHASE_1EDGE;
             break;
         case CFN_HAL_SPI_CONFIG_FMT_POL0_PHA1:
             hspi->Init.CLKPolarity = SPI_POLARITY_LOW;
-            hspi->Init.CLKPhase = SPI_PHASE_2EDGE;
+            hspi->Init.CLKPhase    = SPI_PHASE_2EDGE;
             break;
         case CFN_HAL_SPI_CONFIG_FMT_POL1_PHA0:
             hspi->Init.CLKPolarity = SPI_POLARITY_HIGH;
-            hspi->Init.CLKPhase = SPI_PHASE_1EDGE;
+            hspi->Init.CLKPhase    = SPI_PHASE_1EDGE;
             break;
         case CFN_HAL_SPI_CONFIG_FMT_POL1_PHA1:
             hspi->Init.CLKPolarity = SPI_POLARITY_HIGH;
-            hspi->Init.CLKPhase = SPI_PHASE_2EDGE;
+            hspi->Init.CLKPhase    = SPI_PHASE_2EDGE;
             break;
     }
 
-    hspi->Init.NSS = SPI_NSS_SOFT;
+    hspi->Init.NSS               = SPI_NSS_SOFT;
     hspi->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32; /* Default */
-    hspi->Init.FirstBit = SPI_FIRSTBIT_MSB;
-    hspi->Init.TIMode = SPI_TIMODE_DISABLE;
-    hspi->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-    hspi->Init.CRCPolynomial = 10;
+    hspi->Init.FirstBit          = SPI_FIRSTBIT_MSB;
+    hspi->Init.TIMode            = SPI_TIMODE_DISABLE;
+    hspi->Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLE;
+    hspi->Init.CRCPolynomial     = 10;
 
     return cfn_hal_stm32_map_error(HAL_SPI_Init(hspi));
 }
 
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 {
-    cfn_hal_spi_t *driver = (cfn_hal_spi_t *) base;
+    cfn_hal_spi_t *driver  = (cfn_hal_spi_t *) base;
     uint32_t       port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     return cfn_hal_stm32_map_error(HAL_SPI_DeInit(&port_hspis[port_id]));
 }
@@ -115,9 +135,9 @@ static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const v
 
 static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    cfn_hal_spi_t     *driver = (cfn_hal_spi_t *) base;
+    cfn_hal_spi_t     *driver  = (cfn_hal_spi_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    SPI_HandleTypeDef *hspi = &port_hspis[port_id];
+    SPI_HandleTypeDef *hspi    = &port_hspis[port_id];
 
     if (event_mask & CFN_HAL_SPI_EVENT_TX_COMPLETE)
     {
@@ -133,9 +153,9 @@ static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint3
 
 static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    cfn_hal_spi_t     *driver = (cfn_hal_spi_t *) base;
+    cfn_hal_spi_t     *driver  = (cfn_hal_spi_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    SPI_HandleTypeDef *hspi = &port_hspis[port_id];
+    SPI_HandleTypeDef *hspi    = &port_hspis[port_id];
 
     if (event_mask & CFN_HAL_SPI_EVENT_TX_COMPLETE)
     {
@@ -151,10 +171,10 @@ static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint
 
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
-    cfn_hal_spi_t     *driver = (cfn_hal_spi_t *) base;
+    cfn_hal_spi_t     *driver  = (cfn_hal_spi_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    SPI_HandleTypeDef *hspi = &port_hspis[port_id];
-    uint32_t           mask = 0;
+    SPI_HandleTypeDef *hspi    = &port_hspis[port_id];
+    uint32_t           mask    = 0;
 
     if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_TXE))
     {
@@ -174,9 +194,9 @@ static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t
 
 static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    cfn_hal_spi_t     *driver = (cfn_hal_spi_t *) base;
+    cfn_hal_spi_t     *driver  = (cfn_hal_spi_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    SPI_HandleTypeDef *hspi = &port_hspis[port_id];
+    SPI_HandleTypeDef *hspi    = &port_hspis[port_id];
 
     if (error_mask & (CFN_HAL_SPI_ERROR_CRC | CFN_HAL_SPI_ERROR_FRAMING | CFN_HAL_SPI_ERROR_OVERRUN))
     {
@@ -188,9 +208,9 @@ static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint3
 
 static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    cfn_hal_spi_t     *driver = (cfn_hal_spi_t *) base;
+    cfn_hal_spi_t     *driver  = (cfn_hal_spi_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    SPI_HandleTypeDef *hspi = &port_hspis[port_id];
+    SPI_HandleTypeDef *hspi    = &port_hspis[port_id];
 
     if (error_mask & (CFN_HAL_SPI_ERROR_CRC | CFN_HAL_SPI_ERROR_FRAMING | CFN_HAL_SPI_ERROR_OVERRUN))
     {
@@ -202,10 +222,10 @@ static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint
 
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
 {
-    cfn_hal_spi_t     *driver = (cfn_hal_spi_t *) base;
+    cfn_hal_spi_t     *driver  = (cfn_hal_spi_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    SPI_HandleTypeDef *hspi = &port_hspis[port_id];
-    uint32_t           mask = 0;
+    SPI_HandleTypeDef *hspi    = &port_hspis[port_id];
+    uint32_t           mask    = 0;
 
     if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_CRCERR))
     {
@@ -417,14 +437,14 @@ cfn_hal_spi_construct(cfn_hal_spi_t *driver, const cfn_hal_spi_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = &SPI_API;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_SPI;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config = config;
-    driver->phy = phy;
+    driver->api                  = &SPI_API;
+    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_SPI;
+    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
+    driver->config               = config;
+    driver->phy                  = phy;
 
     port_hspis[port_id].Instance = PORT_INSTANCES[port_id];
-    port_drivers[port_id] = driver;
+    port_drivers[port_id]        = driver;
 
     return CFN_HAL_ERROR_OK;
 #else
@@ -449,11 +469,11 @@ cfn_hal_error_code_t cfn_hal_spi_destruct(cfn_hal_spi_t *driver)
         port_drivers[port_id] = NULL;
     }
 
-    driver->api = NULL;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_SPI;
+    driver->api         = NULL;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_SPI;
     driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config = NULL;
-    driver->phy = NULL;
+    driver->config      = NULL;
+    driver->phy         = NULL;
 
     return CFN_HAL_ERROR_OK;
 #else

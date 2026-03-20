@@ -1,6 +1,26 @@
 /**
+ * Copyright (c) 2026 Hisham Moussa Daou <https://www.whileone.me>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
  * @file cfn_hal_crypto_port.c
- * @brief STM32F4 Hardware Crypto HAL Port Implementation.
+ * @brief STM32F4 CRYPTO HAL Port Implementation
  */
 
 /* Includes ---------------------------------------------------------*/
@@ -34,9 +54,9 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 
 #ifdef HAL_CRYP_MODULE_ENABLED
     __HAL_RCC_CRYP_CLK_ENABLE();
-    port_hcryp.Instance = CRYP;
-    port_hcryp.Init.DataType = CRYP_DATATYPE_8B;
-    port_hcryp.Init.KeySize = CRYP_KEYSIZE_128B;
+    port_hcryp.Instance       = CRYP;
+    port_hcryp.Init.DataType  = CRYP_DATATYPE_8B;
+    port_hcryp.Init.KeySize   = CRYP_KEYSIZE_128B;
     port_hcryp.Init.Algorithm = CRYP_AES_ECB;
 
     if (HAL_CRYP_Init(&port_hcryp) != HAL_OK)
@@ -170,7 +190,7 @@ static cfn_hal_error_code_t port_crypto_generate_random(cfn_hal_crypto_t *driver
     CFN_HAL_UNUSED(driver);
 #ifdef HAL_RNG_MODULE_ENABLED
     uint32_t random_val = 0;
-    size_t   i = 0;
+    size_t   i          = 0;
 
     while (i < size)
     {
@@ -253,11 +273,11 @@ cfn_hal_error_code_t cfn_hal_crypto_construct(cfn_hal_crypto_t              *dri
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    driver->api = &CRYPTO_API;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_CRYPTO;
+    driver->api         = &CRYPTO_API;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_CRYPTO;
     driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config = config;
-    driver->phy = phy;
+    driver->config      = config;
+    driver->phy         = phy;
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);
@@ -273,10 +293,10 @@ cfn_hal_error_code_t cfn_hal_crypto_destruct(cfn_hal_crypto_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    driver->api = NULL;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_CRYPTO;
+    driver->api         = NULL;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_CRYPTO;
     driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config = NULL;
-    driver->phy = NULL;
+    driver->config      = NULL;
+    driver->phy         = NULL;
     return CFN_HAL_ERROR_OK;
 }

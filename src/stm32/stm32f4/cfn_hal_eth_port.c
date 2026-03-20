@@ -1,6 +1,26 @@
 /**
+ * Copyright (c) 2026 Hisham Moussa Daou <https://www.whileone.me>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
  * @file cfn_hal_eth_port.c
- * @brief STM32F4 ETH HAL Port Implementation.
+ * @brief STM32F4 ETH HAL Port Implementation
  */
 
 /* Includes ---------------------------------------------------------*/
@@ -52,14 +72,14 @@ static void low_level_init(cfn_hal_eth_t *driver)
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_eth_t     *driver = (cfn_hal_eth_t *) base;
+    cfn_hal_eth_t     *driver  = (cfn_hal_eth_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    ETH_HandleTypeDef *heth = &port_heths[port_id];
+    ETH_HandleTypeDef *heth    = &port_heths[port_id];
 
     low_level_init(driver);
 
-    heth->Instance = PORT_INSTANCES[port_id];
-    heth->Init.MACAddr = (uint8_t *) driver->config->mac_addr;
+    heth->Instance            = PORT_INSTANCES[port_id];
+    heth->Init.MACAddr        = (uint8_t *) driver->config->mac_addr;
     heth->Init.MediaInterface = ETH_MEDIA_INTERFACE_RMII;
 
     return cfn_hal_stm32_map_error(HAL_ETH_Init(heth));
@@ -67,7 +87,7 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 {
-    cfn_hal_eth_t *driver = (cfn_hal_eth_t *) base;
+    cfn_hal_eth_t *driver  = (cfn_hal_eth_t *) base;
     uint32_t       port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     return cfn_hal_stm32_map_error(HAL_ETH_DeInit(&port_heths[port_id]));
 }
@@ -169,19 +189,19 @@ static cfn_hal_error_code_t port_eth_stop(cfn_hal_eth_t *driver)
 
 static cfn_hal_error_code_t port_eth_transmit_frame(cfn_hal_eth_t *driver, const uint8_t *frame, size_t length)
 {
-    uint32_t                  port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    uint32_t                  port_id   = (uint32_t) (uintptr_t) driver->phy->instance;
     ETH_TxPacketConfigTypeDef tx_config = { 0 };
-    tx_config.Attributes = ETH_TX_PACKETS_FEATURES_CSUM | ETH_TX_PACKETS_FEATURES_CRCPAD;
-    tx_config.Length = (uint32_t) length;
-    tx_config.pData = (uint8_t *) frame;
+    tx_config.Attributes                = ETH_TX_PACKETS_FEATURES_CSUM | ETH_TX_PACKETS_FEATURES_CRCPAD;
+    tx_config.Length                    = (uint32_t) length;
+    tx_config.pData                     = (uint8_t *) frame;
     return cfn_hal_stm32_map_error(HAL_ETH_Transmit(&port_heths[port_id], &tx_config, 100));
 }
 
 static cfn_hal_error_code_t
 port_eth_receive_frame(cfn_hal_eth_t *driver, uint8_t *buffer, size_t max_length, size_t *received_length)
 {
-    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    ETH_HandleTypeDef *heth = &port_heths[port_id];
+    uint32_t           port_id  = (uint32_t) (uintptr_t) driver->phy->instance;
+    ETH_HandleTypeDef *heth     = &port_heths[port_id];
     void              *p_buffer = NULL;
 
     if (HAL_ETH_ReadData(heth, &p_buffer) != HAL_OK)
@@ -207,7 +227,7 @@ port_eth_receive_frame(cfn_hal_eth_t *driver, uint8_t *buffer, size_t max_length
 static cfn_hal_error_code_t
 port_eth_read_phy_reg(cfn_hal_eth_t *driver, uint16_t phy_addr, uint16_t reg_addr, uint16_t *value)
 {
-    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    uint32_t port_id  = (uint32_t) (uintptr_t) driver->phy->instance;
     uint32_t temp_val = 0;
     if (HAL_ETH_ReadPHYRegister(&port_heths[port_id], phy_addr, reg_addr, &temp_val) != HAL_OK)
     {
@@ -238,8 +258,8 @@ static cfn_hal_error_code_t port_eth_get_link_status(cfn_hal_eth_t *driver, cfn_
         return CFN_HAL_ERROR_FAIL;
     }
 
-    status->is_up = (bsr & 0x0004) != 0;
-    status->speed = CFN_HAL_ETH_LINK_SPEED_100M;   /* Simplified */
+    status->is_up  = (bsr & 0x0004) != 0;
+    status->speed  = CFN_HAL_ETH_LINK_SPEED_100M;  /* Simplified */
     status->duplex = CFN_HAL_ETH_LINK_DUPLEX_FULL; /* Simplified */
 
     return CFN_HAL_ERROR_OK;
@@ -288,14 +308,14 @@ cfn_hal_eth_construct(cfn_hal_eth_t *driver, const cfn_hal_eth_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = &ETH_API;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_ETH;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config = config;
-    driver->phy = phy;
+    driver->api                  = &ETH_API;
+    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_ETH;
+    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
+    driver->config               = config;
+    driver->phy                  = phy;
 
     port_heths[port_id].Instance = PORT_INSTANCES[port_id];
-    port_drivers[port_id] = driver;
+    port_drivers[port_id]        = driver;
 
     return CFN_HAL_ERROR_OK;
 #else
@@ -320,11 +340,11 @@ cfn_hal_error_code_t cfn_hal_eth_destruct(cfn_hal_eth_t *driver)
         port_drivers[port_id] = NULL;
     }
 
-    driver->api = NULL;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_ETH;
+    driver->api         = NULL;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_ETH;
     driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config = NULL;
-    driver->phy = NULL;
+    driver->config      = NULL;
+    driver->phy         = NULL;
 
     return CFN_HAL_ERROR_OK;
 #else

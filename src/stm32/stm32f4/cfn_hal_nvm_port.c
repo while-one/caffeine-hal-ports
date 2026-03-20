@@ -1,6 +1,26 @@
 /**
+ * Copyright (c) 2026 Hisham Moussa Daou <https://www.whileone.me>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
  * @file cfn_hal_nvm_port.c
- * @brief STM32F4 NVM (Internal Flash) HAL Port Implementation.
+ * @brief STM32F4 NVM HAL Port Implementation
  */
 
 /* Includes ---------------------------------------------------------*/
@@ -128,18 +148,18 @@ static cfn_hal_error_code_t port_nvm_write(cfn_hal_nvm_t *driver, uint32_t addr,
 static cfn_hal_error_code_t port_nvm_erase_sector(cfn_hal_nvm_t *driver, uint32_t sector_addr)
 {
     CFN_HAL_UNUSED(driver);
-    FLASH_EraseInitTypeDef erase_init = { 0 };
+    FLASH_EraseInitTypeDef erase_init   = { 0 };
     uint32_t               sector_error = 0;
-    HAL_StatusTypeDef      status = HAL_OK;
+    HAL_StatusTypeDef      status       = HAL_OK;
 
     HAL_FLASH_Unlock();
 
-    erase_init.TypeErase = FLASH_TYPEERASE_SECTORS;
+    erase_init.TypeErase    = FLASH_TYPEERASE_SECTORS;
     erase_init.VoltageRange = FLASH_VOLTAGE_RANGE_3;
-    erase_init.Sector = get_sector(sector_addr);
-    erase_init.NbSectors = 1;
+    erase_init.Sector       = get_sector(sector_addr);
+    erase_init.NbSectors    = 1;
 
-    status = HAL_FLASHEx_Erase(&erase_init, &sector_error);
+    status                  = HAL_FLASHEx_Erase(&erase_init, &sector_error);
 
     HAL_FLASH_Lock();
 
@@ -149,16 +169,16 @@ static cfn_hal_error_code_t port_nvm_erase_sector(cfn_hal_nvm_t *driver, uint32_
 static cfn_hal_error_code_t port_nvm_erase_chip(cfn_hal_nvm_t *driver)
 {
     CFN_HAL_UNUSED(driver);
-    FLASH_EraseInitTypeDef erase_init = { 0 };
+    FLASH_EraseInitTypeDef erase_init   = { 0 };
     uint32_t               sector_error = 0;
-    HAL_StatusTypeDef      status = HAL_OK;
+    HAL_StatusTypeDef      status       = HAL_OK;
 
     HAL_FLASH_Unlock();
 
-    erase_init.TypeErase = FLASH_TYPEERASE_MASSERASE;
+    erase_init.TypeErase    = FLASH_TYPEERASE_MASSERASE;
     erase_init.VoltageRange = FLASH_VOLTAGE_RANGE_3;
 
-    status = HAL_FLASHEx_Erase(&erase_init, &sector_error);
+    status                  = HAL_FLASHEx_Erase(&erase_init, &sector_error);
 
     HAL_FLASH_Lock();
 
@@ -173,9 +193,9 @@ static cfn_hal_error_code_t port_nvm_get_info(cfn_hal_nvm_t *driver, cfn_hal_nvm
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    info->total_size = 1024 * 1024; /* Assume 1MB for F417VG */
-    info->sector_size = 128 * 1024; /* Large sectors on F4 */
-    info->page_size = 1;            /* Byte-programmable */
+    info->total_size   = 1024 * 1024; /* Assume 1MB for F417VG */
+    info->sector_size  = 128 * 1024;  /* Large sectors on F4 */
+    info->page_size    = 1;           /* Byte-programmable */
     info->write_cycles = 10000;
 
     return CFN_HAL_ERROR_OK;
@@ -212,11 +232,11 @@ cfn_hal_nvm_construct(cfn_hal_nvm_t *driver, const cfn_hal_nvm_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = &NVM_API;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_NVM;
+    driver->api         = &NVM_API;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_NVM;
     driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config = config;
-    driver->phy = phy;
+    driver->config      = config;
+    driver->phy         = phy;
 
     return CFN_HAL_ERROR_OK;
 }
@@ -228,11 +248,11 @@ cfn_hal_error_code_t cfn_hal_nvm_destruct(cfn_hal_nvm_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = NULL;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_NVM;
+    driver->api         = NULL;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_NVM;
     driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config = NULL;
-    driver->phy = NULL;
+    driver->config      = NULL;
+    driver->phy         = NULL;
 
     return CFN_HAL_ERROR_OK;
 }
