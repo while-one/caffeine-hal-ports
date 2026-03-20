@@ -1,6 +1,26 @@
 /**
+ * Copyright (c) 2026 Hisham Moussa Daou <https://www.whileone.me>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
  * @file cfn_hal_sdio_port.c
- * @brief STM32F4 SDIO HAL Port Implementation.
+ * @brief STM32F4 SDIO HAL Port Implementation
  */
 
 /* Includes ---------------------------------------------------------*/
@@ -24,13 +44,13 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 
     __HAL_RCC_SDIO_CLK_ENABLE();
 
-    port_hsd.Instance = SDIO;
-    port_hsd.Init.ClockEdge = SDIO_CLOCK_EDGE_RISING;
-    port_hsd.Init.ClockBypass = SDIO_CLOCK_BYPASS_DISABLE;
-    port_hsd.Init.ClockPowerSave = SDIO_CLOCK_POWER_SAVE_DISABLE;
-    port_hsd.Init.BusWide = (driver->config->bus_wide == 4) ? SDIO_BUS_WIDE_4B : SDIO_BUS_WIDE_1B;
+    port_hsd.Instance                 = SDIO;
+    port_hsd.Init.ClockEdge           = SDIO_CLOCK_EDGE_RISING;
+    port_hsd.Init.ClockBypass         = SDIO_CLOCK_BYPASS_DISABLE;
+    port_hsd.Init.ClockPowerSave      = SDIO_CLOCK_POWER_SAVE_DISABLE;
+    port_hsd.Init.BusWide             = (driver->config->bus_wide == 4) ? SDIO_BUS_WIDE_4B : SDIO_BUS_WIDE_1B;
     port_hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
-    port_hsd.Init.ClockDiv = 0; /* Target high speed */
+    port_hsd.Init.ClockDiv            = 0; /* Target high speed */
 
     return cfn_hal_stm32_map_error(HAL_SD_Init(&port_hsd));
 }
@@ -73,9 +93,9 @@ port_sdio_send_command(cfn_hal_sdio_t *driver, const cfn_hal_sdio_cmd_t *cmd, ui
     CFN_HAL_UNUSED(driver);
     SDIO_CmdInitTypeDef s_cmd = { 0 };
 
-    s_cmd.Argument = cmd->arg;
-    s_cmd.CmdIndex = cmd->cmd_index;
-    s_cmd.Response = cmd->response_type;
+    s_cmd.Argument            = cmd->arg;
+    s_cmd.CmdIndex            = cmd->cmd_index;
+    s_cmd.Response            = cmd->response_type;
     s_cmd.WaitForInterrupt =
         SDIO_WAIT_NO; /* Wait member exists in some F4 versions but might be named differently or used differently */
     s_cmd.CPSM = SDIO_CPSM_ENABLE;
@@ -114,12 +134,12 @@ static cfn_hal_error_code_t port_sdio_get_card_info(cfn_hal_sdio_t *driver, cfn_
         return CFN_HAL_ERROR_FAIL;
     }
 
-    info->card_type = s_info.CardType;
-    info->rel_card_addr = s_info.RelCardAdd;
-    info->block_count = s_info.BlockNbr;
-    info->block_size = s_info.BlockSize;
+    info->card_type       = s_info.CardType;
+    info->rel_card_addr   = s_info.RelCardAdd;
+    info->block_count     = s_info.BlockNbr;
+    info->block_size      = s_info.BlockSize;
     info->log_block_count = s_info.LogBlockNbr;
-    info->log_block_size = s_info.LogBlockSize;
+    info->log_block_size  = s_info.LogBlockSize;
 
     return CFN_HAL_ERROR_OK;
 }
@@ -174,11 +194,11 @@ cfn_hal_sdio_construct(cfn_hal_sdio_t *driver, const cfn_hal_sdio_config_t *conf
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = &SDIO_API;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_SDIO;
+    driver->api         = &SDIO_API;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_SDIO;
     driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config = config;
-    driver->phy = phy;
+    driver->config      = config;
+    driver->phy         = phy;
 
     return CFN_HAL_ERROR_OK;
 #else
@@ -197,11 +217,11 @@ cfn_hal_error_code_t cfn_hal_sdio_destruct(cfn_hal_sdio_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = NULL;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_SDIO;
+    driver->api         = NULL;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_SDIO;
     driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config = NULL;
-    driver->phy = NULL;
+    driver->config      = NULL;
+    driver->phy         = NULL;
 
     return CFN_HAL_ERROR_OK;
 #else

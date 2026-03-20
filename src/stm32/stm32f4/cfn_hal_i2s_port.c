@@ -1,6 +1,26 @@
 /**
+ * Copyright (c) 2026 Hisham Moussa Daou <https://www.whileone.me>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
  * @file cfn_hal_i2s_port.c
- * @brief STM32F4 I2S HAL Port Implementation.
+ * @brief STM32F4 I2S HAL Port Implementation
  */
 
 /* Includes ---------------------------------------------------------*/
@@ -57,19 +77,19 @@ static void low_level_init(cfn_hal_i2s_t *driver)
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_i2s_t     *driver = (cfn_hal_i2s_t *) base;
+    cfn_hal_i2s_t     *driver  = (cfn_hal_i2s_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    I2S_HandleTypeDef *hi2s = &port_hi2ss[port_id];
+    I2S_HandleTypeDef *hi2s    = &port_hi2ss[port_id];
 
     low_level_init(driver);
 
-    hi2s->Instance = PORT_INSTANCES[port_id];
-    hi2s->Init.Mode = I2S_MODE_MASTER_TX; /* Default, can be changed via config if needed */
-    hi2s->Init.Standard = I2S_STANDARD_PHILIPS;
-    hi2s->Init.DataFormat = I2S_DATAFORMAT_16B;
-    hi2s->Init.MCLKOutput = I2S_MCLKOUTPUT_ENABLE;
-    hi2s->Init.AudioFreq = driver->config->sample_rate;
-    hi2s->Init.CPOL = I2S_CPOL_LOW;
+    hi2s->Instance         = PORT_INSTANCES[port_id];
+    hi2s->Init.Mode        = I2S_MODE_MASTER_TX; /* Default, can be changed via config if needed */
+    hi2s->Init.Standard    = I2S_STANDARD_PHILIPS;
+    hi2s->Init.DataFormat  = I2S_DATAFORMAT_16B;
+    hi2s->Init.MCLKOutput  = I2S_MCLKOUTPUT_ENABLE;
+    hi2s->Init.AudioFreq   = driver->config->sample_rate;
+    hi2s->Init.CPOL        = I2S_CPOL_LOW;
     hi2s->Init.ClockSource = I2S_CLOCK_PLL;
 
     return cfn_hal_stm32_map_error(HAL_I2S_Init(hi2s));
@@ -77,7 +97,7 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 {
-    cfn_hal_i2s_t *driver = (cfn_hal_i2s_t *) base;
+    cfn_hal_i2s_t *driver  = (cfn_hal_i2s_t *) base;
     uint32_t       port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     return cfn_hal_stm32_map_error(HAL_I2S_DeInit(&port_hi2ss[port_id]));
 }
@@ -221,14 +241,14 @@ cfn_hal_i2s_construct(cfn_hal_i2s_t *driver, const cfn_hal_i2s_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = &I2S_API;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_I2S;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config = config;
-    driver->phy = phy;
+    driver->api                  = &I2S_API;
+    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_I2S;
+    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
+    driver->config               = config;
+    driver->phy                  = phy;
 
     port_hi2ss[port_id].Instance = PORT_INSTANCES[port_id];
-    port_drivers[port_id] = driver;
+    port_drivers[port_id]        = driver;
 
     return CFN_HAL_ERROR_OK;
 #else
@@ -253,11 +273,11 @@ cfn_hal_error_code_t cfn_hal_i2s_destruct(cfn_hal_i2s_t *driver)
         port_drivers[port_id] = NULL;
     }
 
-    driver->api = NULL;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_I2S;
+    driver->api         = NULL;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_I2S;
     driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config = NULL;
-    driver->phy = NULL;
+    driver->config      = NULL;
+    driver->phy         = NULL;
 
     return CFN_HAL_ERROR_OK;
 #else

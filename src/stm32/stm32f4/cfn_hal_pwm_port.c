@@ -1,6 +1,26 @@
 /**
+ * Copyright (c) 2026 Hisham Moussa Daou <https://www.whileone.me>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
  * @file cfn_hal_pwm_port.c
- * @brief STM32F4 PWM HAL Port Implementation.
+ * @brief STM32F4 PWM HAL Port Implementation
  */
 
 /* Includes ---------------------------------------------------------*/
@@ -118,34 +138,34 @@ static void low_level_init(cfn_hal_pwm_t *driver)
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_pwm_t     *driver = (cfn_hal_pwm_t *) base;
-    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    TIM_HandleTypeDef *htim = &port_htims[port_id];
+    cfn_hal_pwm_t     *driver      = (cfn_hal_pwm_t *) base;
+    uint32_t           port_id     = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim        = &port_htims[port_id];
     TIM_OC_InitTypeDef s_config_oc = { 0 };
 
     low_level_init(driver);
 
     uint32_t timer_clk = get_timer_clock(PORT_INSTANCES[port_id]);
     uint32_t prescaler = 0;
-    uint32_t period = 0;
+    uint32_t period    = 0;
 
     /* Target 1MHz internal resolution for easy calculation if possible */
     if (timer_clk >= 1000000)
     {
         prescaler = (timer_clk / 1000000) - 1;
-        period = (1000000 / driver->config->frequency_hz) - 1;
+        period    = (1000000 / driver->config->frequency_hz) - 1;
     }
     else
     {
         prescaler = 0;
-        period = (timer_clk / driver->config->frequency_hz) - 1;
+        period    = (timer_clk / driver->config->frequency_hz) - 1;
     }
 
-    htim->Instance = PORT_INSTANCES[port_id];
-    htim->Init.Prescaler = prescaler;
-    htim->Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim->Init.Period = period;
-    htim->Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    htim->Instance               = PORT_INSTANCES[port_id];
+    htim->Init.Prescaler         = prescaler;
+    htim->Init.CounterMode       = TIM_COUNTERMODE_UP;
+    htim->Init.Period            = period;
+    htim->Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
     htim->Init.RepetitionCounter = 0;
     htim->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
 
@@ -155,7 +175,7 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
     }
 
     s_config_oc.OCMode = TIM_OCMODE_PWM1;
-    s_config_oc.Pulse = (period * driver->config->duty_cycle_percent) / 100;
+    s_config_oc.Pulse  = (period * driver->config->duty_cycle_percent) / 100;
     s_config_oc.OCPolarity =
         (driver->config->polarity == CFN_HAL_PWM_CONFIG_POLARITY_NORMAL) ? TIM_OCPOLARITY_HIGH : TIM_OCPOLARITY_LOW;
     s_config_oc.OCFastMode = TIM_OCFAST_DISABLE;
@@ -166,7 +186,7 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 {
-    cfn_hal_pwm_t *driver = (cfn_hal_pwm_t *) base;
+    cfn_hal_pwm_t *driver  = (cfn_hal_pwm_t *) base;
     uint32_t       port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     return cfn_hal_stm32_map_error(HAL_TIM_PWM_DeInit(&port_htims[port_id]));
 }
@@ -179,9 +199,9 @@ static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const v
 
 static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    cfn_hal_pwm_t     *driver = (cfn_hal_pwm_t *) base;
+    cfn_hal_pwm_t     *driver  = (cfn_hal_pwm_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    TIM_HandleTypeDef *htim = &port_htims[port_id];
+    TIM_HandleTypeDef *htim    = &port_htims[port_id];
 
     if (event_mask & CFN_HAL_PWM_EVENT_PERIOD_MATCH)
     {
@@ -202,9 +222,9 @@ static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint3
 
 static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    cfn_hal_pwm_t     *driver = (cfn_hal_pwm_t *) base;
+    cfn_hal_pwm_t     *driver  = (cfn_hal_pwm_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    TIM_HandleTypeDef *htim = &port_htims[port_id];
+    TIM_HandleTypeDef *htim    = &port_htims[port_id];
 
     if (event_mask & CFN_HAL_PWM_EVENT_PERIOD_MATCH)
     {
@@ -235,9 +255,9 @@ static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t
 
 static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    cfn_hal_pwm_t     *driver = (cfn_hal_pwm_t *) base;
+    cfn_hal_pwm_t     *driver  = (cfn_hal_pwm_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    TIM_HandleTypeDef *htim = &port_htims[port_id];
+    TIM_HandleTypeDef *htim    = &port_htims[port_id];
 
     if (error_mask & CFN_HAL_PWM_ERROR_FAULT)
     {
@@ -249,9 +269,9 @@ static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint3
 
 static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    cfn_hal_pwm_t     *driver = (cfn_hal_pwm_t *) base;
+    cfn_hal_pwm_t     *driver  = (cfn_hal_pwm_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    TIM_HandleTypeDef *htim = &port_htims[port_id];
+    TIM_HandleTypeDef *htim    = &port_htims[port_id];
 
     if (error_mask & CFN_HAL_PWM_ERROR_FAULT)
     {
@@ -287,17 +307,17 @@ static cfn_hal_error_code_t port_pwm_stop(cfn_hal_pwm_t *driver)
 
 static cfn_hal_error_code_t port_pwm_set_frequency(cfn_hal_pwm_t *driver, uint32_t frequency_hz)
 {
-    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    TIM_HandleTypeDef *htim = &port_htims[port_id];
+    uint32_t           port_id   = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim      = &port_htims[port_id];
     uint32_t           timer_clk = get_timer_clock(PORT_INSTANCES[port_id]);
     uint32_t           prescaler = htim->Init.Prescaler;
-    uint32_t           period = (timer_clk / (prescaler + 1)) / frequency_hz;
+    uint32_t           period    = (timer_clk / (prescaler + 1)) / frequency_hz;
 
     if (period > 0xFFFF && (PORT_INSTANCES[port_id] != TIM2 && PORT_INSTANCES[port_id] != TIM5))
     {
         /* Need to adjust prescaler for 16-bit timers */
         prescaler = (timer_clk / 65535 / frequency_hz);
-        period = (timer_clk / (prescaler + 1)) / frequency_hz;
+        period    = (timer_clk / (prescaler + 1)) / frequency_hz;
     }
 
     __HAL_TIM_SET_PRESCALER(htim, prescaler);
@@ -309,9 +329,9 @@ static cfn_hal_error_code_t port_pwm_set_frequency(cfn_hal_pwm_t *driver, uint32
 static cfn_hal_error_code_t port_pwm_set_duty_cycle(cfn_hal_pwm_t *driver, uint32_t duty_percent)
 {
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    TIM_HandleTypeDef *htim = &port_htims[port_id];
-    uint32_t           period = __HAL_TIM_GET_AUTORELOAD(htim);
-    uint32_t           pulse = (period * duty_percent) / 100;
+    TIM_HandleTypeDef *htim    = &port_htims[port_id];
+    uint32_t           period  = __HAL_TIM_GET_AUTORELOAD(htim);
+    uint32_t           pulse   = (period * duty_percent) / 100;
 
     __HAL_TIM_SET_COMPARE(htim, get_hal_channel(driver->phy->channel), pulse);
 
@@ -358,14 +378,14 @@ cfn_hal_pwm_construct(cfn_hal_pwm_t *driver, const cfn_hal_pwm_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = &PWM_API;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_PWM;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config = config;
-    driver->phy = phy;
+    driver->api                  = &PWM_API;
+    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_PWM;
+    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
+    driver->config               = config;
+    driver->phy                  = phy;
 
     port_htims[port_id].Instance = PORT_INSTANCES[port_id];
-    port_drivers[port_id] = driver;
+    port_drivers[port_id]        = driver;
 
     return CFN_HAL_ERROR_OK;
 #else
@@ -390,11 +410,11 @@ cfn_hal_error_code_t cfn_hal_pwm_destruct(cfn_hal_pwm_t *driver)
         port_drivers[port_id] = NULL;
     }
 
-    driver->api = NULL;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_PWM;
+    driver->api         = NULL;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_PWM;
     driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config = NULL;
-    driver->phy = NULL;
+    driver->config      = NULL;
+    driver->phy         = NULL;
 
     return CFN_HAL_ERROR_OK;
 #else

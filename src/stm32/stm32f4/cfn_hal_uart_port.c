@@ -1,6 +1,26 @@
 /**
+ * Copyright (c) 2026 Hisham Moussa Daou <https://www.whileone.me>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
  * @file cfn_hal_uart_port.c
- * @brief STM32F4 UART HAL Port Implementation.
+ * @brief STM32F4 UART HAL Port Implementation
  */
 
 /* Includes ---------------------------------------------------------*/
@@ -15,6 +35,64 @@
 
 /* Private Data -----------------------------------------------------*/
 
+/**
+ * @brief Mapping from Caffeine UART data length configuration to STM32 HAL WordLength.
+ */
+static const uint32_t PORT_MAP_DATA_LEN[CFN_HAL_UART_CONFIG_DATA_LEN_MAX] = {
+    [CFN_HAL_UART_CONFIG_DATA_LEN_5] = UINT32_MAX,         // Not supported
+    [CFN_HAL_UART_CONFIG_DATA_LEN_6] = UINT32_MAX,         // Not supported
+    [CFN_HAL_UART_CONFIG_DATA_LEN_7] = UINT32_MAX,         // Not supported
+    [CFN_HAL_UART_CONFIG_DATA_LEN_8] = UART_WORDLENGTH_8B, // 8 bits
+    [CFN_HAL_UART_CONFIG_DATA_LEN_9] = UART_WORDLENGTH_9B, // 9 bits
+};
+
+/**
+ * @brief Mapping from Caffeine UART stop bits configuration to STM32 HAL StopBits.
+ */
+static const uint32_t PORT_MAP_STOP_BITS[CFN_HAL_UART_CONFIG_STOP_MAX] = {
+    [CFN_HAL_UART_CONFIG_STOP_ONE_BIT]  = UART_STOPBITS_1,
+    [CFN_HAL_UART_CONFIG_STOP_TWO_BITS] = UART_STOPBITS_2,
+};
+
+/**
+ * @brief Mapping from Caffeine UART parity configuration to STM32 HAL Parity.
+ */
+static const uint32_t PORT_MAP_PARITY[CFN_HAL_UART_CONFIG_PARITY_MAX] = {
+    [CFN_HAL_UART_CONFIG_PARITY_NONE] = UART_PARITY_NONE,
+    [CFN_HAL_UART_CONFIG_PARITY_EVEN] = UART_PARITY_EVEN,
+    [CFN_HAL_UART_CONFIG_PARITY_ODD]  = UART_PARITY_ODD,
+};
+
+/**
+ * @brief Mapping from Caffeine UART direction configuration to STM32 HAL Mode.
+ */
+static const uint32_t PORT_MAP_DIRECTION[CFN_HAL_UART_CONFIG_DIRECTION_MAX] = {
+    [CFN_HAL_UART_CONFIG_DIRECTION_NONE]    = 0,
+    [CFN_HAL_UART_CONFIG_DIRECTION_TX_ONLY] = UART_MODE_TX,
+    [CFN_HAL_UART_CONFIG_DIRECTION_RX_ONLY] = UART_MODE_RX,
+    [CFN_HAL_UART_CONFIG_DIRECTION_TX_RX]   = UART_MODE_TX_RX,
+};
+
+/**
+ * @brief Mapping from Caffeine UART flow control configuration to STM32 HAL HwFlowCtl.
+ */
+static const uint32_t PORT_MAP_FLOW_CONTROL[CFN_HAL_UART_CONFIG_FLOW_CTRL_MAX] = {
+    [CFN_HAL_UART_CONFIG_FLOW_CTRL_NONE]    = UART_HWCONTROL_NONE,
+    [CFN_HAL_UART_CONFIG_FLOW_CTRL_CTS]     = UART_HWCONTROL_CTS,
+    [CFN_HAL_UART_CONFIG_FLOW_CTRL_RTS]     = UART_HWCONTROL_RTS,
+    [CFN_HAL_UART_CONFIG_FLOW_CTRL_RTS_CTS] = UART_HWCONTROL_RTS_CTS,
+};
+
+static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_UART_PORT_MAX] = {
+    [CFN_HAL_UART_PORT_USART1] = CFN_HAL_PORT_PERIPH_USART1, [CFN_HAL_UART_PORT_USART2] = CFN_HAL_PORT_PERIPH_USART2,
+    [CFN_HAL_UART_PORT_USART3] = CFN_HAL_PORT_PERIPH_USART3, [CFN_HAL_UART_PORT_UART4] = CFN_HAL_PORT_PERIPH_UART4,
+    [CFN_HAL_UART_PORT_UART5] = CFN_HAL_PORT_PERIPH_UART5,   [CFN_HAL_UART_PORT_USART6] = CFN_HAL_PORT_PERIPH_USART6,
+    [CFN_HAL_UART_PORT_UART7] = CFN_HAL_PORT_PERIPH_UART7,   [CFN_HAL_UART_PORT_UART8] = CFN_HAL_PORT_PERIPH_UART8,
+    [CFN_HAL_UART_PORT_UART9] = CFN_HAL_PORT_PERIPH_UART9,   [CFN_HAL_UART_PORT_UART10] = CFN_HAL_PORT_PERIPH_UART10,
+};
+/**
+ * @brief Table of physical peripheral register base addresses.
+ */
 static USART_TypeDef *const PORT_INSTANCES[CFN_HAL_UART_PORT_MAX] = {
 #if defined(USART1)
     [CFN_HAL_UART_PORT_USART1] = USART1,
@@ -36,75 +114,128 @@ static USART_TypeDef *const PORT_INSTANCES[CFN_HAL_UART_PORT_MAX] = {
 #endif
 };
 
+/**
+ * @brief Array of STM32 HAL UART handles, one for each physical port.
+ */
 static UART_HandleTypeDef port_huarts[CFN_HAL_UART_PORT_MAX];
-static cfn_hal_uart_t    *port_drivers[CFN_HAL_UART_PORT_MAX];
+
+/**
+ * @brief Array of active Caffeine UART driver pointers, used by ISRs and callbacks.
+ */
+static cfn_hal_uart_t *port_drivers[CFN_HAL_UART_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
+/**
+ * @brief Calculates the port ID from an STM32 HAL UART handle pointer using O(1) arithmetic.
+ * @param huart Pointer to the STM32 HAL UART handle.
+ * @return The 0-based port ID, or -1 if the handle is not part of the port array.
+ */
 static int32_t get_port_id_from_handle(UART_HandleTypeDef *huart)
 {
-    for (uint32_t i = 0; i < CFN_HAL_UART_PORT_MAX; i++)
+    if ((huart < &port_huarts[0]) || (huart >= &port_huarts[CFN_HAL_UART_PORT_MAX]))
     {
-        if (&port_huarts[i] == huart)
-        {
-            return (int32_t) i;
-        }
+        return -1;
     }
-    return -1;
+    return (int32_t) (huart - port_huarts);
 }
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_uart_t *driver)
+/**
+ * @brief Performs low-level hardware initialization (Clocks and GPIOs).
+ * @param driver Pointer to the UART driver instance.
+ */
+static enum cfn_hal_error_codes low_level_init(cfn_hal_uart_t *driver)
 {
+    if (driver == NULL || driver->phy == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate((cfn_hal_port_peripheral_id_t) (CFN_HAL_PORT_PERIPH_USART1 + port_id));
 
-    /* 2. Initialize Pins */
+    if (port_id >= CFN_HAL_UART_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
+
     if (driver->phy->tx)
     {
-        (void) cfn_hal_base_init((cfn_hal_driver_t *) driver->phy->tx->port, CFN_HAL_PERIPHERAL_TYPE_GPIO);
+        (void) cfn_hal_gpio_init(driver->phy->tx->port);
     }
     if (driver->phy->rx)
     {
-        (void) cfn_hal_base_init((cfn_hal_driver_t *) driver->phy->rx->port, CFN_HAL_PERIPHERAL_TYPE_GPIO);
+        (void) cfn_hal_gpio_init(driver->phy->rx->port);
     }
+
+    return CFN_HAL_ERROR_OK;
 }
 
+/**
+ * @brief Base initialization for the STM32 UART peripheral.
+ * @param base Pointer to the base driver structure.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_uart_t     *driver = (cfn_hal_uart_t *) base;
+    if (base == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    cfn_hal_uart_t     *driver  = (cfn_hal_uart_t *) base;
     uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    UART_HandleTypeDef *huart = &port_huarts[port_id];
+    UART_HandleTypeDef *huart   = &port_huarts[port_id];
 
-    low_level_init(driver);
+    if (driver->config == NULL ||
+        ((driver->config->data_len != CFN_HAL_UART_CONFIG_DATA_LEN_8) &&
+         (driver->config->data_len != CFN_HAL_UART_CONFIG_DATA_LEN_9)) ||
+        (driver->config->stop_bits >= CFN_HAL_UART_CONFIG_STOP_MAX) ||
+        (driver->config->parity >= CFN_HAL_UART_CONFIG_PARITY_MAX) ||
+        (driver->config->direction >= CFN_HAL_UART_CONFIG_DIRECTION_MAX) ||
+        (driver->config->flow_ctrl >= CFN_HAL_UART_CONFIG_FLOW_CTRL_MAX))
+    {
+        return CFN_HAL_ERROR_BAD_CONFIG;
+    }
 
-    huart->Instance = PORT_INSTANCES[port_id];
-    huart->Init.BaudRate = driver->config->baudrate;
-    huart->Init.WordLength =
-        (driver->config->data_len == CFN_HAL_UART_CONFIG_DATA_LEN_9) ? UART_WORDLENGTH_9B : UART_WORDLENGTH_8B;
-    huart->Init.StopBits =
-        (driver->config->stop_bits == CFN_HAL_UART_CONFIG_STOP_TWO_BITS) ? UART_STOPBITS_2 : UART_STOPBITS_1;
-    huart->Init.Parity = (driver->config->parity == CFN_HAL_UART_CONFIG_PARITY_NONE)   ? UART_PARITY_NONE
-                         : (driver->config->parity == CFN_HAL_UART_CONFIG_PARITY_EVEN) ? UART_PARITY_EVEN
-                                                                                       : UART_PARITY_ODD;
-    huart->Init.Mode = UART_MODE_TX_RX;
-    huart->Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    cfn_hal_error_code_t error = low_level_init(driver);
+
+    if (error != CFN_HAL_ERROR_OK)
+    {
+        return error;
+    }
+
+    huart->Instance          = PORT_INSTANCES[port_id];
+    huart->Init.BaudRate     = driver->config->baudrate;
+    huart->Init.WordLength   = PORT_MAP_DATA_LEN[driver->config->data_len];
+    huart->Init.StopBits     = PORT_MAP_STOP_BITS[driver->config->stop_bits];
+    huart->Init.Parity       = PORT_MAP_PARITY[driver->config->parity];
+    huart->Init.Mode         = PORT_MAP_DIRECTION[driver->config->direction];
+    huart->Init.HwFlowCtl    = PORT_MAP_FLOW_CONTROL[driver->config->flow_ctrl];
     huart->Init.OverSampling = UART_OVERSAMPLING_16;
 
     return cfn_hal_stm32_map_error(HAL_UART_Init(huart));
 }
 
+/**
+ * @brief Base deinitialization for the STM32 UART peripheral.
+ * @param base Pointer to the base driver structure.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 {
-    cfn_hal_uart_t *driver = (cfn_hal_uart_t *) base;
+    cfn_hal_uart_t *driver  = (cfn_hal_uart_t *) base;
     uint32_t        port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     return cfn_hal_stm32_map_error(HAL_UART_DeInit(&port_huarts[port_id]));
 }
 
-/* ... base stubs ... */
-
+/**
+ * @brief Updates the UART configuration at runtime.
+ * @param base Pointer to the base driver structure.
+ * @param config Pointer to the new UART configuration structure.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
 {
     CFN_HAL_UNUSED(base);
@@ -112,11 +243,17 @@ static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const v
     return port_base_init(base);
 }
 
+/**
+ * @brief Enables specific UART interrupt events.
+ * @param base Pointer to the base driver structure.
+ * @param event_mask Bitmask of nominal events to enable.
+ * @return CFN_HAL_ERROR_OK on success.
+ */
 static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    cfn_hal_uart_t     *driver = (cfn_hal_uart_t *) base;
+    cfn_hal_uart_t     *driver  = (cfn_hal_uart_t *) base;
     uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    UART_HandleTypeDef *huart = &port_huarts[port_id];
+    UART_HandleTypeDef *huart   = &port_huarts[port_id];
 
     if (event_mask & CFN_HAL_UART_EVENT_RX_READY)
     {
@@ -134,11 +271,17 @@ static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint3
     return CFN_HAL_ERROR_OK;
 }
 
+/**
+ * @brief Disables specific UART interrupt events.
+ * @param base Pointer to the base driver structure.
+ * @param event_mask Bitmask of nominal events to disable.
+ * @return CFN_HAL_ERROR_OK on success.
+ */
 static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
 {
-    cfn_hal_uart_t     *driver = (cfn_hal_uart_t *) base;
+    cfn_hal_uart_t     *driver  = (cfn_hal_uart_t *) base;
     uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    UART_HandleTypeDef *huart = &port_huarts[port_id];
+    UART_HandleTypeDef *huart   = &port_huarts[port_id];
 
     if (event_mask & CFN_HAL_UART_EVENT_RX_READY)
     {
@@ -156,12 +299,18 @@ static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint
     return CFN_HAL_ERROR_OK;
 }
 
+/**
+ * @brief Gets the current status of UART interrupt flags.
+ * @param base Pointer to the base driver structure.
+ * @param event_mask Pointer to store the bitmask of active events.
+ * @return CFN_HAL_ERROR_OK on success.
+ */
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
-    cfn_hal_uart_t     *driver = (cfn_hal_uart_t *) base;
+    cfn_hal_uart_t     *driver  = (cfn_hal_uart_t *) base;
     uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    UART_HandleTypeDef *huart = &port_huarts[port_id];
-    uint32_t            mask = 0;
+    UART_HandleTypeDef *huart   = &port_huarts[port_id];
+    uint32_t            mask    = 0;
 
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_RXNE))
     {
@@ -183,11 +332,17 @@ static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t
     return CFN_HAL_ERROR_OK;
 }
 
+/**
+ * @brief Enables specific UART exception error interrupts.
+ * @param base Pointer to the base driver structure.
+ * @param error_mask Bitmask of errors to enable.
+ * @return CFN_HAL_ERROR_OK on success.
+ */
 static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    cfn_hal_uart_t     *driver = (cfn_hal_uart_t *) base;
+    cfn_hal_uart_t     *driver  = (cfn_hal_uart_t *) base;
     uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    UART_HandleTypeDef *huart = &port_huarts[port_id];
+    UART_HandleTypeDef *huart   = &port_huarts[port_id];
 
     if (error_mask & CFN_HAL_UART_ERROR_PARITY)
     {
@@ -201,11 +356,17 @@ static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint3
     return CFN_HAL_ERROR_OK;
 }
 
+/**
+ * @brief Disables specific UART exception error interrupts.
+ * @param base Pointer to the base driver structure.
+ * @param error_mask Bitmask of errors to disable.
+ * @return CFN_HAL_ERROR_OK on success.
+ */
 static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
 {
-    cfn_hal_uart_t     *driver = (cfn_hal_uart_t *) base;
+    cfn_hal_uart_t     *driver  = (cfn_hal_uart_t *) base;
     uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    UART_HandleTypeDef *huart = &port_huarts[port_id];
+    UART_HandleTypeDef *huart   = &port_huarts[port_id];
 
     if (error_mask & CFN_HAL_UART_ERROR_PARITY)
     {
@@ -219,12 +380,18 @@ static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint
     return CFN_HAL_ERROR_OK;
 }
 
+/**
+ * @brief Gets the current status of UART error flags.
+ * @param base Pointer to the base driver structure.
+ * @param error_mask Pointer to store the bitmask of active errors.
+ * @return CFN_HAL_ERROR_OK on success.
+ */
 static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
 {
-    cfn_hal_uart_t     *driver = (cfn_hal_uart_t *) base;
+    cfn_hal_uart_t     *driver  = (cfn_hal_uart_t *) base;
     uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    UART_HandleTypeDef *huart = &port_huarts[port_id];
-    uint32_t            mask = 0;
+    UART_HandleTypeDef *huart   = &port_huarts[port_id];
+    uint32_t            mask    = 0;
 
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_PE))
     {
@@ -248,6 +415,10 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 /* ST HAL Callback Overrides ----------------------------------------*/
 
+/**
+ * @brief Override of the ST HAL Tx Complete callback to fire Caffeine events.
+ * @param huart Pointer to the ST HAL UART handle.
+ */
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
     int32_t port_id = get_port_id_from_handle(huart);
@@ -261,6 +432,10 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
     }
 }
 
+/**
+ * @brief Override of the ST HAL Rx Complete callback to fire Caffeine events.
+ * @param huart Pointer to the ST HAL UART handle.
+ */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     int32_t port_id = get_port_id_from_handle(huart);
@@ -274,6 +449,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     }
 }
 
+/**
+ * @brief Override of the ST HAL Error callback to fire Caffeine events.
+ * @param huart Pointer to the ST HAL UART handle.
+ */
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     int32_t port_id = get_port_id_from_handle(huart);
@@ -289,6 +468,11 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     }
 }
 
+/**
+ * @brief Override of the ST HAL Rx Event callback (Idle/Half-Full) to fire Caffeine events.
+ * @param huart Pointer to the ST HAL UART handle.
+ * @param size Number of bytes received so far.
+ */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 {
     int32_t port_id = get_port_id_from_handle(huart);
@@ -308,35 +492,52 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 
 #ifndef CFN_HAL_PORT_DISABLE_IRQ_UART
 
-static void port_uart_handle_isr(UART_HandleTypeDef *huart)
+/**
+ * @brief Unified internal ISR handler for all UART instances.
+ * @param port_id The physical UART port ID.
+ */
+static void port_uart_handle_isr(cfn_hal_uart_port_t port_id)
 {
-    int32_t port_id = get_port_id_from_handle(huart);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    UART_HandleTypeDef *huart  = &port_huarts[port_id];
+    cfn_hal_uart_t     *driver = port_drivers[port_id];
+
+    if (driver != NULL && huart != NULL)
     {
-        cfn_hal_uart_t *driver = port_drivers[port_id];
         uint32_t isrflags = READ_REG(huart->Instance->SR);
         uint32_t cr1its   = READ_REG(huart->Instance->CR1);
 
-        if ((driver->base.flags & CFN_HAL_UART_FLAG_CONTINUOUS_RX) &&
-            ((isrflags & USART_SR_RXNE) != RESET) && ((cr1its & USART_CR1_RXNEIE) != RESET))
+        if ((driver->base.flags & CFN_HAL_UART_FLAG_CONTINUOUS_RX) && ((isrflags & USART_SR_RXNE) != RESET) &&
+            ((cr1its & USART_CR1_RXNEIE) != RESET))
         {
             uint32_t error_mask = CFN_HAL_UART_ERROR_NONE;
-            if (isrflags & USART_SR_ORE) error_mask |= CFN_HAL_UART_ERROR_OVERRUN;
-            if (isrflags & USART_SR_FE)  error_mask |= CFN_HAL_UART_ERROR_FRAMING;
-            if (isrflags & USART_SR_NE)  error_mask |= CFN_HAL_UART_ERROR_GENERAL;
-            if (isrflags & USART_SR_PE)  error_mask |= CFN_HAL_UART_ERROR_PARITY;
+            if (isrflags & USART_SR_ORE)
+            {
+                error_mask |= CFN_HAL_UART_ERROR_OVERRUN;
+            }
+            if (isrflags & USART_SR_FE)
+            {
+                error_mask |= CFN_HAL_UART_ERROR_FRAMING;
+            }
+            if (isrflags & USART_SR_NE)
+            {
+                error_mask |= CFN_HAL_UART_ERROR_GENERAL;
+            }
+            if (isrflags & USART_SR_PE)
+            {
+                error_mask |= CFN_HAL_UART_ERROR_PARITY;
+            }
 
             /* Read DR to get byte and clear RXNE flag. */
 #if defined(USART_SR_RXNE)
-            uint8_t byte = (uint8_t)(huart->Instance->DR & (uint8_t)0x00FF);
+            uint8_t byte = (uint8_t) (huart->Instance->DR & (uint8_t) 0x00FF);
 #else
-            uint8_t byte = (uint8_t)(huart->Instance->RDR & (uint8_t)0x00FF);
+            uint8_t byte = (uint8_t) (huart->Instance->RDR & (uint8_t) 0x00FF);
 #endif
             if (driver->cb)
             {
                 driver->cb(driver, CFN_HAL_UART_EVENT_RX_BYTE, error_mask, &byte, 1, driver->cb_user_arg);
             }
-            /* Return early to avoid HAL overhead. Any concurrent interrupt sources 
+            /* Return early to avoid HAL overhead. Any concurrent interrupt sources
                (TXE, TC, etc.) will cause the NVIC to immediately re-trigger the ISR. */
             return;
         }
@@ -345,44 +546,62 @@ static void port_uart_handle_isr(UART_HandleTypeDef *huart)
 }
 
 #if defined(USART1)
+/**
+ * @brief USART1 Interrupt Handler.
+ */
 void USART1_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
-    port_uart_handle_isr(&port_huarts[CFN_HAL_UART_PORT_USART1]);
+    port_uart_handle_isr(CFN_HAL_UART_PORT_USART1);
 }
 #endif
 
 #if defined(USART2)
+/**
+ * @brief USART2 Interrupt Handler.
+ */
 void USART2_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
-    port_uart_handle_isr(&port_huarts[CFN_HAL_UART_PORT_USART2]);
+    port_uart_handle_isr(CFN_HAL_UART_PORT_USART2);
 }
 #endif
 
 #if defined(USART3)
+/**
+ * @brief USART3 Interrupt Handler.
+ */
 void USART3_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
-    port_uart_handle_isr(&port_huarts[CFN_HAL_UART_PORT_USART3]);
+    port_uart_handle_isr(CFN_HAL_UART_PORT_USART3);
 }
 #endif
 
 #if defined(UART4)
+/**
+ * @brief UART4 Interrupt Handler.
+ */
 void UART4_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
-    port_uart_handle_isr(&port_huarts[CFN_HAL_UART_PORT_UART4]);
+    port_uart_handle_isr(CFN_HAL_UART_PORT_UART4);
 }
 #endif
 
 #if defined(UART5)
+/**
+ * @brief UART5 Interrupt Handler.
+ */
 void UART5_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
-    port_uart_handle_isr(&port_huarts[CFN_HAL_UART_PORT_UART5]);
+    port_uart_handle_isr(CFN_HAL_UART_PORT_UART5);
 }
 #endif
 
 #if defined(USART6)
+/**
+ * @brief USART6 Interrupt Handler.
+ */
 void USART6_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
-    port_uart_handle_isr(&port_huarts[CFN_HAL_UART_PORT_USART6]);
+    port_uart_handle_isr(CFN_HAL_UART_PORT_USART6);
 }
 #endif
 
@@ -390,6 +609,14 @@ void USART6_IRQHandler(void) // NOLINT(readability-identifier-naming)
 
 /* UART Specific Functions */
 
+/**
+ * @brief Transmits data in blocking polling mode.
+ * @param driver Pointer to the UART driver instance.
+ * @param data Pointer to the buffer containing data to transmit.
+ * @param length Number of bytes to transmit.
+ * @param timeout Timeout in milliseconds.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 static cfn_hal_error_code_t
 port_uart_tx_polling(cfn_hal_uart_t *driver, const uint8_t *data, size_t length, uint32_t timeout)
 {
@@ -398,26 +625,59 @@ port_uart_tx_polling(cfn_hal_uart_t *driver, const uint8_t *data, size_t length,
         HAL_UART_Transmit(&port_huarts[port_id], (uint8_t *) data, (uint16_t) length, timeout));
 }
 
+/**
+ * @brief Receives data in blocking polling mode.
+ * @param driver Pointer to the UART driver instance.
+ * @param buffer Pointer to the buffer to store received data.
+ * @param length Number of bytes to receive.
+ * @param timeout Timeout in milliseconds.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 static cfn_hal_error_code_t
 port_uart_rx_polling(cfn_hal_uart_t *driver, uint8_t *buffer, size_t length, uint32_t timeout)
 {
-    if (driver) { driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX; }
+    if (driver)
+    {
+        driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX;
+    }
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     return cfn_hal_stm32_map_error(HAL_UART_Receive(&port_huarts[port_id], buffer, (uint16_t) length, timeout));
 }
 
+/**
+ * @brief Receives data until an IDLE line is detected or the buffer is full.
+ * @param driver Pointer to the UART driver instance.
+ * @param data Pointer to the buffer to store received data.
+ * @param max_bytes Maximum number of bytes to receive.
+ * @param received_bytes Pointer to store the actual number of bytes received (optional).
+ * @param timeout Timeout in milliseconds.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 static cfn_hal_error_code_t
 port_uart_rx_to_idle(cfn_hal_uart_t *driver, uint8_t *data, size_t max_bytes, size_t *received_bytes, uint32_t timeout)
 {
-    if (driver) { driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX; }
-    uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    UART_HandleTypeDef *huart = &port_huarts[port_id];
     CFN_HAL_UNUSED(timeout);
     CFN_HAL_UNUSED(received_bytes);
+
+    if (driver == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX;
+    uint32_t            port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    UART_HandleTypeDef *huart   = &port_huarts[port_id];
 
     return cfn_hal_stm32_map_error(HAL_UARTEx_ReceiveToIdle_IT(huart, data, (uint16_t) max_bytes));
 }
 
+/**
+ * @brief Transmits data using interrupts.
+ * @param driver Pointer to the UART driver instance.
+ * @param data Pointer to the buffer containing data to transmit.
+ * @param nbr_of_bytes Number of bytes to transmit.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 static cfn_hal_error_code_t port_uart_tx_irq(cfn_hal_uart_t *driver, const uint8_t *data, size_t nbr_of_bytes)
 {
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
@@ -425,46 +685,89 @@ static cfn_hal_error_code_t port_uart_tx_irq(cfn_hal_uart_t *driver, const uint8
         HAL_UART_Transmit_IT(&port_huarts[port_id], (uint8_t *) data, (uint16_t) nbr_of_bytes));
 }
 
+/**
+ * @brief Aborts an active interrupt-based transmission.
+ * @param driver Pointer to the UART driver instance.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 static cfn_hal_error_code_t port_uart_tx_irq_abort(cfn_hal_uart_t *driver)
 {
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     return cfn_hal_stm32_map_error(HAL_UART_AbortTransmit_IT(&port_huarts[port_id]));
 }
 
+/**
+ * @brief Receives a fixed number of bytes using interrupts.
+ * @param driver Pointer to the UART driver instance.
+ * @param data Pointer to the buffer to store received data.
+ * @param nbr_of_bytes Number of bytes to receive.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 static cfn_hal_error_code_t port_uart_rx_n_irq(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes)
 {
-    if (driver) { driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX; }
+    if (driver)
+    {
+        driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX;
+    }
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     return cfn_hal_stm32_map_error(HAL_UART_Receive_IT(&port_huarts[port_id], data, (uint16_t) nbr_of_bytes));
 }
 
+/**
+ * @brief Enables continuous RX mode using interrupts.
+ * @param driver Pointer to the UART driver instance.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 static cfn_hal_error_code_t port_uart_rx_irq(cfn_hal_uart_t *driver)
 {
-    if (!driver || !driver->phy || !driver->phy->instance) return CFN_HAL_ERROR_BAD_PARAM;
+    if (!driver || !driver->phy || !driver->phy->instance)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     driver->base.flags |= CFN_HAL_UART_FLAG_CONTINUOUS_RX;
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     __HAL_UART_ENABLE_IT(&port_huarts[port_id], UART_IT_RXNE);
     return CFN_HAL_ERROR_OK;
 }
 
+/**
+ * @brief Aborts continuous RX mode or an active interrupt-based reception.
+ * @param driver Pointer to the UART driver instance.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 static cfn_hal_error_code_t port_uart_rx_irq_abort(cfn_hal_uart_t *driver)
 {
-    if (driver) { driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX; }
+    if (driver)
+    {
+        driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX;
+    }
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     __HAL_UART_DISABLE_IT(&port_huarts[port_id], UART_IT_RXNE);
     return cfn_hal_stm32_map_error(HAL_UART_AbortReceive_IT(&port_huarts[port_id]));
 }
 
+/**
+ * @brief Starts UART data reception using DMA.
+ * @param driver Pointer to the UART driver instance.
+ * @param data Pointer to the buffer to store received data.
+ * @param nbr_of_bytes Number of bytes to receive.
+ * @return CFN_HAL_ERROR_NOT_SUPPORTED (Dummy implementation).
+ */
 static cfn_hal_error_code_t port_uart_rx_dma(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes)
 {
-    if (driver) { driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX; }
+    if (driver)
+    {
+        driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX;
+    }
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(data);
     CFN_HAL_UNUSED(nbr_of_bytes);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
 
-/* API --------------------------------------------------------------*/
+/**
+ * @brief UART API VMT instance for the STM32F4 port.
+ */
 static const cfn_hal_uart_api_t UART_API = {
     .base = {
         .init = port_base_init,
@@ -495,6 +798,13 @@ static const cfn_hal_uart_api_t UART_API = {
 
 /* Instantiation ----------------------------------------------------*/
 
+/**
+ * @brief Constructs a new UART driver instance.
+ * @param driver Pointer to the driver structure to construct.
+ * @param config Pointer to the UART configuration.
+ * @param phy Pointer to the physical UART mapping.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 cfn_hal_error_code_t
 cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *config, const cfn_hal_uart_phy_t *phy)
 {
@@ -510,14 +820,14 @@ cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *conf
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = &UART_API;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_UART;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config = config;
-    driver->phy = phy;
+    driver->api                   = &UART_API;
+    driver->base.type             = CFN_HAL_PERIPHERAL_TYPE_UART;
+    driver->base.status           = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
+    driver->config                = config;
+    driver->phy                   = phy;
 
     port_huarts[port_id].Instance = PORT_INSTANCES[port_id];
-    port_drivers[port_id] = driver;
+    port_drivers[port_id]         = driver;
 
     return CFN_HAL_ERROR_OK;
 #else
@@ -528,6 +838,11 @@ cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *conf
 #endif
 }
 
+/**
+ * @brief Destructs an existing UART driver instance.
+ * @param driver Pointer to the driver instance to destruct.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 cfn_hal_error_code_t cfn_hal_uart_destruct(cfn_hal_uart_t *driver)
 {
 #ifdef HAL_UART_MODULE_ENABLED
@@ -542,11 +857,11 @@ cfn_hal_error_code_t cfn_hal_uart_destruct(cfn_hal_uart_t *driver)
         port_drivers[port_id] = NULL;
     }
 
-    driver->api = NULL;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_UART;
+    driver->api         = NULL;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_UART;
     driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config = NULL;
-    driver->phy = NULL;
+    driver->config      = NULL;
+    driver->phy         = NULL;
 
     return CFN_HAL_ERROR_OK;
 #else

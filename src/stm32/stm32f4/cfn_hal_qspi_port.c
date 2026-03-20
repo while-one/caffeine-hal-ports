@@ -1,6 +1,26 @@
 /**
+ * Copyright (c) 2026 Hisham Moussa Daou <https://www.whileone.me>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
  * @file cfn_hal_qspi_port.c
- * @brief STM32F4 QSPI HAL Port Implementation.
+ * @brief STM32F4 QSPI HAL Port Implementation
  */
 
 /* Includes ---------------------------------------------------------*/
@@ -23,15 +43,15 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 
     __HAL_RCC_QSPI_CLK_ENABLE();
 
-    port_hqspi.Instance = QUADSPI;
-    port_hqspi.Init.ClockPrescaler = 1;
-    port_hqspi.Init.FifoThreshold = 4;
-    port_hqspi.Init.SampleShifting = QSPI_SAMPLE_SHIFTING_HALFCYCLE;
-    port_hqspi.Init.FlashSize = 23; /* 16MB */
+    port_hqspi.Instance                = QUADSPI;
+    port_hqspi.Init.ClockPrescaler     = 1;
+    port_hqspi.Init.FifoThreshold      = 4;
+    port_hqspi.Init.SampleShifting     = QSPI_SAMPLE_SHIFTING_HALFCYCLE;
+    port_hqspi.Init.FlashSize          = 23; /* 16MB */
     port_hqspi.Init.ChipSelectHighTime = QSPI_CS_HIGH_TIME_1_CYCLE;
-    port_hqspi.Init.ClockMode = QSPI_CLOCK_MODE_0;
-    port_hqspi.Init.FlashID = QSPI_FLASH_ID_1;
-    port_hqspi.Init.DualFlash = QSPI_DUALFLASH_DISABLE;
+    port_hqspi.Init.ClockMode          = QSPI_CLOCK_MODE_0;
+    port_hqspi.Init.FlashID            = QSPI_FLASH_ID_1;
+    port_hqspi.Init.DualFlash          = QSPI_DUALFLASH_DISABLE;
 
     return cfn_hal_stm32_map_error(HAL_QSPI_Init(&port_hqspi));
 }
@@ -73,19 +93,19 @@ static cfn_hal_error_code_t port_qspi_command(cfn_hal_qspi_t *driver, const cfn_
     CFN_HAL_UNUSED(driver);
     QSPI_CommandTypeDef s_cmd = { 0 };
 
-    s_cmd.Instruction = cmd->instruction;
-    s_cmd.Address = cmd->address;
-    s_cmd.AlternateBytes = cmd->alternate_bytes;
-    s_cmd.AddressSize = cmd->address_size;
-    s_cmd.AlternateBytesSize = cmd->alternate_bytes_size;
-    s_cmd.DummyCycles = cmd->dummy_cycles;
-    s_cmd.InstructionMode = cmd->instruction_mode;
-    s_cmd.AddressMode = cmd->address_mode;
-    s_cmd.AlternateByteMode = cmd->alternate_bytes_mode;
-    s_cmd.DataMode = cmd->data_mode;
-    s_cmd.NbData = cmd->nb_data;
-    s_cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
-    s_cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
+    s_cmd.Instruction         = cmd->instruction;
+    s_cmd.Address             = cmd->address;
+    s_cmd.AlternateBytes      = cmd->alternate_bytes;
+    s_cmd.AddressSize         = cmd->address_size;
+    s_cmd.AlternateBytesSize  = cmd->alternate_bytes_size;
+    s_cmd.DummyCycles         = cmd->dummy_cycles;
+    s_cmd.InstructionMode     = cmd->instruction_mode;
+    s_cmd.AddressMode         = cmd->address_mode;
+    s_cmd.AlternateByteMode   = cmd->alternate_bytes_mode;
+    s_cmd.DataMode            = cmd->data_mode;
+    s_cmd.NbData              = cmd->nb_data;
+    s_cmd.DdrMode             = QSPI_DDR_MODE_DISABLE;
+    s_cmd.SIOOMode            = QSPI_SIOO_INST_EVERY_CMD;
 
     return cfn_hal_stm32_map_error(HAL_QSPI_Command(&port_hqspi, &s_cmd, timeout));
 }
@@ -105,24 +125,24 @@ static cfn_hal_error_code_t port_qspi_receive(cfn_hal_qspi_t *driver, uint8_t *d
 static cfn_hal_error_code_t port_qspi_memory_mapped_enable(cfn_hal_qspi_t *driver, const cfn_hal_qspi_cmd_t *cmd)
 {
     CFN_HAL_UNUSED(driver);
-    QSPI_CommandTypeDef      s_cmd = { 0 };
+    QSPI_CommandTypeDef      s_cmd        = { 0 };
     QSPI_MemoryMappedTypeDef s_mem_mapped = { 0 };
 
-    s_cmd.Instruction = cmd->instruction;
-    s_cmd.Address = cmd->address;
-    s_cmd.AlternateBytes = cmd->alternate_bytes;
-    s_cmd.AddressSize = cmd->address_size;
-    s_cmd.AlternateBytesSize = cmd->alternate_bytes_size;
-    s_cmd.DummyCycles = cmd->dummy_cycles;
-    s_cmd.InstructionMode = cmd->instruction_mode;
-    s_cmd.AddressMode = cmd->address_mode;
-    s_cmd.AlternateByteMode = cmd->alternate_bytes_mode;
-    s_cmd.DataMode = cmd->data_mode;
-    s_cmd.NbData = cmd->nb_data;
-    s_cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
-    s_cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
+    s_cmd.Instruction                     = cmd->instruction;
+    s_cmd.Address                         = cmd->address;
+    s_cmd.AlternateBytes                  = cmd->alternate_bytes;
+    s_cmd.AddressSize                     = cmd->address_size;
+    s_cmd.AlternateBytesSize              = cmd->alternate_bytes_size;
+    s_cmd.DummyCycles                     = cmd->dummy_cycles;
+    s_cmd.InstructionMode                 = cmd->instruction_mode;
+    s_cmd.AddressMode                     = cmd->address_mode;
+    s_cmd.AlternateByteMode               = cmd->alternate_bytes_mode;
+    s_cmd.DataMode                        = cmd->data_mode;
+    s_cmd.NbData                          = cmd->nb_data;
+    s_cmd.DdrMode                         = QSPI_DDR_MODE_DISABLE;
+    s_cmd.SIOOMode                        = QSPI_SIOO_INST_EVERY_CMD;
 
-    s_mem_mapped.TimeOutActivation = QSPI_TIMEOUT_COUNTER_DISABLE;
+    s_mem_mapped.TimeOutActivation        = QSPI_TIMEOUT_COUNTER_DISABLE;
 
     return cfn_hal_stm32_map_error(HAL_QSPI_MemoryMapped(&port_hqspi, &s_cmd, &s_mem_mapped));
 }
@@ -160,11 +180,11 @@ cfn_hal_qspi_construct(cfn_hal_qspi_t *driver, const cfn_hal_qspi_config_t *conf
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = &QSPI_API;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_QSPI;
+    driver->api         = &QSPI_API;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_QSPI;
     driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config = config;
-    driver->phy = phy;
+    driver->config      = config;
+    driver->phy         = phy;
 
     return CFN_HAL_ERROR_OK;
 #else
@@ -183,11 +203,11 @@ cfn_hal_error_code_t cfn_hal_qspi_destruct(cfn_hal_qspi_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = NULL;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_QSPI;
+    driver->api         = NULL;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_QSPI;
     driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config = NULL;
-    driver->phy = NULL;
+    driver->config      = NULL;
+    driver->phy         = NULL;
 
     return CFN_HAL_ERROR_OK;
 #else

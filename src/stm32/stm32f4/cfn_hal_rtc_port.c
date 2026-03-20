@@ -1,6 +1,26 @@
 /**
+ * Copyright (c) 2026 Hisham Moussa Daou <https://www.whileone.me>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
  * @file cfn_hal_rtc_port.c
- * @brief STM32F4 RTC HAL Port Implementation.
+ * @brief STM32F4 RTC HAL Port Implementation
  */
 
 /* Includes ---------------------------------------------------------*/
@@ -50,27 +70,27 @@ static void low_level_init(cfn_hal_rtc_t *driver)
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_rtc_t     *driver = (cfn_hal_rtc_t *) base;
+    cfn_hal_rtc_t     *driver  = (cfn_hal_rtc_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    RTC_HandleTypeDef *hrtc = &port_hrtcs[port_id];
+    RTC_HandleTypeDef *hrtc    = &port_hrtcs[port_id];
 
     low_level_init(driver);
 
     hrtc->Instance = PORT_INSTANCES[port_id];
     hrtc->Init.HourFormat =
         (driver->config->format == CFN_HAL_RTC_CONFIG_FORMAT_12H) ? RTC_HOURFORMAT_12 : RTC_HOURFORMAT_24;
-    hrtc->Init.AsynchPrediv = 127;
-    hrtc->Init.SynchPrediv = 255;
-    hrtc->Init.OutPut = RTC_OUTPUT_DISABLE;
+    hrtc->Init.AsynchPrediv   = 127;
+    hrtc->Init.SynchPrediv    = 255;
+    hrtc->Init.OutPut         = RTC_OUTPUT_DISABLE;
     hrtc->Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
-    hrtc->Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+    hrtc->Init.OutPutType     = RTC_OUTPUT_TYPE_OPENDRAIN;
 
     return cfn_hal_stm32_map_error(HAL_RTC_Init(hrtc));
 }
 
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 {
-    cfn_hal_rtc_t *driver = (cfn_hal_rtc_t *) base;
+    cfn_hal_rtc_t *driver  = (cfn_hal_rtc_t *) base;
     uint32_t       port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     return cfn_hal_stm32_map_error(HAL_RTC_DeInit(&port_hrtcs[port_id]));
 }
@@ -144,14 +164,14 @@ void RTC_Alarm_IRQHandler(void) // NOLINT(readability-identifier-naming)
 static cfn_hal_error_code_t port_rtc_set_time(cfn_hal_rtc_t *driver, cfn_hal_rtc_time_t *time)
 {
     uint32_t        port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    RTC_TimeTypeDef s_time = { 0 };
-    RTC_DateTypeDef s_date = { 0 };
+    RTC_TimeTypeDef s_time  = { 0 };
+    RTC_DateTypeDef s_date  = { 0 };
 
-    s_time.Hours = (uint8_t) time->tm_hour;
-    s_time.Minutes = (uint8_t) time->tm_min;
-    s_time.Seconds = (uint8_t) time->tm_sec;
-    s_time.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
-    s_time.StoreOperation = RTC_STOREOPERATION_RESET;
+    s_time.Hours            = (uint8_t) time->tm_hour;
+    s_time.Minutes          = (uint8_t) time->tm_min;
+    s_time.Seconds          = (uint8_t) time->tm_sec;
+    s_time.DayLightSaving   = RTC_DAYLIGHTSAVING_NONE;
+    s_time.StoreOperation   = RTC_STOREOPERATION_RESET;
 
     if (HAL_RTC_SetTime(&port_hrtcs[port_id], &s_time, RTC_FORMAT_BIN) != HAL_OK)
     {
@@ -159,9 +179,9 @@ static cfn_hal_error_code_t port_rtc_set_time(cfn_hal_rtc_t *driver, cfn_hal_rtc
     }
 
     s_date.WeekDay = (uint8_t) time->tm_wday + 1; /* tm is 0-6, ST is 1-7 */
-    s_date.Month = (uint8_t) time->tm_mon + 1;    /* tm is 0-11, ST is 1-12 */
-    s_date.Date = (uint8_t) time->tm_mday;
-    s_date.Year = (uint8_t) (time->tm_year % 100); /* 2-digit year */
+    s_date.Month   = (uint8_t) time->tm_mon + 1;  /* tm is 0-11, ST is 1-12 */
+    s_date.Date    = (uint8_t) time->tm_mday;
+    s_date.Year    = (uint8_t) (time->tm_year % 100); /* 2-digit year */
 
     return cfn_hal_stm32_map_error(HAL_RTC_SetDate(&port_hrtcs[port_id], &s_date, RTC_FORMAT_BIN));
 }
@@ -169,8 +189,8 @@ static cfn_hal_error_code_t port_rtc_set_time(cfn_hal_rtc_t *driver, cfn_hal_rtc
 static cfn_hal_error_code_t port_rtc_get_time(cfn_hal_rtc_t *driver, cfn_hal_rtc_time_t *time)
 {
     uint32_t        port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    RTC_TimeTypeDef s_time = { 0 };
-    RTC_DateTypeDef s_date = { 0 };
+    RTC_TimeTypeDef s_time  = { 0 };
+    RTC_DateTypeDef s_date  = { 0 };
 
     if (HAL_RTC_GetTime(&port_hrtcs[port_id], &s_time, RTC_FORMAT_BIN) != HAL_OK)
     {
@@ -182,11 +202,11 @@ static cfn_hal_error_code_t port_rtc_get_time(cfn_hal_rtc_t *driver, cfn_hal_rtc
     }
 
     time->tm_hour = s_time.Hours;
-    time->tm_min = s_time.Minutes;
-    time->tm_sec = s_time.Seconds;
+    time->tm_min  = s_time.Minutes;
+    time->tm_sec  = s_time.Seconds;
     time->tm_wday = (int) s_date.WeekDay - 1;
     time->tm_mday = (int) s_date.Date;
-    time->tm_mon = (int) s_date.Month - 1;
+    time->tm_mon  = (int) s_date.Month - 1;
     time->tm_year = 100 + (int) s_date.Year; /* Assumption: Year 20xx */
 
     return CFN_HAL_ERROR_OK;
@@ -194,20 +214,20 @@ static cfn_hal_error_code_t port_rtc_get_time(cfn_hal_rtc_t *driver, cfn_hal_rtc
 
 static cfn_hal_error_code_t port_rtc_set_alarm(cfn_hal_rtc_t *driver, uint32_t id, cfn_hal_rtc_time_t *time)
 {
-    uint32_t         port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    RTC_AlarmTypeDef s_alarm = { 0 };
+    uint32_t         port_id         = (uint32_t) (uintptr_t) driver->phy->instance;
+    RTC_AlarmTypeDef s_alarm         = { 0 };
 
-    s_alarm.AlarmTime.Hours = (uint8_t) time->tm_hour;
-    s_alarm.AlarmTime.Minutes = (uint8_t) time->tm_min;
-    s_alarm.AlarmTime.Seconds = (uint8_t) time->tm_sec;
-    s_alarm.AlarmTime.SubSeconds = 0;
+    s_alarm.AlarmTime.Hours          = (uint8_t) time->tm_hour;
+    s_alarm.AlarmTime.Minutes        = (uint8_t) time->tm_min;
+    s_alarm.AlarmTime.Seconds        = (uint8_t) time->tm_sec;
+    s_alarm.AlarmTime.SubSeconds     = 0;
     s_alarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
     s_alarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
-    s_alarm.AlarmMask = RTC_ALARMMASK_NONE;
-    s_alarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
-    s_alarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
-    s_alarm.AlarmDateWeekDay = (uint8_t) time->tm_mday;
-    s_alarm.Alarm = (id == 0) ? RTC_ALARM_A : RTC_ALARM_B;
+    s_alarm.AlarmMask                = RTC_ALARMMASK_NONE;
+    s_alarm.AlarmSubSecondMask       = RTC_ALARMSUBSECONDMASK_ALL;
+    s_alarm.AlarmDateWeekDaySel      = RTC_ALARMDATEWEEKDAYSEL_DATE;
+    s_alarm.AlarmDateWeekDay         = (uint8_t) time->tm_mday;
+    s_alarm.Alarm                    = (id == 0) ? RTC_ALARM_A : RTC_ALARM_B;
 
     return cfn_hal_stm32_map_error(HAL_RTC_SetAlarm_IT(&port_hrtcs[port_id], &s_alarm, RTC_FORMAT_BIN));
 }
@@ -215,8 +235,8 @@ static cfn_hal_error_code_t port_rtc_set_alarm(cfn_hal_rtc_t *driver, uint32_t i
 static cfn_hal_error_code_t
 port_rtc_get_alarm(cfn_hal_rtc_t *driver, uint32_t id, bool *elapsed, cfn_hal_rtc_time_t *time)
 {
-    uint32_t         port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    RTC_AlarmTypeDef s_alarm = { 0 };
+    uint32_t         port_id  = (uint32_t) (uintptr_t) driver->phy->instance;
+    RTC_AlarmTypeDef s_alarm  = { 0 };
     uint32_t         alarm_id = (id == 0) ? RTC_ALARM_A : RTC_ALARM_B;
 
     if (HAL_RTC_GetAlarm(&port_hrtcs[port_id], &s_alarm, alarm_id, RTC_FORMAT_BIN) != HAL_OK)
@@ -227,8 +247,8 @@ port_rtc_get_alarm(cfn_hal_rtc_t *driver, uint32_t id, bool *elapsed, cfn_hal_rt
     if (time != NULL)
     {
         time->tm_hour = s_alarm.AlarmTime.Hours;
-        time->tm_min = s_alarm.AlarmTime.Minutes;
-        time->tm_sec = s_alarm.AlarmTime.Seconds;
+        time->tm_min  = s_alarm.AlarmTime.Minutes;
+        time->tm_sec  = s_alarm.AlarmTime.Seconds;
         time->tm_mday = s_alarm.AlarmDateWeekDay;
     }
 
@@ -243,7 +263,7 @@ port_rtc_get_alarm(cfn_hal_rtc_t *driver, uint32_t id, bool *elapsed, cfn_hal_rt
 
 static cfn_hal_error_code_t port_rtc_stop_alarm(cfn_hal_rtc_t *driver, uint32_t id)
 {
-    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    uint32_t port_id  = (uint32_t) (uintptr_t) driver->phy->instance;
     uint32_t alarm_id = (id == 0) ? RTC_ALARM_A : RTC_ALARM_B;
     return cfn_hal_stm32_map_error(HAL_RTC_DeactivateAlarm(&port_hrtcs[port_id], alarm_id));
 }
@@ -289,14 +309,14 @@ cfn_hal_rtc_construct(cfn_hal_rtc_t *driver, const cfn_hal_rtc_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api = &RTC_API;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_RTC;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config = config;
-    driver->phy = phy;
+    driver->api                  = &RTC_API;
+    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_RTC;
+    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
+    driver->config               = config;
+    driver->phy                  = phy;
 
     port_hrtcs[port_id].Instance = PORT_INSTANCES[port_id];
-    port_drivers[port_id] = driver;
+    port_drivers[port_id]        = driver;
 
     return CFN_HAL_ERROR_OK;
 #else
@@ -321,11 +341,11 @@ cfn_hal_error_code_t cfn_hal_rtc_destruct(cfn_hal_rtc_t *driver)
         port_drivers[port_id] = NULL;
     }
 
-    driver->api = NULL;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_RTC;
+    driver->api         = NULL;
+    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_RTC;
     driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config = NULL;
-    driver->phy = NULL;
+    driver->config      = NULL;
+    driver->phy         = NULL;
 
     return CFN_HAL_ERROR_OK;
 #else
