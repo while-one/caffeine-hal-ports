@@ -37,11 +37,43 @@ static QSPI_HandleTypeDef port_hqspi;
 
 /* VMT Implementations ----------------------------------------------*/
 
+static void low_level_init(cfn_hal_qspi_t *driver)
+{
+    /* 1. Enable Clock */
+    __HAL_RCC_QSPI_CLK_ENABLE();
+
+    /* 2. Initialize Pins */
+    if (driver->phy->clk)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->clk->port);
+    }
+    if (driver->phy->cs)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->cs->port);
+    }
+    if (driver->phy->io0)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->io0->port);
+    }
+    if (driver->phy->io1)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->io1->port);
+    }
+    if (driver->phy->io2)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->io2->port);
+    }
+    if (driver->phy->io3)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->io3->port);
+    }
+}
+
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    CFN_HAL_UNUSED(base);
+    cfn_hal_qspi_t *driver = (cfn_hal_qspi_t *) base;
 
-    __HAL_RCC_QSPI_CLK_ENABLE();
+    low_level_init(driver);
 
     port_hqspi.Instance                = QUADSPI;
     port_hqspi.Init.ClockPrescaler     = 1;

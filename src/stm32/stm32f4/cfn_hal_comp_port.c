@@ -30,6 +30,35 @@
 
 #ifdef HAL_COMP_MODULE_ENABLED
 
+/* VMT Implementations ----------------------------------------------*/
+
+static void low_level_init(cfn_hal_comp_t *driver)
+{
+    /* 1. Enable Clock */
+    __HAL_RCC_COMP_CLK_ENABLE();
+
+    /* 2. Initialize Pins */
+    if (driver->phy->input_plus)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->input_plus->port);
+    }
+    if (driver->phy->input_minus)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->input_minus->port);
+    }
+    if (driver->phy->output)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->output->port);
+    }
+}
+
+static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
+{
+    cfn_hal_comp_t *driver = (cfn_hal_comp_t *) base;
+    low_level_init(driver);
+    return CFN_HAL_ERROR_OK;
+}
+
 static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
 {
     CFN_HAL_UNUSED(base);

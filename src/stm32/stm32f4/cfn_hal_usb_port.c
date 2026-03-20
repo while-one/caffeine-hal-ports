@@ -75,6 +75,24 @@ static void low_level_init(cfn_hal_usb_t *driver)
     {
         cfn_hal_port_clock_enable_gate(CFN_HAL_PORT_PERIPH_USB_OTG_HS);
     }
+
+    /* 2. Initialize Pins */
+    if (driver->phy->dp)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->dp->port);
+    }
+    if (driver->phy->dm)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->dm->port);
+    }
+    if (driver->phy->id)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->id->port);
+    }
+    if (driver->phy->vbus)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->vbus->port);
+    }
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
