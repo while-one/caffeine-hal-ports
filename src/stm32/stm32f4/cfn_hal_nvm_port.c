@@ -142,8 +142,7 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 static cfn_hal_error_code_t port_nvm_read(cfn_hal_nvm_t *driver, uint32_t addr, uint8_t *buffer, size_t size)
 {
     CFN_HAL_UNUSED(driver);
-    memcpy(buffer, (const void *) (uintptr_t) addr,
-           size); // NOLINT(performance-no-int-to-ptr)
+    memcpy(buffer, (const void *) (uintptr_t) addr, size); // NOLINT(performance-no-int-to-ptr)
     return CFN_HAL_ERROR_OK;
 }
 
