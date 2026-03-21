@@ -27,7 +27,8 @@
 #define CAFFEINE_HAL_PORT_ADC_STM32F4_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 /* Includes ---------------------------------------------------------*/
@@ -38,11 +39,12 @@ extern "C" {
 /**
  * @brief STM32F4 Physical ADC instances.
  */
-typedef enum {
-  CFN_HAL_ADC_PORT_ADC1,
-  CFN_HAL_ADC_PORT_ADC2,
-  CFN_HAL_ADC_PORT_ADC3,
-  CFN_HAL_ADC_PORT_MAX
+typedef enum
+{
+    CFN_HAL_ADC_PORT_ADC1,
+    CFN_HAL_ADC_PORT_ADC2,
+    CFN_HAL_ADC_PORT_ADC3,
+    CFN_HAL_ADC_PORT_MAX
 } cfn_hal_adc_port_t;
 
 /* Functions prototypes ---------------------------------------------*/

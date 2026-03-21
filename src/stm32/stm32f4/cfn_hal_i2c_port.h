@@ -27,7 +27,8 @@
 #define CAFFEINE_HAL_PORT_I2C_STM32F4_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 /* Includes ---------------------------------------------------------*/
@@ -38,11 +39,12 @@ extern "C" {
 /**
  * @brief STM32F4 Physical I2C instances.
  */
-typedef enum {
-  CFN_HAL_I2C_PORT_I2C1,
-  CFN_HAL_I2C_PORT_I2C2,
-  CFN_HAL_I2C_PORT_I2C3,
-  CFN_HAL_I2C_PORT_MAX
+typedef enum
+{
+    CFN_HAL_I2C_PORT_I2C1,
+    CFN_HAL_I2C_PORT_I2C2,
+    CFN_HAL_I2C_PORT_I2C3,
+    CFN_HAL_I2C_PORT_MAX
 } cfn_hal_i2c_port_t;
 
 /* Functions prototypes ---------------------------------------------*/

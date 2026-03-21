@@ -27,7 +27,8 @@
 #define CAFFEINE_HAL_PORT_DAC_STM32F4_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 /* Includes ---------------------------------------------------------*/
@@ -38,7 +39,11 @@ extern "C" {
 /**
  * @brief STM32F4 Physical DAC instances.
  */
-typedef enum { CFN_HAL_DAC_PORT_DAC1, CFN_HAL_DAC_PORT_MAX } cfn_hal_dac_port_t;
+typedef enum
+{
+    CFN_HAL_DAC_PORT_DAC1,
+    CFN_HAL_DAC_PORT_MAX
+} cfn_hal_dac_port_t;
 
 /* Functions prototypes ---------------------------------------------*/
 

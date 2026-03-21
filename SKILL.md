@@ -16,8 +16,7 @@ This repository (`caffeine-hal-ports`) contains the hardware-specific implementa
 The build system relies on a strictly target-based, preset-driven architecture. Global variables and conditional `if(VENDOR)` logic are forbidden in the root `CMakeLists.txt`. There is a strict separation of concerns for compiler flags.
 
 ### A. Global Flags (`CMakeLists.txt`)
-*   Contains universal warnings (`-Wall`, `-Wextra`, etc.) and dead-code elimination preparation (`-ffunction-sections`, `-fdata-sections`).
-*   Declares user-configurable options like `CAFFEINE_WARNINGS_AS_ERRORS` (default `ON`) and `CAFFEINE_OPTIMIZATION_LEVEL` (default `-Os`).
+*   The root `CMakeLists.txt` delegates universal warnings (`-Wall`, `-Wextra`, etc.), dead-code elimination preparation (`-ffunction-sections`, `-fdata-sections`), and user-configurable options like `CAFFEINE_WARNINGS_AS_ERRORS` to the included `caffeine-build/cmake/CaffeineMacros.cmake`. Do not duplicate them here.
 
 ### B. Modular CMake Presets Architecture
 The build system utilizes a modular, directory-based preset architecture. The root `CMakePresets.json` acts strictly as a delegator and base configuration host, while hardware-specific profiles are isolated in `caffeine-build/cmake/presets/<vendor>/<family>.json`.
@@ -77,7 +76,7 @@ If the user specifies `CAFFEINE_BOOTLOADER_SIZE_HEX` in their CMake preset, the 
 Generic `cfn_hal` drivers use an abstract `void *port` in their PHY config. To prevent leaking vendor CMSIS macros (like `stm32f4xx_hal.h`) to the user app, we map this pointer to an enum.
 *   **Naming Rule:** You MUST use the `cfn_hal_<peripheral>_port_t` type name and the `CFN_HAL_<PERIPHERAL>_PORT_` prefix for elements (e.g., `cfn_hal_uart_port_t` and `CFN_HAL_UART_PORT_USART1`).
 *   **Source File (`cfn_hal_<peripheral>_port.c`):** Declare a static array of vendor handles sized by the enum max (e.g., `static UART_HandleTypeDef port_huarts[CFN_HAL_UART_PORT_MAX];`). 
-*   **Rule:** Inside wrapper functions, extract the ID via `uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->port;` and use it to index the static array for O(1) high-speed hardware access.
+*   **Rule (Handle Lookup):** Inside wrapper functions or callback overrides, you must extract the ID using pointer arithmetic against the static array (e.g., `(uint32_t)(huart - port_huarts)`). **CRITICAL:** You MUST perform a strict `NULL` check on the vendor handle before executing the pointer arithmetic to prevent Undefined Behavior.
 
 ### D. Error Mapping
 You must never return vendor-specific error codes (like `HAL_TIMEOUT` or `TX_QUEUE_FULL`) directly from your wrappers.

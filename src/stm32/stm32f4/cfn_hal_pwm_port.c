@@ -41,20 +41,13 @@
  * @brief Mapping from Caffeine Timer port IDs to global clock peripheral IDs.
  */
 static const uint32_t PORT_MAP_PERIPHERAL_ID[CFN_HAL_TIMER_PORT_MAX] = {
-    [CFN_HAL_TIMER_PORT_TIM1] = CFN_HAL_PORT_PERIPH_TIM1,
-    [CFN_HAL_TIMER_PORT_TIM2] = CFN_HAL_PORT_PERIPH_TIM2,
-    [CFN_HAL_TIMER_PORT_TIM3] = CFN_HAL_PORT_PERIPH_TIM3,
-    [CFN_HAL_TIMER_PORT_TIM4] = CFN_HAL_PORT_PERIPH_TIM4,
-    [CFN_HAL_TIMER_PORT_TIM5] = CFN_HAL_PORT_PERIPH_TIM5,
-    [CFN_HAL_TIMER_PORT_TIM6] = CFN_HAL_PORT_PERIPH_TIM6,
-    [CFN_HAL_TIMER_PORT_TIM7] = CFN_HAL_PORT_PERIPH_TIM7,
-    [CFN_HAL_TIMER_PORT_TIM8] = CFN_HAL_PORT_PERIPH_TIM8,
-    [CFN_HAL_TIMER_PORT_TIM9] = CFN_HAL_PORT_PERIPH_TIM9,
-    [CFN_HAL_TIMER_PORT_TIM10] = CFN_HAL_PORT_PERIPH_TIM10,
-    [CFN_HAL_TIMER_PORT_TIM11] = CFN_HAL_PORT_PERIPH_TIM11,
-    [CFN_HAL_TIMER_PORT_TIM12] = CFN_HAL_PORT_PERIPH_TIM12,
-    [CFN_HAL_TIMER_PORT_TIM13] = CFN_HAL_PORT_PERIPH_TIM13,
-    [CFN_HAL_TIMER_PORT_TIM14] = CFN_HAL_PORT_PERIPH_TIM14,
+    [CFN_HAL_TIMER_PORT_TIM1] = CFN_HAL_PORT_PERIPH_TIM1,   [CFN_HAL_TIMER_PORT_TIM2] = CFN_HAL_PORT_PERIPH_TIM2,
+    [CFN_HAL_TIMER_PORT_TIM3] = CFN_HAL_PORT_PERIPH_TIM3,   [CFN_HAL_TIMER_PORT_TIM4] = CFN_HAL_PORT_PERIPH_TIM4,
+    [CFN_HAL_TIMER_PORT_TIM5] = CFN_HAL_PORT_PERIPH_TIM5,   [CFN_HAL_TIMER_PORT_TIM6] = CFN_HAL_PORT_PERIPH_TIM6,
+    [CFN_HAL_TIMER_PORT_TIM7] = CFN_HAL_PORT_PERIPH_TIM7,   [CFN_HAL_TIMER_PORT_TIM8] = CFN_HAL_PORT_PERIPH_TIM8,
+    [CFN_HAL_TIMER_PORT_TIM9] = CFN_HAL_PORT_PERIPH_TIM9,   [CFN_HAL_TIMER_PORT_TIM10] = CFN_HAL_PORT_PERIPH_TIM10,
+    [CFN_HAL_TIMER_PORT_TIM11] = CFN_HAL_PORT_PERIPH_TIM11, [CFN_HAL_TIMER_PORT_TIM12] = CFN_HAL_PORT_PERIPH_TIM12,
+    [CFN_HAL_TIMER_PORT_TIM13] = CFN_HAL_PORT_PERIPH_TIM13, [CFN_HAL_TIMER_PORT_TIM14] = CFN_HAL_PORT_PERIPH_TIM14,
 };
 
 static TIM_TypeDef *const PORT_INSTANCES[CFN_HAL_TIMER_PORT_MAX] = {
@@ -103,257 +96,282 @@ static TIM_TypeDef *const PORT_INSTANCES[CFN_HAL_TIMER_PORT_MAX] = {
 };
 
 static TIM_HandleTypeDef port_htims[CFN_HAL_TIMER_PORT_MAX];
-static cfn_hal_pwm_t *port_drivers[CFN_HAL_TIMER_PORT_MAX];
+static cfn_hal_pwm_t    *port_drivers[CFN_HAL_TIMER_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
-static uint32_t get_hal_channel(uint32_t channel) {
-  switch (channel) {
-  case 1:
-    return TIM_CHANNEL_1;
-  case 2:
-    return TIM_CHANNEL_2;
-  case 3:
-    return TIM_CHANNEL_3;
-  case 4:
-    return TIM_CHANNEL_4;
-  default:
-    return TIM_CHANNEL_1;
-  }
+static uint32_t get_hal_channel(uint32_t channel)
+{
+    switch (channel)
+    {
+        case 1:
+            return TIM_CHANNEL_1;
+        case 2:
+            return TIM_CHANNEL_2;
+        case 3:
+            return TIM_CHANNEL_3;
+        case 4:
+            return TIM_CHANNEL_4;
+        default:
+            return TIM_CHANNEL_1;
+    }
 }
 
-static uint32_t get_timer_clock(const TIM_TypeDef *instance) {
-  uint32_t ppre1 = (RCC->CFGR & RCC_CFGR_PPRE1) >> RCC_CFGR_PPRE1_Pos;
-  uint32_t ppre2 = (RCC->CFGR & RCC_CFGR_PPRE2) >> RCC_CFGR_PPRE2_Pos;
+static uint32_t get_timer_clock(const TIM_TypeDef *instance)
+{
+    uint32_t ppre1 = (RCC->CFGR & RCC_CFGR_PPRE1) >> RCC_CFGR_PPRE1_Pos;
+    uint32_t ppre2 = (RCC->CFGR & RCC_CFGR_PPRE2) >> RCC_CFGR_PPRE2_Pos;
 
-  /* On F4, if PPRE is not 1, timer clock is 2x peripheral clock */
-  if (instance == TIM1 || instance == TIM8 || instance == TIM9 ||
-      instance == TIM10 || instance == TIM11) {
-    uint32_t pclk2 = HAL_RCC_GetPCLK2Freq();
-    return (ppre2 == RCC_HCLK_DIV1) ? pclk2 : (pclk2 * 2);
-  } else {
-    uint32_t pclk1 = HAL_RCC_GetPCLK1Freq();
-    return (ppre1 == RCC_HCLK_DIV1) ? pclk1 : (pclk1 * 2);
-  }
+    /* On F4, if PPRE is not 1, timer clock is 2x peripheral clock */
+    if (instance == TIM1 || instance == TIM8 || instance == TIM9 || instance == TIM10 || instance == TIM11)
+    {
+        uint32_t pclk2 = HAL_RCC_GetPCLK2Freq();
+        return (ppre2 == RCC_HCLK_DIV1) ? pclk2 : (pclk2 * 2);
+    }
+    else
+    {
+        uint32_t pclk1 = HAL_RCC_GetPCLK1Freq();
+        return (ppre1 == RCC_HCLK_DIV1) ? pclk1 : (pclk1 * 2);
+    }
 }
 
 /* VMT Implementations ----------------------------------------------*/
 
-static cfn_hal_error_code_t low_level_init(cfn_hal_pwm_t *driver) {
-  if (driver == NULL || driver->phy == NULL) {
-    return CFN_HAL_ERROR_BAD_PARAM;
-  }
+static cfn_hal_error_code_t low_level_init(cfn_hal_pwm_t *driver)
+{
+    if (driver == NULL || driver->phy == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
 
-  struct cfn_hal_clock_s *clk = driver->base.clock_driver;
-  if (clk == NULL) {
-    return CFN_HAL_ERROR_BAD_PARAM;
-  }
-  uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-  if (port_id >= CFN_HAL_TIMER_PORT_MAX) {
-    return CFN_HAL_ERROR_BAD_PARAM;
-  }
+    struct cfn_hal_clock_s *clk = driver->base.clock_driver;
+    if (clk == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_TIMER_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
 
-  /* 1. Enable Clock */
-  cfn_hal_clock_enable_gate((cfn_hal_clock_t *)clk, driver->base.peripheral_id);
+    /* 1. Enable Clock */
+    cfn_hal_clock_enable_gate((cfn_hal_clock_t *) clk, driver->base.peripheral_id);
 
-  /* 2. Initialize Pin */
-  if (driver->phy->pin) {
-    (void)cfn_hal_gpio_init(driver->phy->pin->port);
-  }
+    /* 2. Initialize Pin */
+    if (driver->phy->pin)
+    {
+        (void) cfn_hal_gpio_init(driver->phy->pin->port);
+    }
 
-  return CFN_HAL_ERROR_OK;
+    return CFN_HAL_ERROR_OK;
 }
 
-static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base) {
-  cfn_hal_pwm_t *driver = (cfn_hal_pwm_t *)base;
-  cfn_hal_error_code_t error;
-  uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-  TIM_HandleTypeDef *htim = &port_htims[port_id];
-  TIM_OC_InitTypeDef s_config_oc = {0};
+static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
+{
+    cfn_hal_pwm_t       *driver = (cfn_hal_pwm_t *) base;
+    cfn_hal_error_code_t error;
+    uint32_t             port_id     = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef   *htim        = &port_htims[port_id];
+    TIM_OC_InitTypeDef   s_config_oc = { 0 };
 
-  error = low_level_init(driver);
-  if (error != CFN_HAL_ERROR_OK) {
-    return error;
-  }
+    error                            = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
+    {
+        return error;
+    }
 
-  uint32_t timer_clk = get_timer_clock(PORT_INSTANCES[port_id]);
-  uint32_t prescaler = 0;
-  uint32_t period = 0;
+    uint32_t timer_clk = get_timer_clock(PORT_INSTANCES[port_id]);
+    uint32_t prescaler = 0;
+    uint32_t period    = 0;
 
-  /* Target 1MHz internal resolution for easy calculation if possible */
-  if (timer_clk >= 1000000) {
-    prescaler = (timer_clk / 1000000) - 1;
-    period = (1000000 / driver->config->frequency_hz) - 1;
-  } else {
-    prescaler = 0;
-    period = (timer_clk / driver->config->frequency_hz) - 1;
-  }
+    /* Target 1MHz internal resolution for easy calculation if possible */
+    if (timer_clk >= 1000000)
+    {
+        prescaler = (timer_clk / 1000000) - 1;
+        period    = (1000000 / driver->config->frequency_hz) - 1;
+    }
+    else
+    {
+        prescaler = 0;
+        period    = (timer_clk / driver->config->frequency_hz) - 1;
+    }
 
-  htim->Instance = PORT_INSTANCES[port_id];
-  htim->Init.Prescaler = prescaler;
-  htim->Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim->Init.Period = period;
-  htim->Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim->Init.RepetitionCounter = 0;
-  htim->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+    htim->Instance               = PORT_INSTANCES[port_id];
+    htim->Init.Prescaler         = prescaler;
+    htim->Init.CounterMode       = TIM_COUNTERMODE_UP;
+    htim->Init.Period            = period;
+    htim->Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+    htim->Init.RepetitionCounter = 0;
+    htim->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
 
-  if (HAL_TIM_PWM_Init(htim) != HAL_OK) {
-    return CFN_HAL_ERROR_FAIL;
-  }
+    if (HAL_TIM_PWM_Init(htim) != HAL_OK)
+    {
+        return CFN_HAL_ERROR_FAIL;
+    }
 
-  s_config_oc.OCMode = TIM_OCMODE_PWM1;
-  s_config_oc.Pulse = (period * driver->config->duty_cycle_percent) / 100;
-  s_config_oc.OCPolarity =
-      (driver->config->polarity == CFN_HAL_PWM_CONFIG_POLARITY_NORMAL)
-          ? TIM_OCPOLARITY_HIGH
-          : TIM_OCPOLARITY_LOW;
-  s_config_oc.OCFastMode = TIM_OCFAST_DISABLE;
+    s_config_oc.OCMode = TIM_OCMODE_PWM1;
+    s_config_oc.Pulse  = (period * driver->config->duty_cycle_percent) / 100;
+    s_config_oc.OCPolarity =
+        (driver->config->polarity == CFN_HAL_PWM_CONFIG_POLARITY_NORMAL) ? TIM_OCPOLARITY_HIGH : TIM_OCPOLARITY_LOW;
+    s_config_oc.OCFastMode = TIM_OCFAST_DISABLE;
 
-  return cfn_hal_stm32_map_error(HAL_TIM_PWM_ConfigChannel(
-      htim, &s_config_oc, get_hal_channel(driver->phy->channel)));
+    return cfn_hal_stm32_map_error(
+        HAL_TIM_PWM_ConfigChannel(htim, &s_config_oc, get_hal_channel(driver->phy->channel)));
 }
 
-static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base) {
-  cfn_hal_pwm_t *driver = (cfn_hal_pwm_t *)base;
-  uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-  return cfn_hal_stm32_map_error(HAL_TIM_PWM_DeInit(&port_htims[port_id]));
+static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
+{
+    cfn_hal_pwm_t *driver  = (cfn_hal_pwm_t *) base;
+    uint32_t       port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    return cfn_hal_stm32_map_error(HAL_TIM_PWM_DeInit(&port_htims[port_id]));
 }
 
-static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base,
-                                                 const void *config) {
-  CFN_HAL_UNUSED(config);
-  return port_base_init(base);
+static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
+{
+    CFN_HAL_UNUSED(config);
+    return port_base_init(base);
 }
 
-static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base,
-                                                   uint32_t event_mask) {
-  cfn_hal_pwm_t *driver = (cfn_hal_pwm_t *)base;
-  uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-  TIM_HandleTypeDef *htim = &port_htims[port_id];
+static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint32_t event_mask)
+{
+    cfn_hal_pwm_t     *driver  = (cfn_hal_pwm_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim    = &port_htims[port_id];
 
-  if (event_mask & CFN_HAL_PWM_EVENT_PERIOD_MATCH) {
-    __HAL_TIM_ENABLE_IT(htim, TIM_IT_UPDATE);
-  }
-  if (event_mask & CFN_HAL_PWM_EVENT_PULSE_MATCH) {
-    uint32_t channel = get_hal_channel(driver->phy->channel);
-    __HAL_TIM_ENABLE_IT(htim, (channel == TIM_CHANNEL_1)   ? TIM_IT_CC1
-                              : (channel == TIM_CHANNEL_2) ? TIM_IT_CC2
-                              : (channel == TIM_CHANNEL_3) ? TIM_IT_CC3
-                                                           : TIM_IT_CC4);
-  }
+    if (event_mask & CFN_HAL_PWM_EVENT_PERIOD_MATCH)
+    {
+        __HAL_TIM_ENABLE_IT(htim, TIM_IT_UPDATE);
+    }
+    if (event_mask & CFN_HAL_PWM_EVENT_PULSE_MATCH)
+    {
+        uint32_t channel = get_hal_channel(driver->phy->channel);
+        __HAL_TIM_ENABLE_IT(htim,
+                            (channel == TIM_CHANNEL_1)   ? TIM_IT_CC1
+                            : (channel == TIM_CHANNEL_2) ? TIM_IT_CC2
+                            : (channel == TIM_CHANNEL_3) ? TIM_IT_CC3
+                                                         : TIM_IT_CC4);
+    }
 
-  return CFN_HAL_ERROR_OK;
+    return CFN_HAL_ERROR_OK;
 }
 
-static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base,
-                                                    uint32_t event_mask) {
-  cfn_hal_pwm_t *driver = (cfn_hal_pwm_t *)base;
-  uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-  TIM_HandleTypeDef *htim = &port_htims[port_id];
+static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint32_t event_mask)
+{
+    cfn_hal_pwm_t     *driver  = (cfn_hal_pwm_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim    = &port_htims[port_id];
 
-  if (event_mask & CFN_HAL_PWM_EVENT_PERIOD_MATCH) {
-    __HAL_TIM_DISABLE_IT(htim, TIM_IT_UPDATE);
-  }
-  if (event_mask & CFN_HAL_PWM_EVENT_PULSE_MATCH) {
-    uint32_t channel = get_hal_channel(driver->phy->channel);
-    __HAL_TIM_DISABLE_IT(htim, (channel == TIM_CHANNEL_1)   ? TIM_IT_CC1
-                               : (channel == TIM_CHANNEL_2) ? TIM_IT_CC2
-                               : (channel == TIM_CHANNEL_3) ? TIM_IT_CC3
-                                                            : TIM_IT_CC4);
-  }
+    if (event_mask & CFN_HAL_PWM_EVENT_PERIOD_MATCH)
+    {
+        __HAL_TIM_DISABLE_IT(htim, TIM_IT_UPDATE);
+    }
+    if (event_mask & CFN_HAL_PWM_EVENT_PULSE_MATCH)
+    {
+        uint32_t channel = get_hal_channel(driver->phy->channel);
+        __HAL_TIM_DISABLE_IT(htim,
+                             (channel == TIM_CHANNEL_1)   ? TIM_IT_CC1
+                             : (channel == TIM_CHANNEL_2) ? TIM_IT_CC2
+                             : (channel == TIM_CHANNEL_3) ? TIM_IT_CC3
+                                                          : TIM_IT_CC4);
+    }
 
-  return CFN_HAL_ERROR_OK;
+    return CFN_HAL_ERROR_OK;
 }
 
-static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base,
-                                                uint32_t *event_mask) {
-  CFN_HAL_UNUSED(base);
-  if (event_mask != NULL) {
-    *event_mask = 0;
-  }
-  return CFN_HAL_ERROR_OK;
+static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
+{
+    CFN_HAL_UNUSED(base);
+    if (event_mask != NULL)
+    {
+        *event_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
 }
 
-static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base,
-                                                   uint32_t error_mask) {
-  cfn_hal_pwm_t *driver = (cfn_hal_pwm_t *)base;
-  uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-  TIM_HandleTypeDef *htim = &port_htims[port_id];
+static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint32_t error_mask)
+{
+    cfn_hal_pwm_t     *driver  = (cfn_hal_pwm_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim    = &port_htims[port_id];
 
-  if (error_mask & CFN_HAL_PWM_ERROR_FAULT) {
-    __HAL_TIM_ENABLE_IT(htim, TIM_IT_BREAK);
-  }
+    if (error_mask & CFN_HAL_PWM_ERROR_FAULT)
+    {
+        __HAL_TIM_ENABLE_IT(htim, TIM_IT_BREAK);
+    }
 
-  return CFN_HAL_ERROR_OK;
+    return CFN_HAL_ERROR_OK;
 }
 
-static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base,
-                                                    uint32_t error_mask) {
-  cfn_hal_pwm_t *driver = (cfn_hal_pwm_t *)base;
-  uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-  TIM_HandleTypeDef *htim = &port_htims[port_id];
+static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint32_t error_mask)
+{
+    cfn_hal_pwm_t     *driver  = (cfn_hal_pwm_t *) base;
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim    = &port_htims[port_id];
 
-  if (error_mask & CFN_HAL_PWM_ERROR_FAULT) {
-    __HAL_TIM_DISABLE_IT(htim, TIM_IT_BREAK);
-  }
+    if (error_mask & CFN_HAL_PWM_ERROR_FAULT)
+    {
+        __HAL_TIM_DISABLE_IT(htim, TIM_IT_BREAK);
+    }
 
-  return CFN_HAL_ERROR_OK;
+    return CFN_HAL_ERROR_OK;
 }
 
-static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base,
-                                                uint32_t *error_mask) {
-  CFN_HAL_UNUSED(base);
-  if (error_mask != NULL) {
-    *error_mask = 0;
-  }
-  return CFN_HAL_ERROR_OK;
+static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
+{
+    CFN_HAL_UNUSED(base);
+    if (error_mask != NULL)
+    {
+        *error_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
 }
 
 /* PWM Specific Functions */
 
-static cfn_hal_error_code_t port_pwm_start(cfn_hal_pwm_t *driver) {
-  uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-  return cfn_hal_stm32_map_error(HAL_TIM_PWM_Start(
-      &port_htims[port_id], get_hal_channel(driver->phy->channel)));
+static cfn_hal_error_code_t port_pwm_start(cfn_hal_pwm_t *driver)
+{
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    return cfn_hal_stm32_map_error(HAL_TIM_PWM_Start(&port_htims[port_id], get_hal_channel(driver->phy->channel)));
 }
 
-static cfn_hal_error_code_t port_pwm_stop(cfn_hal_pwm_t *driver) {
-  uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-  return cfn_hal_stm32_map_error(HAL_TIM_PWM_Stop(
-      &port_htims[port_id], get_hal_channel(driver->phy->channel)));
+static cfn_hal_error_code_t port_pwm_stop(cfn_hal_pwm_t *driver)
+{
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    return cfn_hal_stm32_map_error(HAL_TIM_PWM_Stop(&port_htims[port_id], get_hal_channel(driver->phy->channel)));
 }
 
-static cfn_hal_error_code_t port_pwm_set_frequency(cfn_hal_pwm_t *driver,
-                                                   uint32_t frequency_hz) {
-  uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-  TIM_HandleTypeDef *htim = &port_htims[port_id];
-  uint32_t timer_clk = get_timer_clock(PORT_INSTANCES[port_id]);
-  uint32_t prescaler = htim->Init.Prescaler;
-  uint32_t period = (timer_clk / (prescaler + 1)) / frequency_hz;
+static cfn_hal_error_code_t port_pwm_set_frequency(cfn_hal_pwm_t *driver, uint32_t frequency_hz)
+{
+    uint32_t           port_id   = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim      = &port_htims[port_id];
+    uint32_t           timer_clk = get_timer_clock(PORT_INSTANCES[port_id]);
+    uint32_t           prescaler = htim->Init.Prescaler;
+    uint32_t           period    = (timer_clk / (prescaler + 1)) / frequency_hz;
 
-  if (period > 0xFFFF &&
-      (PORT_INSTANCES[port_id] != TIM2 && PORT_INSTANCES[port_id] != TIM5)) {
-    /* Need to adjust prescaler for 16-bit timers */
-    prescaler = (timer_clk / 65535 / frequency_hz);
-    period = (timer_clk / (prescaler + 1)) / frequency_hz;
-  }
+    if (period > 0xFFFF && (PORT_INSTANCES[port_id] != TIM2 && PORT_INSTANCES[port_id] != TIM5))
+    {
+        /* Need to adjust prescaler for 16-bit timers */
+        prescaler = (timer_clk / 65535 / frequency_hz);
+        period    = (timer_clk / (prescaler + 1)) / frequency_hz;
+    }
 
-  __HAL_TIM_SET_PRESCALER(htim, prescaler);
-  __HAL_TIM_SET_AUTORELOAD(htim, period - 1);
+    __HAL_TIM_SET_PRESCALER(htim, prescaler);
+    __HAL_TIM_SET_AUTORELOAD(htim, period - 1);
 
-  return CFN_HAL_ERROR_OK;
+    return CFN_HAL_ERROR_OK;
 }
 
-static cfn_hal_error_code_t port_pwm_set_duty_cycle(cfn_hal_pwm_t *driver,
-                                                    uint32_t duty_percent) {
-  uint32_t port_id = (uint32_t)(uintptr_t)driver->phy->instance;
-  TIM_HandleTypeDef *htim = &port_htims[port_id];
-  uint32_t period = __HAL_TIM_GET_AUTORELOAD(htim);
-  uint32_t pulse = (period * duty_percent) / 100;
+static cfn_hal_error_code_t port_pwm_set_duty_cycle(cfn_hal_pwm_t *driver, uint32_t duty_percent)
+{
+    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim    = &port_htims[port_id];
+    uint32_t           period  = __HAL_TIM_GET_AUTORELOAD(htim);
+    uint32_t           pulse   = (period * duty_percent) / 100;
 
-  __HAL_TIM_SET_COMPARE(htim, get_hal_channel(driver->phy->channel), pulse);
+    __HAL_TIM_SET_COMPARE(htim, get_hal_channel(driver->phy->channel), pulse);
 
-  return CFN_HAL_ERROR_OK;
+    return CFN_HAL_ERROR_OK;
 }
 
 /* API --------------------------------------------------------------*/
@@ -382,51 +400,55 @@ static const cfn_hal_pwm_api_t PWM_API = {
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t cfn_hal_pwm_construct(cfn_hal_pwm_t *driver,
+cfn_hal_error_code_t cfn_hal_pwm_construct(cfn_hal_pwm_t              *driver,
                                            const cfn_hal_pwm_config_t *config,
-                                           const cfn_hal_pwm_phy_t *phy,
-                                           struct cfn_hal_clock_s *clock,
-                                           cfn_hal_pwm_callback_t callback,
-                                           void *user_arg) {
+                                           const cfn_hal_pwm_phy_t    *phy,
+                                           struct cfn_hal_clock_s     *clock,
+                                           cfn_hal_pwm_callback_t      callback,
+                                           void                       *user_arg)
+{
 #ifdef HAL_TIM_MODULE_ENABLED
-  if ((driver == NULL) || (phy == NULL)) {
-    return CFN_HAL_ERROR_BAD_PARAM;
-  }
+    if ((driver == NULL) || (phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
 
-  uint32_t port_id = (uint32_t)(uintptr_t)phy->instance;
-  if (port_id >= CFN_HAL_TIMER_PORT_MAX || PORT_INSTANCES[port_id] == NULL) {
-    return CFN_HAL_ERROR_BAD_PARAM;
-  }
+    uint32_t port_id = (uint32_t) (uintptr_t) phy->instance;
+    if (port_id >= CFN_HAL_TIMER_PORT_MAX || PORT_INSTANCES[port_id] == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
 
-  uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
-  cfn_hal_pwm_populate(driver, peripheral_id, clock, &PWM_API, phy, config,
-                       callback, user_arg);
+    uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
+    cfn_hal_pwm_populate(driver, peripheral_id, clock, &PWM_API, phy, config, callback, user_arg);
 
-  port_htims[port_id].Instance = PORT_INSTANCES[port_id];
-  port_drivers[port_id] = driver;
+    port_htims[port_id].Instance = PORT_INSTANCES[port_id];
+    port_drivers[port_id]        = driver;
 
-  return CFN_HAL_ERROR_OK;
+    return CFN_HAL_ERROR_OK;
 #else
-  CFN_HAL_UNUSED(driver);
-  CFN_HAL_UNUSED(config);
-  CFN_HAL_UNUSED(phy);
-  CFN_HAL_UNUSED(clock);
-  CFN_HAL_UNUSED(callback);
-  CFN_HAL_UNUSED(user_arg);
-  return CFN_HAL_ERROR_NOT_SUPPORTED;
+    CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(config);
+    CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
 
-cfn_hal_error_code_t cfn_hal_pwm_destruct(cfn_hal_pwm_t *driver) {
+cfn_hal_error_code_t cfn_hal_pwm_destruct(cfn_hal_pwm_t *driver)
+{
 #ifdef HAL_TIM_MODULE_ENABLED
-  if (driver == NULL) {
-    return CFN_HAL_ERROR_BAD_PARAM;
-  }
-  driver->config = NULL;
-  driver->phy = NULL;
-  return CFN_HAL_ERROR_OK;
+    if (driver == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    driver->config = NULL;
+    driver->phy    = NULL;
+    return CFN_HAL_ERROR_OK;
 #else
-  CFN_HAL_UNUSED(driver);
-  return CFN_HAL_ERROR_NOT_SUPPORTED;
+    CFN_HAL_UNUSED(driver);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }

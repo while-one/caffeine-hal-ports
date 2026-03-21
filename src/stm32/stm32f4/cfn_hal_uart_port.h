@@ -27,7 +27,8 @@
 #define CAFFEINE_HAL_PORT_UART_STM32F4_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 /* Includes ---------------------------------------------------------*/
@@ -40,18 +41,19 @@ extern "C" {
  * This represents the exhaustive superset available in the STM32F4 family.
  * Elements are named to match CMSIS definitions (USART vs UART).
  */
-typedef enum {
-  CFN_HAL_UART_PORT_USART1,
-  CFN_HAL_UART_PORT_USART2,
-  CFN_HAL_UART_PORT_USART3,
-  CFN_HAL_UART_PORT_UART4,
-  CFN_HAL_UART_PORT_UART5,
-  CFN_HAL_UART_PORT_USART6,
-  CFN_HAL_UART_PORT_UART7,
-  CFN_HAL_UART_PORT_UART8,
-  CFN_HAL_UART_PORT_UART9,
-  CFN_HAL_UART_PORT_UART10,
-  CFN_HAL_UART_PORT_MAX
+typedef enum
+{
+    CFN_HAL_UART_PORT_USART1,
+    CFN_HAL_UART_PORT_USART2,
+    CFN_HAL_UART_PORT_USART3,
+    CFN_HAL_UART_PORT_UART4,
+    CFN_HAL_UART_PORT_UART5,
+    CFN_HAL_UART_PORT_USART6,
+    CFN_HAL_UART_PORT_UART7,
+    CFN_HAL_UART_PORT_UART8,
+    CFN_HAL_UART_PORT_UART9,
+    CFN_HAL_UART_PORT_UART10,
+    CFN_HAL_UART_PORT_MAX
 } cfn_hal_uart_port_t;
 
 /* Functions prototypes ---------------------------------------------*/

@@ -51,24 +51,21 @@ static const cfn_hal_nvm_api_t nvm_api = {
     .get_info = NULL
 };
 
-cfn_hal_error_code_t cfn_hal_nvm_construct(cfn_hal_nvm_t *driver, const cfn_hal_nvm_config_t *config, const cfn_hal_nvm_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_nvm_construct(cfn_hal_nvm_t              *driver,
+                                           const cfn_hal_nvm_config_t *config,
+                                           const cfn_hal_nvm_phy_t    *phy,
+                                           struct cfn_hal_clock_s     *clock,
+                                           cfn_hal_nvm_callback_t      callback,
+                                           void                       *user_arg)
 {
     if ((driver == NULL) || (phy == NULL)) { return CFN_HAL_ERROR_BAD_PARAM; }
-    driver->api = &nvm_api;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_NVM;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config = config;
-    driver->phy = phy;
+    cfn_hal_nvm_populate(driver, 0, clock, &nvm_api, phy, config, callback, user_arg);
     return CFN_HAL_ERROR_OK;
 }
 
 cfn_hal_error_code_t cfn_hal_nvm_destruct(cfn_hal_nvm_t *driver)
 {
     if (driver == NULL) { return CFN_HAL_ERROR_BAD_PARAM; }
-    driver->api = NULL;
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_NVM;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config = NULL;
-    driver->phy = NULL;
+    cfn_hal_nvm_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 }

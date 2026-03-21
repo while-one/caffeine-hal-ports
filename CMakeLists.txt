@@ -7,23 +7,6 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-# User-configurable flags (with sensible defaults)
-option(CAFFEINE_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
-set(CAFFEINE_OPTIMIZATION_LEVEL "-Os" CACHE STRING "Compiler optimization level (e.g., -O0, -O2, -Os, -O3)")
-
-# Universal strict warnings and preparation for dead-code elimination
-set(CAFFEINE_COMPILE_OPTIONS
-        -pedantic-errors
-        -Wall -Wextra -Wpedantic -Wshadow
-        -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations
-        -ffunction-sections -fdata-sections
-        ${CAFFEINE_OPTIMIZATION_LEVEL}
-)
-
-if(CAFFEINE_WARNINGS_AS_ERRORS)
-    list(APPEND CAFFEINE_COMPILE_OPTIONS -Werror)
-endif()
-
 MESSAGE(STATUS "Target CAFFEINE_BUILD_STAGE: ${CAFFEINE_BUILD_STAGE}")
 
 # Export compile commands for analysis tools

@@ -180,6 +180,10 @@ static cfn_hal_uart_t *port_drivers[CFN_HAL_UART_PORT_MAX];
  */
 static uint32_t get_port_id_from_handle(UART_HandleTypeDef *huart)
 {
+    if (!huart)
+    {
+        return UINT32_MAX;
+    }
     if ((huart < &port_huarts[0]) || (huart >= &port_huarts[CFN_HAL_UART_PORT_MAX]))
     {
         return UINT32_MAX;
@@ -860,7 +864,12 @@ static const cfn_hal_uart_api_t UART_API = {
  * @param user_arg User argument for the callback.
  * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
  */
-cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *config, const cfn_hal_uart_phy_t *phy, struct cfn_hal_clock_s *clock, cfn_hal_uart_callback_t callback, void *user_arg)
+cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t              *driver,
+                                            const cfn_hal_uart_config_t *config,
+                                            const cfn_hal_uart_phy_t    *phy,
+                                            struct cfn_hal_clock_s      *clock,
+                                            cfn_hal_uart_callback_t      callback,
+                                            void                        *user_arg)
 {
 #ifdef HAL_UART_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
