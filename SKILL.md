@@ -139,18 +139,18 @@ static const cfn_hal_uart_api_t uart_api = {
 };
 
 // 4. Construction
-cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *config, const cfn_hal_uart_phy_t *phy) 
+cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *config, const cfn_hal_uart_phy_t *phy, struct cfn_hal_clock_s *clock, cfn_hal_uart_callback_t callback, void *user_arg) 
 {
     if ((driver == NULL) || (config == NULL) || (phy == NULL)) 
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
     
-    driver->api = &uart_api; // VMT assignment
-    driver->base.type = CFN_HAL_PERIPHERAL_TYPE_UART; 
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config = config;
-    driver->phy = phy;
+    // Convert physical instance to ID and Map to peripheral_id if needed
+    uint32_t peripheral_id = 0; // Derived from phy->instance
+    
+    // Standard population
+    cfn_hal_uart_populate(driver, peripheral_id, clock, &uart_api, phy, config, callback, user_arg);
     
     return CFN_HAL_ERROR_OK;
 }

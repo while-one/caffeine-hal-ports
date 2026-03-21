@@ -164,11 +164,20 @@ static const cfn_hal_uart_api_t UART_API = {
 };
 
 /* Instantiation ----------------------------------------------------*/
-
-cfn_hal_error_code_t
-cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *config, const cfn_hal_uart_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t              *driver,
+                                            const cfn_hal_uart_config_t *config,
+                                            const cfn_hal_uart_phy_t    *phy,
+                                            struct cfn_hal_clock_s      *clock,
+                                            cfn_hal_uart_callback_t      callback,
+                                            void                        *user_arg)
 {
     if ((driver == NULL) || (phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) phy->instance;
+    if (port_id >= CFN_HAL_UART_PORT_MAX)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
@@ -187,11 +196,7 @@ cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_hal_uart_config_t *conf
     driver->base.lock_obj = mutex;
 #endif
 
-    driver->api         = &UART_API;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_UART;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config      = config;
-    driver->phy         = phy;
+    cfn_hal_uart_populate(driver, port_id, clock, &UART_API, phy, config, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
 }
@@ -203,6 +208,8 @@ cfn_hal_error_code_t cfn_hal_uart_destruct(cfn_hal_uart_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
+    uint32_t port_id = driver->base.peripheral_id;
+
 #if (CFN_HAL_USE_LOCK == 1)
     if (driver->base.lock_obj)
     {
@@ -212,11 +219,7 @@ cfn_hal_error_code_t cfn_hal_uart_destruct(cfn_hal_uart_t *driver)
     }
 #endif
 
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_UART;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
+    cfn_hal_uart_populate(driver, port_id, NULL, NULL, NULL, NULL, NULL, NULL);
 
     return CFN_HAL_ERROR_OK;
 }
