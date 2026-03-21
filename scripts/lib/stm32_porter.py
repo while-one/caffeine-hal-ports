@@ -53,8 +53,8 @@ class Stm32Porter(BasePorter):
                                   f'#include "cfn_hal_{peripheral}_port.h"\n{hal_header}')
 
         # 2. Wrap implementation in guards
-        construct_pattern = rf"cfn_hal_{peripheral}_construct\(.*?\)\s*{{.*?}}"
-        destruct_pattern = rf"cfn_hal_{peripheral}_destruct\(.*?\)\s*{{.*?}}"
+        construct_pattern = rf"cfn_hal_error_code_t\s+cfn_hal_{peripheral}_construct\(.*?\)\s*{{.*?\n}}"
+        destruct_pattern = rf"cfn_hal_error_code_t\s+cfn_hal_{peripheral}_destruct\(.*?\)\s*{{.*?\n}}"
         
         construct_match = re.search(construct_pattern, content, re.DOTALL)
         destruct_match = re.search(destruct_pattern, content, re.DOTALL)
@@ -72,27 +72,46 @@ class Stm32Porter(BasePorter):
         final_content = impl_part[:headers_end] + f"\n\n#ifdef {module_define}\n" + impl_part[headers_end:]
         final_content += f"\n{construct_body}\n\n{destruct_body}\n"
         
+
+        construct_sig = construct_match.group(0).split('{')[0].strip()
+        destruct_sig = destruct_match.group(0).split('{')[0].strip()
+        
+        def extract_param_names(sig):
+            params_str = sig[sig.find('(')+1:sig.rfind(')')]
+            names = []
+            for p in params_str.split(','):
+                p = p.strip()
+                if not p or p == 'void': continue
+                # The name is usually the last word, sometimes after a pointer '*'
+                name_match = re.search(r'([a-zA-Z0-9_]+)\s*$', p.replace('*', ' '))
+                if name_match:
+                    names.append(name_match.group(1))
+            return names
+            
+        construct_params = extract_param_names(construct_sig)
+        destruct_params = extract_param_names(destruct_sig)
+        
+        construct_unused = "\n    ".join(f"CFN_HAL_UNUSED({p});" for p in construct_params)
+        destruct_unused = "\n    ".join(f"CFN_HAL_UNUSED({p});" for p in destruct_params)
+
         final_content += f"""
 #else
 
-cfn_hal_error_code_t cfn_hal_{peripheral}_construct(cfn_hal_{peripheral}_t *driver, 
-                                              const cfn_hal_{peripheral}_config_t *config, 
-                                              const cfn_hal_{peripheral}_phy_t *phy)
+{construct_sig}
 {{
-    CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(config);
-    CFN_HAL_UNUSED(phy);
+    {construct_unused}
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }}
 
-cfn_hal_error_code_t cfn_hal_{peripheral}_destruct(cfn_hal_{peripheral}_t *driver)
+{destruct_sig}
 {{
-    CFN_HAL_UNUSED(driver);
+    {destruct_unused}
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }}
 
-#endif /* {module_define} */
+#endif /* {{module_define}} */
 """
+
         return final_content
 
     def scaffold(self):

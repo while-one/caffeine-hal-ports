@@ -33,8 +33,8 @@ extern "C"
 
 #include "cfn_hal_timer.h"
 
-cfn_hal_error_code_t cfn_hal_timer_construct(cfn_hal_timer_t *driver, const cfn_hal_timer_config_t *config, const cfn_hal_timer_phy_t *phy);
-cfn_hal_error_code_t cfn_hal_timer_destruct(cfn_hal_timer_t *driver);
+
+
 
 #ifdef __cplusplus
 }

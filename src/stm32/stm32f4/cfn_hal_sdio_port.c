@@ -24,22 +24,32 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_sdio.h"
 #include "cfn_hal_sdio_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
+#include "cfn_hal_sdio.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 
 #ifdef HAL_SD_MODULE_ENABLED
 
 /* Private Data -----------------------------------------------------*/
 
+static const uint32_t PORT_MAP_PERIPHERAL_ID[CFN_HAL_SDIO_PORT_MAX] = {
+    [CFN_HAL_SDIO_PORT_1] = CFN_HAL_PORT_PERIPH_SDIO,
+};
+
 static SD_HandleTypeDef port_hsd;
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_sdio_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_sdio_t *driver)
 {
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     /* 1. Enable Clock */
     __HAL_RCC_SDIO_CLK_ENABLE();
 
@@ -68,15 +78,22 @@ static void low_level_init(cfn_hal_sdio_t *driver)
     {
         (void) cfn_hal_gpio_init(driver->phy->d3->port);
     }
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_sdio_t *driver = (cfn_hal_sdio_t *) base;
+    cfn_hal_sdio_t      *driver = (cfn_hal_sdio_t *) base;
+    cfn_hal_error_code_t error;
 
-    low_level_init(driver);
+    error = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
+    {
+        return error;
+    }
 
-    port_hsd.Instance                 = SDIO;
+    port_hsd.Instance                 = (SDIO_TypeDef *) driver->phy->instance;
     port_hsd.Init.ClockEdge           = SDIO_CLOCK_EDGE_RISING;
     port_hsd.Init.ClockBypass         = SDIO_CLOCK_BYPASS_DISABLE;
     port_hsd.Init.ClockPowerSave      = SDIO_CLOCK_POWER_SAVE_DISABLE;
@@ -128,9 +145,8 @@ port_sdio_send_command(cfn_hal_sdio_t *driver, const cfn_hal_sdio_cmd_t *cmd, ui
     s_cmd.Argument            = cmd->arg;
     s_cmd.CmdIndex            = cmd->cmd_index;
     s_cmd.Response            = cmd->response_type;
-    s_cmd.WaitForInterrupt =
-        SDIO_WAIT_NO; /* Wait member exists in some F4 versions but might be named differently or used differently */
-    s_cmd.CPSM = SDIO_CPSM_ENABLE;
+    s_cmd.WaitForInterrupt    = SDIO_WAIT_NO;
+    s_cmd.CPSM                = SDIO_CPSM_ENABLE;
 
     (void) SDIO_SendCommand(port_hsd.Instance, &s_cmd);
 
@@ -194,49 +210,60 @@ static cfn_hal_error_code_t port_sdio_wait_card_ready(cfn_hal_sdio_t *driver, ui
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_sdio_api_t SDIO_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .send_command = port_sdio_send_command,
     .read_blocks = port_sdio_read_blocks,
     .write_blocks = port_sdio_write_blocks,
     .get_card_info = port_sdio_get_card_info,
-    .wait_card_ready = port_sdio_wait_card_ready
-};
+    .wait_card_ready = port_sdio_wait_card_ready};
 
 #endif /* HAL_SD_MODULE_ENABLED */
 
 /* Instantiation ----------------------------------------------------*/
-cfn_hal_error_code_t
-cfn_hal_sdio_construct(cfn_hal_sdio_t *driver, const cfn_hal_sdio_config_t *config, const cfn_hal_sdio_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_sdio_construct(cfn_hal_sdio_t              *driver,
+                                            const cfn_hal_sdio_config_t *config,
+                                            const cfn_hal_sdio_phy_t    *phy,
+                                            struct cfn_hal_clock_s      *clock,
+                                            cfn_hal_sdio_callback_t      callback,
+                                            void                        *user_arg)
 {
 #ifdef HAL_SD_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
+    uint32_t port_id = (uint32_t) (uintptr_t) phy->instance;
+    if (port_id >= CFN_HAL_SDIO_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
 
-    driver->api         = &SDIO_API;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_SDIO;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config      = config;
-    driver->phy         = phy;
+    uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
+
+    cfn_hal_sdio_populate(driver, peripheral_id, clock, &SDIO_API, phy, config, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
@@ -248,13 +275,8 @@ cfn_hal_error_code_t cfn_hal_sdio_destruct(cfn_hal_sdio_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_SDIO;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

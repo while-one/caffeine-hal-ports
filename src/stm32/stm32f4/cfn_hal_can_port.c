@@ -24,26 +24,19 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_can.h"
 #include "cfn_hal_can_port.h"
+#include "cfn_hal_can.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 
+/* Private Prototypes ----------------------------------------------*/
+/* Private Prototypes ----------------------------------------------*/
 #ifdef HAL_CAN_MODULE_ENABLED
 
 /* Private Data -----------------------------------------------------*/
-
-/**
- * @brief Mapping from Caffeine CAN port IDs to global clock peripheral IDs.
- */
-static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_CAN_PORT_MAX] = {
-    [CFN_HAL_CAN_PORT_CAN1] = CFN_HAL_PORT_PERIPH_CAN1,
-    [CFN_HAL_CAN_PORT_CAN2] = CFN_HAL_PORT_PERIPH_CAN2,
-    [CFN_HAL_CAN_PORT_CAN3] = CFN_HAL_PORT_PERIPH_CAN3,
-};
-
 static CAN_TypeDef *const PORT_INSTANCES[CFN_HAL_CAN_PORT_MAX] = {
 #if defined(CAN1)
     [CFN_HAL_CAN_PORT_CAN1] = CAN1,
@@ -56,30 +49,59 @@ static CAN_TypeDef *const PORT_INSTANCES[CFN_HAL_CAN_PORT_MAX] = {
 #endif
 };
 
+static const uint32_t PORT_MAP_PERIPHERAL_ID[CFN_HAL_CAN_PORT_MAX] = {
+#if defined(CAN1)
+    [CFN_HAL_CAN_PORT_CAN1] = CFN_HAL_PORT_PERIPH_CAN1,
+#endif
+#if defined(CAN2)
+    [CFN_HAL_CAN_PORT_CAN2] = CFN_HAL_PORT_PERIPH_CAN2,
+#endif
+#if defined(CAN3)
+    [CFN_HAL_CAN_PORT_CAN3] = CFN_HAL_PORT_PERIPH_CAN3,
+#endif
+};
+
 static CAN_HandleTypeDef port_hcans[CFN_HAL_CAN_PORT_MAX];
 static cfn_hal_can_t    *port_drivers[CFN_HAL_CAN_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
-static int32_t get_port_id_from_handle(CAN_HandleTypeDef *hcan)
+static uint32_t get_port_id_from_handle(CAN_HandleTypeDef *handle)
 {
-    for (uint32_t i = 0; i < CFN_HAL_CAN_PORT_MAX; i++)
+    if (!handle)
     {
-        if (&port_hcans[i] == hcan)
-        {
-            return (int32_t) i;
-        }
+        return UINT32_MAX;
     }
-    return -1;
+    if ((handle < &port_hcans[0]) || (handle >= &port_hcans[CFN_HAL_CAN_PORT_MAX]))
+    {
+        return UINT32_MAX;
+    }
+    return (uint32_t) (handle - port_hcans);
 }
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_can_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_can_t *driver)
 {
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    struct cfn_hal_clock_s *clk = driver->base.clock_driver;
+    if (clk == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_CAN_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
+    cfn_hal_clock_enable_gate((cfn_hal_clock_t *) clk, driver->base.peripheral_id);
 
     /* 2. Initialize Pins */
     if (driver->phy->tx)
@@ -90,15 +112,30 @@ static void low_level_init(cfn_hal_can_t *driver)
     {
         (void) cfn_hal_gpio_init(driver->phy->rx->port);
     }
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_can_t     *driver  = (cfn_hal_can_t *) base;
-    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    cfn_hal_can_t *driver = (cfn_hal_can_t *) base;
+    if ((driver == NULL) || (driver->phy == NULL) || (driver->config == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_CAN_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     CAN_HandleTypeDef *hcan    = &port_hcans[port_id];
 
-    low_level_init(driver);
+    cfn_hal_error_code_t error = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
+    {
+        return error;
+    }
 
     hcan->Instance                  = PORT_INSTANCES[port_id];
 
@@ -249,8 +286,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan)
 {
-    int32_t port_id = get_port_id_from_handle(hcan);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hcan);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_can_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -262,8 +299,8 @@ void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan)
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-    int32_t port_id = get_port_id_from_handle(hcan);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hcan);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_can_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -277,8 +314,8 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
 void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
 {
-    int32_t port_id = get_port_id_from_handle(hcan);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hcan);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_can_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -293,6 +330,12 @@ void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
 /* Raw ISR Handlers -------------------------------------------------*/
 
 #ifndef CFN_HAL_PORT_DISABLE_IRQ_CAN
+void CAN1_RX0_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void CAN1_SCE_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void CAN1_TX_IRQHandler(void);  // NOLINT(readability-identifier-naming)
+void CAN2_RX0_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void CAN2_SCE_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void CAN2_TX_IRQHandler(void);  // NOLINT(readability-identifier-naming)
 
 #if defined(CAN1)
 void CAN1_TX_IRQHandler(void) // NOLINT(readability-identifier-naming)
@@ -403,30 +446,35 @@ static cfn_hal_error_code_t port_can_add_filter(cfn_hal_can_t *driver, const cfn
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_can_api_t CAN_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = port_base_event_enable,
-        .event_disable = port_base_event_disable,
-        .event_get = port_base_event_get,
-        .error_enable = port_base_error_enable,
-        .error_disable = port_base_error_disable,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = port_base_event_enable,
+            .event_disable = port_base_event_disable,
+            .event_get = port_base_event_get,
+            .error_enable = port_base_error_enable,
+            .error_disable = port_base_error_disable,
+            .error_get = port_base_error_get,
+        },
     .transmit = port_can_transmit,
     .receive = port_can_receive,
-    .add_filter = port_can_add_filter
-};
+    .add_filter = port_can_add_filter};
 
 #endif /* HAL_CAN_MODULE_ENABLED */
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_can_construct(cfn_hal_can_t *driver, const cfn_hal_can_config_t *config, const cfn_hal_can_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_can_construct(cfn_hal_can_t              *driver,
+                                           const cfn_hal_can_config_t *config,
+                                           const cfn_hal_can_phy_t    *phy,
+                                           struct cfn_hal_clock_s     *clock,
+                                           cfn_hal_can_callback_t      callback,
+                                           void                       *user_arg)
 {
 #ifdef HAL_CAN_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
@@ -440,11 +488,9 @@ cfn_hal_can_construct(cfn_hal_can_t *driver, const cfn_hal_can_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api                  = &CAN_API;
-    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_CAN;
-    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config               = config;
-    driver->phy                  = phy;
+    uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
+
+    cfn_hal_can_populate(driver, peripheral_id, clock, &CAN_API, phy, config, callback, user_arg);
 
     port_hcans[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -454,6 +500,9 @@ cfn_hal_can_construct(cfn_hal_can_t *driver, const cfn_hal_can_config_t *config,
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
@@ -465,19 +514,8 @@ cfn_hal_error_code_t cfn_hal_can_destruct(cfn_hal_can_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-
-    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    if (port_id < CFN_HAL_CAN_PORT_MAX)
-    {
-        port_drivers[port_id] = NULL;
-    }
-
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_CAN;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

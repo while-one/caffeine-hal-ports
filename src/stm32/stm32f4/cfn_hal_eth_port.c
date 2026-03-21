@@ -24,17 +24,24 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_eth.h"
 #include "cfn_hal_eth_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
+#include "cfn_hal_eth.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 #include <string.h>
 
+/* Private Prototypes ----------------------------------------------*/
+/* Private Prototypes ----------------------------------------------*/
 #ifdef HAL_ETH_MODULE_ENABLED
 
 /* Private Data -----------------------------------------------------*/
+
+static const uint32_t PORT_MAP_PERIPHERAL_ID[CFN_HAL_ETH_PORT_MAX] = {
+    [CFN_HAL_ETH_PORT_ETH1] = CFN_HAL_PORT_PERIPH_ETH,
+};
 
 static ETH_TypeDef *const PORT_INSTANCES[CFN_HAL_ETH_PORT_MAX] = {
 #if defined(ETH)
@@ -47,24 +54,42 @@ static cfn_hal_eth_t    *port_drivers[CFN_HAL_ETH_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
-static int32_t get_port_id_from_handle(ETH_HandleTypeDef *heth)
+static uint32_t get_port_id_from_handle(ETH_HandleTypeDef *heth)
 {
-    for (uint32_t i = 0; i < CFN_HAL_ETH_PORT_MAX; i++)
+    if (!heth)
     {
-        if (&port_heths[i] == heth)
-        {
-            return (int32_t) i;
-        }
+        return UINT32_MAX;
     }
-    return -1;
+    if ((heth < &port_heths[0]) || (heth >= &port_heths[CFN_HAL_ETH_PORT_MAX]))
+    {
+        return UINT32_MAX;
+    }
+    return (uint32_t) (heth - port_heths);
 }
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_eth_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_eth_t *driver)
 {
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    struct cfn_hal_clock_s *clk = driver->base.clock_driver;
+    if (clk == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_ETH_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate(CFN_HAL_PORT_PERIPH_ETH);
+    cfn_hal_clock_enable_gate((cfn_hal_clock_t *) clk, driver->base.peripheral_id);
 
     /* 2. Initialize Pins */
     if (driver->phy->ref_clk)
@@ -103,15 +128,26 @@ static void low_level_init(cfn_hal_eth_t *driver)
     {
         (void) cfn_hal_gpio_init(driver->phy->txd1->port);
     }
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_eth_t     *driver  = (cfn_hal_eth_t *) base;
+    cfn_hal_eth_t *driver = (cfn_hal_eth_t *) base;
+    if ((driver == NULL) || (driver->phy == NULL) || (driver->config == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     ETH_HandleTypeDef *heth    = &port_heths[port_id];
 
-    low_level_init(driver);
+    cfn_hal_error_code_t error = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
+    {
+        return error;
+    }
 
     heth->Instance            = PORT_INSTANCES[port_id];
     heth->Init.MACAddr        = (uint8_t *) driver->config->mac_addr;
@@ -122,8 +158,18 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 {
-    cfn_hal_eth_t *driver  = (cfn_hal_eth_t *) base;
-    uint32_t       port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    cfn_hal_eth_t *driver = (cfn_hal_eth_t *) base;
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_ETH_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     return cfn_hal_stm32_map_error(HAL_ETH_DeInit(&port_heths[port_id]));
 }
 
@@ -158,8 +204,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 void HAL_ETH_RxCpltCallback(ETH_HandleTypeDef *heth)
 {
-    int32_t port_id = get_port_id_from_handle(heth);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(heth);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_eth_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -171,8 +217,8 @@ void HAL_ETH_RxCpltCallback(ETH_HandleTypeDef *heth)
 
 void HAL_ETH_TxCpltCallback(ETH_HandleTypeDef *heth)
 {
-    int32_t port_id = get_port_id_from_handle(heth);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(heth);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_eth_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -184,8 +230,8 @@ void HAL_ETH_TxCpltCallback(ETH_HandleTypeDef *heth)
 
 void HAL_ETH_ErrorCallback(ETH_HandleTypeDef *heth)
 {
-    int32_t port_id = get_port_id_from_handle(heth);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(heth);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_eth_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -200,7 +246,8 @@ void HAL_ETH_ErrorCallback(ETH_HandleTypeDef *heth)
 #ifndef CFN_HAL_PORT_DISABLE_IRQ_ETH
 
 #if defined(ETH)
-void ETH_IRQHandler(void) // NOLINT(readability-identifier-naming)
+void ETH_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void ETH_IRQHandler(void)  // NOLINT(readability-identifier-naming)
 {
     HAL_ETH_IRQHandler(&port_heths[CFN_HAL_ETH_PORT_ETH1]);
 }
@@ -302,34 +349,39 @@ static cfn_hal_error_code_t port_eth_get_link_status(cfn_hal_eth_t *driver, cfn_
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_eth_api_t ETH_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .start = port_eth_start,
     .stop = port_eth_stop,
     .transmit_frame = port_eth_transmit_frame,
     .receive_frame = port_eth_receive_frame,
     .read_phy_reg = port_eth_read_phy_reg,
     .write_phy_reg = port_eth_write_phy_reg,
-    .get_link_status = port_eth_get_link_status
-};
+    .get_link_status = port_eth_get_link_status};
 
 #endif /* HAL_ETH_MODULE_ENABLED */
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_eth_construct(cfn_hal_eth_t *driver, const cfn_hal_eth_config_t *config, const cfn_hal_eth_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_eth_construct(cfn_hal_eth_t              *driver,
+                                           const cfn_hal_eth_config_t *config,
+                                           const cfn_hal_eth_phy_t    *phy,
+                                           struct cfn_hal_clock_s     *clock,
+                                           cfn_hal_eth_callback_t      callback,
+                                           void                       *user_arg)
 {
 #ifdef HAL_ETH_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
@@ -343,11 +395,8 @@ cfn_hal_eth_construct(cfn_hal_eth_t *driver, const cfn_hal_eth_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api                  = &ETH_API;
-    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_ETH;
-    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config               = config;
-    driver->phy                  = phy;
+    uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
+    cfn_hal_eth_populate(driver, peripheral_id, clock, &ETH_API, phy, config, callback, user_arg);
 
     port_heths[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -357,6 +406,9 @@ cfn_hal_eth_construct(cfn_hal_eth_t *driver, const cfn_hal_eth_config_t *config,
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
@@ -369,18 +421,17 @@ cfn_hal_error_code_t cfn_hal_eth_destruct(cfn_hal_eth_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    if (port_id < CFN_HAL_ETH_PORT_MAX)
+    if (driver->phy != NULL)
     {
-        port_drivers[port_id] = NULL;
+        uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+        if (port_id < CFN_HAL_ETH_PORT_MAX)
+        {
+            port_drivers[port_id] = NULL;
+        }
     }
 
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_ETH;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

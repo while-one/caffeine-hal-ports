@@ -24,9 +24,11 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
+
+void cfn_hal_port_clock_enable_gate(cfn_hal_port_peripheral_id_t periph_id);
+#include "cfn_hal_clock.h"
+#include "stm32f4xx_hal.h"
 
 /* VMT Implementations ----------------------------------------------*/
 
@@ -75,6 +77,7 @@ static cfn_hal_error_code_t port_clock_get_system_freq(cfn_hal_clock_t *driver, 
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
+
     *freq_hz = HAL_RCC_GetSysClockFreq();
     return CFN_HAL_ERROR_OK;
 }
@@ -83,12 +86,120 @@ static cfn_hal_error_code_t
 port_clock_get_peripheral_freq(cfn_hal_clock_t *driver, uint32_t peripheral_id, uint32_t *freq_hz)
 {
     CFN_HAL_UNUSED(driver);
-    CFN_HAL_UNUSED(peripheral_id);
     if (!freq_hz)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    *freq_hz = HAL_RCC_GetHCLKFreq();
+
+    cfn_hal_port_peripheral_id_t periph_id = (cfn_hal_port_peripheral_id_t) peripheral_id;
+
+    switch (periph_id)
+    {
+        /* AHB1 Peripherals */
+        /* AHB2 Peripherals */
+        case CFN_HAL_PORT_PERIPH_GPIOA:
+        case CFN_HAL_PORT_PERIPH_GPIOB:
+        case CFN_HAL_PORT_PERIPH_GPIOC:
+        case CFN_HAL_PORT_PERIPH_GPIOD:
+        case CFN_HAL_PORT_PERIPH_GPIOE:
+        case CFN_HAL_PORT_PERIPH_GPIOF:
+        case CFN_HAL_PORT_PERIPH_GPIOG:
+        case CFN_HAL_PORT_PERIPH_GPIOH:
+        case CFN_HAL_PORT_PERIPH_GPIOI:
+        case CFN_HAL_PORT_PERIPH_GPIOJ:
+        case CFN_HAL_PORT_PERIPH_GPIOK:
+        case CFN_HAL_PORT_PERIPH_ETH:
+        case CFN_HAL_PORT_PERIPH_USB_OTG_HS:
+        case CFN_HAL_PORT_PERIPH_USB_OTG_FS:
+        case CFN_HAL_PORT_PERIPH_DMA1:
+        case CFN_HAL_PORT_PERIPH_DMA2:
+        case CFN_HAL_PORT_PERIPH_CRYP:
+        case CFN_HAL_PORT_PERIPH_HASH:
+        case CFN_HAL_PORT_PERIPH_RNG:
+            *freq_hz = HAL_RCC_GetHCLKFreq();
+            break;
+
+        /* APB1 Peripherals */
+        case CFN_HAL_PORT_PERIPH_USART2:
+        case CFN_HAL_PORT_PERIPH_USART3:
+        case CFN_HAL_PORT_PERIPH_UART4:
+        case CFN_HAL_PORT_PERIPH_UART5:
+        case CFN_HAL_PORT_PERIPH_UART7:
+        case CFN_HAL_PORT_PERIPH_UART8:
+        case CFN_HAL_PORT_PERIPH_SPI2:
+        case CFN_HAL_PORT_PERIPH_SPI3:
+        case CFN_HAL_PORT_PERIPH_I2C1:
+        case CFN_HAL_PORT_PERIPH_I2C2:
+        case CFN_HAL_PORT_PERIPH_I2C3:
+        case CFN_HAL_PORT_PERIPH_DAC1:
+        case CFN_HAL_PORT_PERIPH_CAN1:
+        case CFN_HAL_PORT_PERIPH_CAN2:
+        case CFN_HAL_PORT_PERIPH_CAN3:
+            *freq_hz = HAL_RCC_GetPCLK1Freq();
+            break;
+
+        /* APB1 Timers (x2 multiplier if APB1 prescaler != 1) */
+        case CFN_HAL_PORT_PERIPH_TIM2:
+        case CFN_HAL_PORT_PERIPH_TIM3:
+        case CFN_HAL_PORT_PERIPH_TIM4:
+        case CFN_HAL_PORT_PERIPH_TIM5:
+        case CFN_HAL_PORT_PERIPH_TIM6:
+        case CFN_HAL_PORT_PERIPH_TIM7:
+        case CFN_HAL_PORT_PERIPH_TIM12:
+        case CFN_HAL_PORT_PERIPH_TIM13:
+        case CFN_HAL_PORT_PERIPH_TIM14:
+        {
+            uint32_t pclk = HAL_RCC_GetPCLK1Freq();
+            if ((RCC->CFGR & RCC_CFGR_PPRE1) == 0)
+            {
+                *freq_hz = pclk;
+            }
+            else
+            {
+                *freq_hz = pclk * 2;
+            }
+            break;
+        }
+
+        /* APB2 Peripherals */
+        case CFN_HAL_PORT_PERIPH_USART1:
+        case CFN_HAL_PORT_PERIPH_USART6:
+        case CFN_HAL_PORT_PERIPH_UART9:
+        case CFN_HAL_PORT_PERIPH_UART10:
+        case CFN_HAL_PORT_PERIPH_SPI1:
+        case CFN_HAL_PORT_PERIPH_SPI4:
+        case CFN_HAL_PORT_PERIPH_SPI5:
+        case CFN_HAL_PORT_PERIPH_SPI6:
+        case CFN_HAL_PORT_PERIPH_ADC1:
+        case CFN_HAL_PORT_PERIPH_ADC2:
+        case CFN_HAL_PORT_PERIPH_ADC3:
+        case CFN_HAL_PORT_PERIPH_COMP:
+            *freq_hz = HAL_RCC_GetPCLK2Freq();
+            break;
+
+        /* APB2 Timers (x2 multiplier if APB2 prescaler != 1) */
+        case CFN_HAL_PORT_PERIPH_TIM1:
+        case CFN_HAL_PORT_PERIPH_TIM8:
+        case CFN_HAL_PORT_PERIPH_TIM9:
+        case CFN_HAL_PORT_PERIPH_TIM10:
+        case CFN_HAL_PORT_PERIPH_TIM11:
+        {
+            uint32_t pclk = HAL_RCC_GetPCLK2Freq();
+            if ((RCC->CFGR & RCC_CFGR_PPRE2) == 0)
+            {
+                *freq_hz = pclk;
+            }
+            else
+            {
+                *freq_hz = pclk * 2;
+            }
+            break;
+        }
+
+        default:
+            return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     return CFN_HAL_ERROR_OK;
 }
 
@@ -101,26 +212,26 @@ static cfn_hal_error_code_t port_clock_enable_gate(cfn_hal_clock_t *driver, uint
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_clock_api_t CLOCK_API = {
-    .base = {
-        .init = NULL,
-        .deinit = NULL,
-        .power_state_set = NULL,
-        .config_set = NULL,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = NULL,
+            .deinit = NULL,
+            .power_state_set = NULL,
+            .config_set = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .suspend_tick = port_clock_suspend_tick,
     .resume_tick = port_clock_resume_tick,
     .get_system_freq = port_clock_get_system_freq,
     .get_peripheral_freq = port_clock_get_peripheral_freq,
     .enable_gate = port_clock_enable_gate,
-    .disable_gate = NULL
-};
+    .disable_gate = NULL};
 
 /* Internal Helper --------------------------------------------------*/
 
@@ -308,14 +419,124 @@ void cfn_hal_port_clock_enable_gate(cfn_hal_port_peripheral_id_t periph_id)
             __HAL_RCC_CAN2_CLK_ENABLE();
             break;
 #endif
+#if defined(CAN3)
+        case CFN_HAL_PORT_PERIPH_CAN3:
+            __HAL_RCC_CAN3_CLK_ENABLE();
+            break;
+#endif
 #if defined(ETH_MAC_BASE)
         case CFN_HAL_PORT_PERIPH_ETH:
             __HAL_RCC_ETHMAC_CLK_ENABLE();
             break;
 #endif
+#if defined(DMA1)
+        case CFN_HAL_PORT_PERIPH_DMA1:
+            __HAL_RCC_DMA1_CLK_ENABLE();
+            break;
+#endif
+#if defined(DMA2)
+        case CFN_HAL_PORT_PERIPH_DMA2:
+            __HAL_RCC_DMA2_CLK_ENABLE();
+            break;
+#endif
+#if defined(CRYP)
+        case CFN_HAL_PORT_PERIPH_CRYP:
+            __HAL_RCC_CRYP_CLK_ENABLE();
+            break;
+#endif
+#if defined(HASH)
+        case CFN_HAL_PORT_PERIPH_HASH:
+            __HAL_RCC_HASH_CLK_ENABLE();
+            break;
+#endif
+#if defined(RNG)
+        case CFN_HAL_PORT_PERIPH_RNG:
+            __HAL_RCC_RNG_CLK_ENABLE();
+            break;
+#endif
+#if defined(COMP) || defined(COMP1) || defined(SYSCFG_COMP1_OFFSET)
+        case CFN_HAL_PORT_PERIPH_COMP:
+            __HAL_RCC_SYSCFG_CLK_ENABLE();
+            break;
+#endif
+#if defined(USB_OTG_FS)
+        case CFN_HAL_PORT_PERIPH_USB_OTG_FS:
+            __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
+            break;
+#endif
+#if defined(USB_OTG_HS)
+        case CFN_HAL_PORT_PERIPH_USB_OTG_HS:
+            __HAL_RCC_USB_OTG_HS_CLK_ENABLE();
+            break;
+#endif
 #if defined(TIM1)
         case CFN_HAL_PORT_PERIPH_TIM1:
             __HAL_RCC_TIM1_CLK_ENABLE();
+            break;
+#endif
+#if defined(TIM2)
+        case CFN_HAL_PORT_PERIPH_TIM2:
+            __HAL_RCC_TIM2_CLK_ENABLE();
+            break;
+#endif
+#if defined(TIM3)
+        case CFN_HAL_PORT_PERIPH_TIM3:
+            __HAL_RCC_TIM3_CLK_ENABLE();
+            break;
+#endif
+#if defined(TIM4)
+        case CFN_HAL_PORT_PERIPH_TIM4:
+            __HAL_RCC_TIM4_CLK_ENABLE();
+            break;
+#endif
+#if defined(TIM5)
+        case CFN_HAL_PORT_PERIPH_TIM5:
+            __HAL_RCC_TIM5_CLK_ENABLE();
+            break;
+#endif
+#if defined(TIM6)
+        case CFN_HAL_PORT_PERIPH_TIM6:
+            __HAL_RCC_TIM6_CLK_ENABLE();
+            break;
+#endif
+#if defined(TIM7)
+        case CFN_HAL_PORT_PERIPH_TIM7:
+            __HAL_RCC_TIM7_CLK_ENABLE();
+            break;
+#endif
+#if defined(TIM8)
+        case CFN_HAL_PORT_PERIPH_TIM8:
+            __HAL_RCC_TIM8_CLK_ENABLE();
+            break;
+#endif
+#if defined(TIM9)
+        case CFN_HAL_PORT_PERIPH_TIM9:
+            __HAL_RCC_TIM9_CLK_ENABLE();
+            break;
+#endif
+#if defined(TIM10)
+        case CFN_HAL_PORT_PERIPH_TIM10:
+            __HAL_RCC_TIM10_CLK_ENABLE();
+            break;
+#endif
+#if defined(TIM11)
+        case CFN_HAL_PORT_PERIPH_TIM11:
+            __HAL_RCC_TIM11_CLK_ENABLE();
+            break;
+#endif
+#if defined(TIM12)
+        case CFN_HAL_PORT_PERIPH_TIM12:
+            __HAL_RCC_TIM12_CLK_ENABLE();
+            break;
+#endif
+#if defined(TIM13)
+        case CFN_HAL_PORT_PERIPH_TIM13:
+            __HAL_RCC_TIM13_CLK_ENABLE();
+            break;
+#endif
+#if defined(TIM14)
+        case CFN_HAL_PORT_PERIPH_TIM14:
+            __HAL_RCC_TIM14_CLK_ENABLE();
             break;
 #endif
         default:
@@ -325,19 +546,19 @@ void cfn_hal_port_clock_enable_gate(cfn_hal_port_peripheral_id_t periph_id)
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_clock_construct(cfn_hal_clock_t *driver, const cfn_hal_clock_config_t *config, const cfn_hal_clock_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_clock_construct(cfn_hal_clock_t              *driver,
+                                             const cfn_hal_clock_config_t *config,
+                                             const cfn_hal_clock_phy_t    *phy,
+                                             struct cfn_hal_clock_s       *clock,
+                                             cfn_hal_clock_callback_t      callback,
+                                             void                         *user_arg)
 {
-    if (driver == NULL)
+    if (driver == NULL || phy == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api         = &CLOCK_API;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_CLOCK;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config      = config;
-    driver->phy         = phy;
+    cfn_hal_clock_populate(driver, 0, clock, &CLOCK_API, phy, config, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
 }
@@ -349,11 +570,8 @@ cfn_hal_error_code_t cfn_hal_clock_destruct(cfn_hal_clock_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_CLOCK;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
+    driver->config = NULL;
+    driver->phy    = NULL;
 
     return CFN_HAL_ERROR_OK;
 }

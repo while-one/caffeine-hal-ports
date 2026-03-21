@@ -24,10 +24,11 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_nvm.h"
 #include "cfn_hal_nvm_port.h"
+#include "cfn_hal_clock.h"
+#include "cfn_hal_nvm.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 #include <string.h>
 
 /* Private Data -----------------------------------------------------*/
@@ -96,6 +97,27 @@ static uint32_t get_sector(uint32_t address)
 }
 
 /* VMT Implementations ----------------------------------------------*/
+
+static cfn_hal_error_code_t low_level_init(cfn_hal_nvm_t *driver)
+{
+    if (driver == NULL || driver->phy == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    return CFN_HAL_ERROR_OK;
+}
+
+static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
+{
+    if (base == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    cfn_hal_nvm_t *driver = (cfn_hal_nvm_t *) base;
+
+    return low_level_init(driver);
+}
 
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
@@ -203,40 +225,41 @@ static cfn_hal_error_code_t port_nvm_get_info(cfn_hal_nvm_t *driver, cfn_hal_nvm
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_nvm_api_t NVM_API = {
-    .base = {
-        .init = NULL,
-        .deinit = NULL,
-        .power_state_set = NULL,
-        .config_set = NULL,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = NULL,
+            .power_state_set = NULL,
+            .config_set = NULL,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .read = port_nvm_read,
     .write = port_nvm_write,
     .erase_sector = port_nvm_erase_sector,
     .erase_chip = port_nvm_erase_chip,
-    .get_info = port_nvm_get_info
-};
+    .get_info = port_nvm_get_info};
 
 /* Instantiation ----------------------------------------------------*/
-cfn_hal_error_code_t
-cfn_hal_nvm_construct(cfn_hal_nvm_t *driver, const cfn_hal_nvm_config_t *config, const cfn_hal_nvm_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_nvm_construct(cfn_hal_nvm_t              *driver,
+                                           const cfn_hal_nvm_config_t *config,
+                                           const cfn_hal_nvm_phy_t    *phy,
+                                           struct cfn_hal_clock_s     *clock,
+                                           cfn_hal_nvm_callback_t      callback,
+                                           void                       *user_arg)
 {
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api         = &NVM_API;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_NVM;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config      = config;
-    driver->phy         = phy;
+    cfn_hal_nvm_populate(driver, 0, clock, &NVM_API, phy, config, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
 }
@@ -247,12 +270,8 @@ cfn_hal_error_code_t cfn_hal_nvm_destruct(cfn_hal_nvm_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_NVM;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
+    driver->config = NULL;
+    driver->phy    = NULL;
 
     return CFN_HAL_ERROR_OK;
 }

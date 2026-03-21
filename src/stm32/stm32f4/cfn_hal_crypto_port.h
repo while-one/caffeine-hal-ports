@@ -34,6 +34,16 @@ extern "C"
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_crypto.h"
 
+/* Types ------------------------------------------------------------*/
+
+typedef enum
+{
+    CFN_HAL_CRYPTO_PORT_CRYP,
+    CFN_HAL_CRYPTO_PORT_HASH,
+    CFN_HAL_CRYPTO_PORT_RNG,
+    CFN_HAL_CRYPTO_PORT_MAX
+} cfn_hal_crypto_port_t;
+
 /* Functions prototypes ---------------------------------------------*/
 
 /**
@@ -44,9 +54,6 @@ extern "C"
  * @param phy Pointer to the physical mapping structure.
  * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
  */
-cfn_hal_error_code_t cfn_hal_crypto_construct(cfn_hal_crypto_t              *driver,
-                                              const cfn_hal_crypto_config_t *config,
-                                              const cfn_hal_crypto_phy_t    *phy);
 
 /**
  * @brief Destruct the crypto driver.
@@ -54,7 +61,6 @@ cfn_hal_error_code_t cfn_hal_crypto_construct(cfn_hal_crypto_t              *dri
  * @param driver Pointer to the peripheral driver instance.
  * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
  */
-cfn_hal_error_code_t cfn_hal_crypto_destruct(cfn_hal_crypto_t *driver);
 
 #ifdef __cplusplus
 }

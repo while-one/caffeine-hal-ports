@@ -34,18 +34,37 @@ extern "C"
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_sdio.h"
 
+/* Types Enums ------------------------------------------------------*/
+
+/**
+ * @brief SDIO port identifiers for STM32F4.
+ */
+typedef enum
+{
+    CFN_HAL_SDIO_PORT_1,
+    CFN_HAL_SDIO_PORT_MAX
+} cfn_hal_sdio_port_id_t;
+
 /* Functions prototypes ---------------------------------------------*/
 
 /**
  * @brief Construct the sdio driver.
  *
+ * @param port_id Port identifier.
  * @param driver Pointer to the peripheral driver instance.
  * @param config Pointer to the configuration structure.
  * @param phy Pointer to the physical mapping structure.
+ * @param clock Pointer to the clock instance.
+ * @param callback The callback function to register.
+ * @param user_arg User-defined argument passed to the callback.
  * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
  */
-cfn_hal_error_code_t
-cfn_hal_sdio_construct(cfn_hal_sdio_t *driver, const cfn_hal_sdio_config_t *config, const cfn_hal_sdio_phy_t *phy);
+cfn_hal_error_code_t cfn_hal_sdio_construct(cfn_hal_sdio_t              *driver,
+                                            const cfn_hal_sdio_config_t *config,
+                                            const cfn_hal_sdio_phy_t    *phy,
+                                            struct cfn_hal_clock_s      *clock,
+                                            cfn_hal_sdio_callback_t      callback,
+                                            void                        *user_arg);
 
 /**
  * @brief Destruct the sdio driver.

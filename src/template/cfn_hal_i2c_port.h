@@ -33,8 +33,8 @@ extern "C"
 
 #include "cfn_hal_i2c.h"
 
-cfn_hal_error_code_t cfn_hal_i2c_construct(cfn_hal_i2c_t *driver, const cfn_hal_i2c_config_t *config, const cfn_hal_i2c_phy_t *phy);
-cfn_hal_error_code_t cfn_hal_i2c_destruct(cfn_hal_i2c_t *driver);
+
+
 
 #ifdef __cplusplus
 }

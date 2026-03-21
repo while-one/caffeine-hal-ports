@@ -82,6 +82,12 @@ typedef enum
     CFN_HAL_PORT_PERIPH_ETH,
     CFN_HAL_PORT_PERIPH_USB_OTG_FS,
     CFN_HAL_PORT_PERIPH_USB_OTG_HS,
+    CFN_HAL_PORT_PERIPH_DMA1,
+    CFN_HAL_PORT_PERIPH_DMA2,
+    CFN_HAL_PORT_PERIPH_CRYP,
+    CFN_HAL_PORT_PERIPH_HASH,
+    CFN_HAL_PORT_PERIPH_RNG,
+    CFN_HAL_PORT_PERIPH_COMP,
     CFN_HAL_PORT_PERIPH_TIM1,
     CFN_HAL_PORT_PERIPH_TIM2,
     CFN_HAL_PORT_PERIPH_TIM3,
@@ -101,15 +107,9 @@ typedef enum
 
 /* Functions prototypes ---------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_clock_construct(cfn_hal_clock_t *driver, const cfn_hal_clock_config_t *config, const cfn_hal_clock_phy_t *phy);
-
-cfn_hal_error_code_t cfn_hal_clock_destruct(cfn_hal_clock_t *driver);
-
 /**
  * @brief Internal helper to enable peripheral clocks.
  */
-void cfn_hal_port_clock_enable_gate(cfn_hal_port_peripheral_id_t periph_id);
 
 #ifdef __cplusplus
 }

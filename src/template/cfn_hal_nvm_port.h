@@ -33,8 +33,8 @@ extern "C"
 
 #include "cfn_hal_nvm.h"
 
-cfn_hal_error_code_t cfn_hal_nvm_construct(cfn_hal_nvm_t *driver, const cfn_hal_nvm_config_t *config, const cfn_hal_nvm_phy_t *phy);
-cfn_hal_error_code_t cfn_hal_nvm_destruct(cfn_hal_nvm_t *driver);
+
+
 
 #ifdef __cplusplus
 }

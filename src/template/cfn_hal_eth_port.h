@@ -33,8 +33,8 @@ extern "C"
 
 #include "cfn_hal_eth.h"
 
-cfn_hal_error_code_t cfn_hal_eth_construct(cfn_hal_eth_t *driver, const cfn_hal_eth_config_t *config, const cfn_hal_eth_phy_t *phy);
-cfn_hal_error_code_t cfn_hal_eth_destruct(cfn_hal_eth_t *driver);
+
+
 
 #ifdef __cplusplus
 }

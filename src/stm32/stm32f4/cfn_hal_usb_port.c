@@ -24,14 +24,17 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_usb.h"
 #include "cfn_hal_usb_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
+#include "cfn_hal_usb.h"
+#include "stm32f4xx_hal.h"
 #include <string.h>
 
+/* Private Prototypes ----------------------------------------------*/
+/* Private Prototypes ----------------------------------------------*/
 #if defined(HAL_PCD_MODULE_ENABLED)
 
 /* Private Data -----------------------------------------------------*/
@@ -45,35 +48,61 @@ static USB_OTG_GlobalTypeDef *const PORT_INSTANCES[CFN_HAL_USB_PORT_MAX] = {
 #endif
 };
 
+static const uint32_t PORT_MAP_PERIPHERAL_ID[CFN_HAL_USB_PORT_MAX] = {
+#if defined(USB_OTG_FS)
+    [CFN_HAL_USB_PORT_OTG_FS] = CFN_HAL_PORT_PERIPH_USB_OTG_FS,
+#endif
+#if defined(USB_OTG_HS)
+    [CFN_HAL_USB_PORT_OTG_HS] = CFN_HAL_PORT_PERIPH_USB_OTG_HS,
+#endif
+};
+
 static PCD_HandleTypeDef port_hpcds[CFN_HAL_USB_PORT_MAX];
 static cfn_hal_usb_t    *port_drivers[CFN_HAL_USB_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
-static int32_t get_port_id_from_handle(PCD_HandleTypeDef *hpcd)
+static uint32_t get_port_id_from_handle(PCD_HandleTypeDef *hpcd)
 {
-    for (uint32_t i = 0; i < CFN_HAL_USB_PORT_MAX; i++)
+    if (!hpcd)
     {
-        if (&port_hpcds[i] == hpcd)
-        {
-            return (int32_t) i;
-        }
+        return UINT32_MAX;
     }
-    return -1;
+    if ((hpcd < &port_hpcds[0]) || (hpcd >= &port_hpcds[CFN_HAL_USB_PORT_MAX]))
+    {
+        return UINT32_MAX;
+    }
+    return (uint32_t) (hpcd - port_hpcds);
 }
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_usb_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_usb_t *driver)
 {
+    if (driver == NULL || driver->phy == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    struct cfn_hal_clock_s *clk = driver->base.clock_driver;
+    if (clk == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+
+    if (port_id >= CFN_HAL_USB_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     if (port_id == (uint32_t) CFN_HAL_USB_PORT_OTG_FS)
     {
-        cfn_hal_port_clock_enable_gate(CFN_HAL_PORT_PERIPH_USB_OTG_FS);
+        cfn_hal_clock_enable_gate((cfn_hal_clock_t *) clk, driver->base.peripheral_id);
     }
     else
     {
-        cfn_hal_port_clock_enable_gate(CFN_HAL_PORT_PERIPH_USB_OTG_HS);
+        cfn_hal_clock_enable_gate((cfn_hal_clock_t *) clk, driver->base.peripheral_id);
     }
 
     /* 2. Initialize Pins */
@@ -93,15 +122,25 @@ static void low_level_init(cfn_hal_usb_t *driver)
     {
         (void) cfn_hal_gpio_init(driver->phy->vbus->port);
     }
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
+    if (base == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     cfn_hal_usb_t     *driver  = (cfn_hal_usb_t *) base;
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     PCD_HandleTypeDef *hpcd    = &port_hpcds[port_id];
 
-    low_level_init(driver);
+    cfn_hal_error_code_t error = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
+    {
+        return error;
+    }
 
     hpcd->Instance                 = PORT_INSTANCES[port_id];
     hpcd->Init.dev_endpoints       = 7;
@@ -153,8 +192,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 void HAL_PCD_ResetCallback(PCD_HandleTypeDef *hpcd)
 {
-    int32_t port_id = get_port_id_from_handle(hpcd);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hpcd);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_usb_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -166,8 +205,8 @@ void HAL_PCD_ResetCallback(PCD_HandleTypeDef *hpcd)
 
 void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd)
 {
-    int32_t port_id = get_port_id_from_handle(hpcd);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hpcd);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_usb_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -179,8 +218,8 @@ void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd)
 
 void HAL_PCD_DataOutStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum)
 {
-    int32_t port_id = get_port_id_from_handle(hpcd);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hpcd);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_usb_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -192,8 +231,8 @@ void HAL_PCD_DataOutStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum)
 
 void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum)
 {
-    int32_t port_id = get_port_id_from_handle(hpcd);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hpcd);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_usb_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -205,8 +244,8 @@ void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum)
 
 void HAL_PCD_SuspendCallback(PCD_HandleTypeDef *hpcd)
 {
-    int32_t port_id = get_port_id_from_handle(hpcd);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hpcd);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_usb_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -218,8 +257,8 @@ void HAL_PCD_SuspendCallback(PCD_HandleTypeDef *hpcd)
 
 void HAL_PCD_ResumeCallback(PCD_HandleTypeDef *hpcd)
 {
-    int32_t port_id = get_port_id_from_handle(hpcd);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hpcd);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_usb_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -232,6 +271,8 @@ void HAL_PCD_ResumeCallback(PCD_HandleTypeDef *hpcd)
 /* Raw ISR Handlers -------------------------------------------------*/
 
 #ifndef CFN_HAL_PORT_DISABLE_IRQ_USB
+void OTG_FS_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void OTG_HS_IRQHandler(void); // NOLINT(readability-identifier-naming)
 
 #if defined(USB_OTG_FS)
 void OTG_FS_IRQHandler(void) // NOLINT(readability-identifier-naming)
@@ -346,19 +387,21 @@ static cfn_hal_error_code_t port_usb_get_rx_data_size(cfn_hal_usb_t *driver, uin
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_usb_api_t USB_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .start = port_usb_start,
     .stop = port_usb_stop,
     .set_address = port_usb_set_address,
@@ -368,17 +411,30 @@ static const cfn_hal_usb_api_t USB_API = {
     .ep_receive = port_usb_ep_receive,
     .ep_stall = port_usb_ep_stall,
     .read_setup_packet = port_usb_read_setup_packet,
-    .get_rx_data_size = port_usb_get_rx_data_size
-};
+    .get_rx_data_size = port_usb_get_rx_data_size};
 
 #endif /* HAL_PCD_MODULE_ENABLED */
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_usb_construct(cfn_hal_usb_t *driver, const cfn_hal_usb_config_t *config, const cfn_hal_usb_phy_t *phy)
+/**
+ * @brief Constructs a new USB driver instance.
+ * @param driver Pointer to the driver structure to construct.
+ * @param config Pointer to the USB configuration.
+ * @param phy Pointer to the physical USB mapping.
+ * @param clock Pointer to the clock driver instance.
+ * @param callback User callback function.
+ * @param user_arg User argument for the callback.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
+cfn_hal_error_code_t cfn_hal_usb_construct(cfn_hal_usb_t              *driver,
+                                           const cfn_hal_usb_config_t *config,
+                                           const cfn_hal_usb_phy_t    *phy,
+                                           struct cfn_hal_clock_s     *clock,
+                                           cfn_hal_usb_callback_t      callback,
+                                           void                       *user_arg)
 {
-#if defined(HAL_PCD_MODULE_ENABLED)
+#ifdef HAL_PCD_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -390,11 +446,8 @@ cfn_hal_usb_construct(cfn_hal_usb_t *driver, const cfn_hal_usb_config_t *config,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api                  = &USB_API;
-    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_USB;
-    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config               = config;
-    driver->phy                  = phy;
+    uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
+    cfn_hal_usb_populate(driver, peripheral_id, clock, &USB_API, phy, config, callback, user_arg);
 
     port_hpcds[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -404,30 +457,37 @@ cfn_hal_usb_construct(cfn_hal_usb_t *driver, const cfn_hal_usb_config_t *config,
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
 
+/**
+ * @brief Destructs an existing USB driver instance.
+ * @param driver Pointer to the driver instance to destruct.
+ * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
+ */
 cfn_hal_error_code_t cfn_hal_usb_destruct(cfn_hal_usb_t *driver)
 {
-    if (driver == NULL)
+#ifdef HAL_PCD_MODULE_ENABLED
+    if (driver == NULL || driver->phy == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-#if defined(HAL_PCD_MODULE_ENABLED)
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     if (port_id < CFN_HAL_USB_PORT_MAX)
     {
         port_drivers[port_id] = NULL;
     }
-#endif
 
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_USB;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }

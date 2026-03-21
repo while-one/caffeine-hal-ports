@@ -24,24 +24,14 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_gpio.h"
 #include "cfn_hal_gpio_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
+#include "cfn_hal_gpio.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 
 /* Private Data -----------------------------------------------------*/
-
-/**
- * @brief Mapping from Caffeine GPIO port IDs to global clock peripheral IDs.
- */
-static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_GPIO_PORT_MAX] = {
-    [CFN_HAL_GPIO_PORT_A] = CFN_HAL_PORT_PERIPH_GPIOA, [CFN_HAL_GPIO_PORT_B] = CFN_HAL_PORT_PERIPH_GPIOB,
-    [CFN_HAL_GPIO_PORT_C] = CFN_HAL_PORT_PERIPH_GPIOC, [CFN_HAL_GPIO_PORT_D] = CFN_HAL_PORT_PERIPH_GPIOD,
-    [CFN_HAL_GPIO_PORT_E] = CFN_HAL_PORT_PERIPH_GPIOE, [CFN_HAL_GPIO_PORT_F] = CFN_HAL_PORT_PERIPH_GPIOF,
-    [CFN_HAL_GPIO_PORT_G] = CFN_HAL_PORT_PERIPH_GPIOG, [CFN_HAL_GPIO_PORT_H] = CFN_HAL_PORT_PERIPH_GPIOH,
-    [CFN_HAL_GPIO_PORT_I] = CFN_HAL_PORT_PERIPH_GPIOI,
-};
 
 static GPIO_TypeDef *const PORT_INSTANCES[CFN_HAL_GPIO_PORT_MAX] = {
 #if defined(GPIOA)
@@ -73,17 +63,50 @@ static GPIO_TypeDef *const PORT_INSTANCES[CFN_HAL_GPIO_PORT_MAX] = {
 #endif
 };
 
+static const uint32_t PORT_MAP_PERIPHERAL_ID[CFN_HAL_GPIO_PORT_MAX] = {
+    [CFN_HAL_GPIO_PORT_A] = CFN_HAL_PORT_PERIPH_GPIOA, //
+    [CFN_HAL_GPIO_PORT_B] = CFN_HAL_PORT_PERIPH_GPIOB, //
+    [CFN_HAL_GPIO_PORT_C] = CFN_HAL_PORT_PERIPH_GPIOC, //
+    [CFN_HAL_GPIO_PORT_D] = CFN_HAL_PORT_PERIPH_GPIOD, //
+    [CFN_HAL_GPIO_PORT_E] = CFN_HAL_PORT_PERIPH_GPIOE, //
+    [CFN_HAL_GPIO_PORT_F] = CFN_HAL_PORT_PERIPH_GPIOF, //
+    [CFN_HAL_GPIO_PORT_G] = CFN_HAL_PORT_PERIPH_GPIOG, //
+    [CFN_HAL_GPIO_PORT_H] = CFN_HAL_PORT_PERIPH_GPIOH, //
+    [CFN_HAL_GPIO_PORT_I] = CFN_HAL_PORT_PERIPH_GPIOI, //
+    [CFN_HAL_GPIO_PORT_J] = CFN_HAL_PORT_PERIPH_GPIOJ, //
+    [CFN_HAL_GPIO_PORT_K] = CFN_HAL_PORT_PERIPH_GPIOK, //
+};
 /* VMT Implementations ----------------------------------------------*/
+
+static cfn_hal_error_code_t low_level_init(cfn_hal_gpio_t *driver)
+{
+    if (driver == NULL || driver->phy == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    struct cfn_hal_clock_s *clk = driver->base.clock_driver;
+    if (clk == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->port;
+    if (port_id >= CFN_HAL_GPIO_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    /* 1. Enable Clock */
+    cfn_hal_clock_enable_gate((cfn_hal_clock_t *) clk, driver->base.peripheral_id);
+
+    return CFN_HAL_ERROR_OK;
+}
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_gpio_t *driver  = (cfn_hal_gpio_t *) base;
-    uint32_t        port_id = (uint32_t) (uintptr_t) driver->phy->port;
+    cfn_hal_gpio_t *driver = (cfn_hal_gpio_t *) base;
 
-    /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
-
-    return CFN_HAL_ERROR_OK;
+    return low_level_init(driver);
 }
 
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
@@ -145,6 +168,9 @@ static cfn_hal_error_code_t port_gpio_pin_config(cfn_hal_gpio_t *port, const cfn
         case CFN_HAL_GPIO_CONFIG_MODE_ANALOG:
             st_cfg.Mode = GPIO_MODE_ANALOG;
             break;
+
+        default:
+            return CFN_HAL_ERROR_BAD_PARAM;
     }
 
     switch (pin_cfg->pull)
@@ -158,6 +184,9 @@ static cfn_hal_error_code_t port_gpio_pin_config(cfn_hal_gpio_t *port, const cfn
         case CFN_HAL_GPIO_CONFIG_PULL_PULLDOWN:
             st_cfg.Pull = GPIO_PULLDOWN;
             break;
+
+        default:
+            return CFN_HAL_ERROR_BAD_PARAM;
     }
 
     switch (pin_cfg->speed)
@@ -174,6 +203,9 @@ static cfn_hal_error_code_t port_gpio_pin_config(cfn_hal_gpio_t *port, const cfn
         case CFN_HAL_GPIO_CONFIG_SPEED_VERY_HIGH:
             st_cfg.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
             break;
+
+        default:
+            return CFN_HAL_ERROR_BAD_PARAM;
     }
 
     HAL_GPIO_Init(PORT_INSTANCES[port_id], &st_cfg);
@@ -236,32 +268,36 @@ static cfn_hal_error_code_t port_gpio_port_read(cfn_hal_gpio_t *port, uint32_t *
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_gpio_api_t GPIO_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = NULL,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .pin_config = port_gpio_pin_config,
     .pin_read = port_gpio_pin_read,
     .pin_write = port_gpio_pin_write,
     .pin_toggle = port_gpio_pin_toggle,
     .port_read = port_gpio_port_read,
-    .port_write = port_gpio_port_write
-};
+    .port_write = port_gpio_port_write};
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t cfn_hal_gpio_construct(cfn_hal_gpio_t *driver, void *config, const cfn_hal_gpio_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_gpio_construct(cfn_hal_gpio_t           *driver,
+                                            const cfn_hal_gpio_phy_t *phy,
+                                            struct cfn_hal_clock_s   *clock,
+                                            cfn_hal_gpio_callback_t   callback,
+                                            void                     *user_arg)
 {
-    CFN_HAL_UNUSED(config);
+#ifdef HAL_GPIO_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -273,27 +309,32 @@ cfn_hal_error_code_t cfn_hal_gpio_construct(cfn_hal_gpio_t *driver, void *config
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api         = &GPIO_API;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_GPIO;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config      = NULL;
-    driver->phy         = phy;
+    uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
+    cfn_hal_gpio_populate(driver, peripheral_id, clock, &GPIO_API, phy, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }
 
 cfn_hal_error_code_t cfn_hal_gpio_destruct(cfn_hal_gpio_t *driver)
 {
+#ifdef HAL_GPIO_MODULE_ENABLED
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_GPIO;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
+#else
+    CFN_HAL_UNUSED(driver);
+    return CFN_HAL_ERROR_NOT_SUPPORTED;
+#endif
 }

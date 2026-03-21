@@ -24,11 +24,19 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_irq.h"
 #include "cfn_hal_irq_port.h"
+#include "cfn_hal_clock.h"
+#include "cfn_hal_irq.h"
+#include "stm32f4xx_hal.h"
 
 /* VMT Implementations ----------------------------------------------*/
+
+static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
+{
+    CFN_HAL_UNUSED(base);
+
+    return CFN_HAL_ERROR_OK;
+}
 
 static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
 {
@@ -94,41 +102,41 @@ static cfn_hal_error_code_t port_irq_clear_pending(cfn_hal_irq_t *driver, uint32
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_irq_api_t IRQ_API = {
-    .base = {
-        .init = NULL,
-        .deinit = NULL,
-        .power_state_set = NULL,
-        .config_set = NULL,
-        .callback_register = NULL,
-        .event_enable = NULL,
-        .event_disable = NULL,
-        .event_get = port_base_event_get,
-        .error_enable = NULL,
-        .error_disable = NULL,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = NULL,
+            .power_state_set = NULL,
+            .config_set = NULL,
+            .callback_register = NULL,
+            .event_enable = NULL,
+            .event_disable = NULL,
+            .event_get = port_base_event_get,
+            .error_enable = NULL,
+            .error_disable = NULL,
+            .error_get = port_base_error_get,
+        },
     .global_enable = port_irq_global_enable,
     .global_disable = port_irq_global_disable,
     .enable_vector = port_irq_enable_vector,
     .disable_vector = port_irq_disable_vector,
     .set_priority = port_irq_set_priority,
-    .clear_pending = port_irq_clear_pending
-};
+    .clear_pending = port_irq_clear_pending};
 
 /* Instantiation ----------------------------------------------------*/
-cfn_hal_error_code_t
-cfn_hal_irq_construct(cfn_hal_irq_t *driver, const cfn_hal_irq_config_t *config, const cfn_hal_irq_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_irq_construct(cfn_hal_irq_t              *driver,
+                                           const cfn_hal_irq_config_t *config,
+                                           const cfn_hal_irq_phy_t    *phy,
+                                           struct cfn_hal_clock_s     *clock,
+                                           cfn_hal_irq_callback_t      callback,
+                                           void                       *user_arg)
 {
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api         = &IRQ_API;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_IRQ;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config      = config;
-    driver->phy         = phy;
+    cfn_hal_irq_populate(driver, 0, clock, &IRQ_API, phy, config, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
 }
@@ -139,12 +147,8 @@ cfn_hal_error_code_t cfn_hal_irq_destruct(cfn_hal_irq_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_IRQ;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
+    driver->config = NULL;
+    driver->phy    = NULL;
 
     return CFN_HAL_ERROR_OK;
 }

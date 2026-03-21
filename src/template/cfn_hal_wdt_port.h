@@ -33,8 +33,8 @@ extern "C"
 
 #include "cfn_hal_wdt.h"
 
-cfn_hal_error_code_t cfn_hal_wdt_construct(cfn_hal_wdt_t *driver, const cfn_hal_wdt_config_t *config, const cfn_hal_wdt_phy_t *phy);
-cfn_hal_error_code_t cfn_hal_wdt_destruct(cfn_hal_wdt_t *driver);
+
+
 
 #ifdef __cplusplus
 }

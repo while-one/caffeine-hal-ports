@@ -6,3 +6,12 @@ build*/
 .idea/
 .artifacts/
 CMakeUserPresets.json
+
+#python
+**/__pycache__/
+*.pyc
+
+#vim
+*~
+*.un~
+

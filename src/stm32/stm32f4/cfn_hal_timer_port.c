@@ -24,12 +24,14 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_timer.h"
 #include "cfn_hal_timer_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
 #include "cfn_hal_stm32_error.h"
+#include "cfn_hal_timer.h"
+#include "stm32f4xx_hal.h"
 
+/* Private Prototypes ----------------------------------------------*/
 #ifdef HAL_TIM_MODULE_ENABLED
 
 /* Private Data -----------------------------------------------------*/
@@ -37,7 +39,7 @@
 /**
  * @brief Mapping from Caffeine Timer port IDs to global clock peripheral IDs.
  */
-static const cfn_hal_port_peripheral_id_t PORT_MAP_CLOCK_PERIPHERAL_ID[CFN_HAL_TIMER_PORT_MAX] = {
+static const uint32_t PORT_MAP_PERIPHERAL_ID[CFN_HAL_TIMER_PORT_MAX] = {
     [CFN_HAL_TIMER_PORT_TIM1] = CFN_HAL_PORT_PERIPH_TIM1,   [CFN_HAL_TIMER_PORT_TIM2] = CFN_HAL_PORT_PERIPH_TIM2,
     [CFN_HAL_TIMER_PORT_TIM3] = CFN_HAL_PORT_PERIPH_TIM3,   [CFN_HAL_TIMER_PORT_TIM4] = CFN_HAL_PORT_PERIPH_TIM4,
     [CFN_HAL_TIMER_PORT_TIM5] = CFN_HAL_PORT_PERIPH_TIM5,   [CFN_HAL_TIMER_PORT_TIM6] = CFN_HAL_PORT_PERIPH_TIM6,
@@ -97,34 +99,53 @@ static cfn_hal_timer_t  *port_drivers[CFN_HAL_TIMER_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
-static int32_t get_port_id_from_handle(TIM_HandleTypeDef *htim)
+static uint32_t get_port_id_from_handle(TIM_HandleTypeDef *handle)
 {
-    for (uint32_t i = 0; i < CFN_HAL_TIMER_PORT_MAX; i++)
+    if (!handle)
     {
-        if (&port_htims[i] == htim)
-        {
-            return (int32_t) i;
-        }
+        return UINT32_MAX;
     }
-    return -1;
+    if ((handle < &port_htims[0]) || (handle >= &port_htims[CFN_HAL_TIMER_PORT_MAX]))
+    {
+        return UINT32_MAX;
+    }
+    return (uint32_t) (handle - port_htims);
 }
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_timer_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_timer_t *driver)
 {
-    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    struct cfn_hal_clock_s *clk = driver->base.clock_driver;
+    if (clk == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     /* 1. Enable Clock */
-    cfn_hal_port_clock_enable_gate(PORT_MAP_CLOCK_PERIPHERAL_ID[port_id]);
+    cfn_hal_clock_enable_gate((cfn_hal_clock_t *) clk, driver->base.peripheral_id);
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_timer_t   *driver  = (cfn_hal_timer_t *) base;
-    uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    TIM_HandleTypeDef *htim    = &port_htims[port_id];
+    cfn_hal_timer_t     *driver = (cfn_hal_timer_t *) base;
+    cfn_hal_error_code_t error;
 
-    low_level_init(driver);
+    error = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
+    {
+        return error;
+    }
+
+    uint32_t           port_id   = (uint32_t) (uintptr_t) driver->phy->instance;
+    TIM_HandleTypeDef *htim      = &port_htims[port_id];
 
     htim->Instance               = PORT_INSTANCES[port_id];
     htim->Init.Prescaler         = driver->config->prescaler;
@@ -146,7 +167,6 @@ static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 
 static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
 {
-    CFN_HAL_UNUSED(base);
     CFN_HAL_UNUSED(config);
     return port_base_init(base);
 }
@@ -249,8 +269,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    int32_t port_id = get_port_id_from_handle(htim);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(htim);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_timer_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -262,8 +282,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 void HAL_TIM_ErrorCallback(TIM_HandleTypeDef *htim)
 {
-    int32_t port_id = get_port_id_from_handle(htim);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(htim);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_timer_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -381,13 +401,13 @@ static cfn_hal_error_code_t port_timer_get_ticks(cfn_hal_timer_t *driver, uint32
 
 static cfn_hal_error_code_t port_timer_get_ticks_u64(cfn_hal_timer_t *driver, uint32_t ch, uint64_t *ticks)
 {
-    uint32_t             t32 = 0;
-    cfn_hal_error_code_t err = port_timer_get_ticks(driver, ch, &t32);
-    if (err == CFN_HAL_ERROR_OK)
+    uint32_t             t32   = 0;
+    cfn_hal_error_code_t error = port_timer_get_ticks(driver, ch, &t32);
+    if (error == CFN_HAL_ERROR_OK)
     {
         *ticks = (uint64_t) t32;
     }
-    return err;
+    return error;
 }
 
 static cfn_hal_error_code_t port_timer_set_period(cfn_hal_timer_t *driver, const cfn_hal_timer_period_t *period)
@@ -399,32 +419,37 @@ static cfn_hal_error_code_t port_timer_set_period(cfn_hal_timer_t *driver, const
 
 /* API --------------------------------------------------------------*/
 static const cfn_hal_timer_api_t TIMER_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = port_base_event_enable,
-        .event_disable = port_base_event_disable,
-        .event_get = port_base_event_get,
-        .error_enable = port_base_error_enable,
-        .error_disable = port_base_error_disable,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = port_base_event_enable,
+            .event_disable = port_base_event_disable,
+            .event_get = port_base_event_get,
+            .error_enable = port_base_error_enable,
+            .error_disable = port_base_error_disable,
+            .error_get = port_base_error_get,
+        },
     .start = port_timer_start,
     .stop = port_timer_stop,
     .get_ticks = port_timer_get_ticks,
     .get_ticks_u64 = port_timer_get_ticks_u64,
-    .set_period = port_timer_set_period
-};
+    .set_period = port_timer_set_period};
 
 #endif /* HAL_TIM_MODULE_ENABLED */
 
 /* Instantiation ----------------------------------------------------*/
 
-cfn_hal_error_code_t
-cfn_hal_timer_construct(cfn_hal_timer_t *driver, const cfn_hal_timer_config_t *config, const cfn_hal_timer_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_timer_construct(cfn_hal_timer_t              *driver,
+                                             const cfn_hal_timer_config_t *config,
+                                             const cfn_hal_timer_phy_t    *phy,
+                                             struct cfn_hal_clock_s       *clock,
+                                             cfn_hal_timer_callback_t      callback,
+                                             void                         *user_arg)
 {
 #ifdef HAL_TIM_MODULE_ENABLED
     if ((driver == NULL) || (phy == NULL))
@@ -433,16 +458,19 @@ cfn_hal_timer_construct(cfn_hal_timer_t *driver, const cfn_hal_timer_config_t *c
     }
 
     uint32_t port_id = (uint32_t) (uintptr_t) phy->instance;
-    if (port_id >= CFN_HAL_TIMER_PORT_MAX || PORT_INSTANCES[port_id] == NULL)
+    if (port_id >= CFN_HAL_TIMER_PORT_MAX)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api                  = &TIMER_API;
-    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_TIMER;
-    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config               = config;
-    driver->phy                  = phy;
+    if (PORT_INSTANCES[port_id] == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
+
+    cfn_hal_timer_populate(driver, peripheral_id, clock, &TIMER_API, phy, config, callback, user_arg);
 
     port_htims[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -452,6 +480,9 @@ cfn_hal_timer_construct(cfn_hal_timer_t *driver, const cfn_hal_timer_config_t *c
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
+    CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(callback);
+    CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
@@ -470,12 +501,8 @@ cfn_hal_error_code_t cfn_hal_timer_destruct(cfn_hal_timer_t *driver)
         port_drivers[port_id] = NULL;
     }
 
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_TIMER;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

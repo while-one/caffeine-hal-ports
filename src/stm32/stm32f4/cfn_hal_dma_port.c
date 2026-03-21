@@ -24,11 +24,12 @@
  */
 
 /* Includes ---------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "cfn_hal_dma.h"
 #include "cfn_hal_dma_port.h"
+#include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
+#include "cfn_hal_dma.h"
 #include "cfn_hal_stm32_error.h"
+#include "stm32f4xx_hal.h"
 
 /* Private Data -----------------------------------------------------*/
 
@@ -43,28 +44,58 @@ static DMA_Stream_TypeDef *const PORT_INSTANCES[CFN_HAL_DMA_PORT_MAX] = {
     [CFN_HAL_DMA_PORT_DMA2_STREAM6] = DMA2_Stream6, [CFN_HAL_DMA_PORT_DMA2_STREAM7] = DMA2_Stream7,
 };
 
+static const uint32_t PORT_MAP_PERIPHERAL_ID[CFN_HAL_DMA_PORT_MAX] = {
+    [CFN_HAL_DMA_PORT_DMA1_STREAM0] = CFN_HAL_PORT_PERIPH_DMA1,
+    [CFN_HAL_DMA_PORT_DMA1_STREAM1] = CFN_HAL_PORT_PERIPH_DMA1,
+    [CFN_HAL_DMA_PORT_DMA1_STREAM2] = CFN_HAL_PORT_PERIPH_DMA1,
+    [CFN_HAL_DMA_PORT_DMA1_STREAM3] = CFN_HAL_PORT_PERIPH_DMA1,
+    [CFN_HAL_DMA_PORT_DMA1_STREAM4] = CFN_HAL_PORT_PERIPH_DMA1,
+    [CFN_HAL_DMA_PORT_DMA1_STREAM5] = CFN_HAL_PORT_PERIPH_DMA1,
+    [CFN_HAL_DMA_PORT_DMA1_STREAM6] = CFN_HAL_PORT_PERIPH_DMA1,
+    [CFN_HAL_DMA_PORT_DMA1_STREAM7] = CFN_HAL_PORT_PERIPH_DMA1,
+    [CFN_HAL_DMA_PORT_DMA2_STREAM0] = CFN_HAL_PORT_PERIPH_DMA2,
+    [CFN_HAL_DMA_PORT_DMA2_STREAM1] = CFN_HAL_PORT_PERIPH_DMA2,
+    [CFN_HAL_DMA_PORT_DMA2_STREAM2] = CFN_HAL_PORT_PERIPH_DMA2,
+    [CFN_HAL_DMA_PORT_DMA2_STREAM3] = CFN_HAL_PORT_PERIPH_DMA2,
+    [CFN_HAL_DMA_PORT_DMA2_STREAM4] = CFN_HAL_PORT_PERIPH_DMA2,
+    [CFN_HAL_DMA_PORT_DMA2_STREAM5] = CFN_HAL_PORT_PERIPH_DMA2,
+    [CFN_HAL_DMA_PORT_DMA2_STREAM6] = CFN_HAL_PORT_PERIPH_DMA2,
+    [CFN_HAL_DMA_PORT_DMA2_STREAM7] = CFN_HAL_PORT_PERIPH_DMA2,
+};
+
 static DMA_HandleTypeDef port_hdmas[CFN_HAL_DMA_PORT_MAX];
 static cfn_hal_dma_t    *port_drivers[CFN_HAL_DMA_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
-static int32_t get_port_id_from_handle(const DMA_HandleTypeDef *hdma)
+static uint32_t get_port_id_from_handle(const DMA_HandleTypeDef *hdma)
 {
-    for (uint32_t i = 0; i < CFN_HAL_DMA_PORT_MAX; i++)
+    if (!hdma)
     {
-        if (&port_hdmas[i] == hdma)
-        {
-            return (int32_t) i;
-        }
+        return UINT32_MAX;
     }
-    return -1;
+    if ((hdma < &port_hdmas[0]) || (hdma >= &port_hdmas[CFN_HAL_DMA_PORT_MAX]))
+    {
+        return UINT32_MAX;
+    }
+    return (uint32_t) (hdma - port_hdmas);
 }
 
 /* VMT Implementations ----------------------------------------------*/
 
-static void low_level_init(cfn_hal_dma_t *driver)
+static cfn_hal_error_code_t low_level_init(cfn_hal_dma_t *driver)
 {
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_DMA_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     if (port_id < CFN_HAL_DMA_PORT_DMA2_STREAM0)
     {
         __HAL_RCC_DMA1_CLK_ENABLE();
@@ -73,15 +104,26 @@ static void low_level_init(cfn_hal_dma_t *driver)
     {
         __HAL_RCC_DMA2_CLK_ENABLE();
     }
+
+    return CFN_HAL_ERROR_OK;
 }
 
 static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 {
-    cfn_hal_dma_t     *driver  = (cfn_hal_dma_t *) base;
+    cfn_hal_dma_t *driver = (cfn_hal_dma_t *) base;
+    if ((driver == NULL) || (driver->phy == NULL) || (driver->config == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     DMA_HandleTypeDef *hdma    = &port_hdmas[port_id];
 
-    low_level_init(driver);
+    cfn_hal_error_code_t error = low_level_init(driver);
+    if (error != CFN_HAL_ERROR_OK)
+    {
+        return error;
+    }
 
     hdma->Instance                 = PORT_INSTANCES[port_id];
     hdma->Init.Channel             = (uint32_t) (uintptr_t) driver->phy->user_arg; /* Request Selection */
@@ -99,8 +141,18 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
 
 static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 {
-    cfn_hal_dma_t *driver  = (cfn_hal_dma_t *) base;
-    uint32_t       port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    cfn_hal_dma_t *driver = (cfn_hal_dma_t *) base;
+    if ((driver == NULL) || (driver->phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    if (port_id >= CFN_HAL_DMA_PORT_MAX)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     return cfn_hal_stm32_map_error(HAL_DMA_DeInit(&port_hdmas[port_id]));
 }
 
@@ -205,11 +257,14 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 }
 
 /* ST HAL Callback Overrides ----------------------------------------*/
+void HAL_DMA_XferCpltCallback(const DMA_HandleTypeDef *hdma);     // NOLINT(readability-identifier-naming)
+void HAL_DMA_XferHalfCpltCallback(const DMA_HandleTypeDef *hdma); // NOLINT(readability-identifier-naming)
+void HAL_DMA_XferErrorCallback(const DMA_HandleTypeDef *hdma);    // NOLINT(readability-identifier-naming)
 
 void HAL_DMA_XferCpltCallback(const DMA_HandleTypeDef *hdma) // NOLINT(readability-identifier-naming)
 {
-    int32_t port_id = get_port_id_from_handle(hdma);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hdma);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_dma_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -221,8 +276,8 @@ void HAL_DMA_XferCpltCallback(const DMA_HandleTypeDef *hdma) // NOLINT(readabili
 
 void HAL_DMA_XferHalfCpltCallback(const DMA_HandleTypeDef *hdma) // NOLINT(readability-identifier-naming)
 {
-    int32_t port_id = get_port_id_from_handle(hdma);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hdma);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_dma_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -234,8 +289,8 @@ void HAL_DMA_XferHalfCpltCallback(const DMA_HandleTypeDef *hdma) // NOLINT(reada
 
 void HAL_DMA_XferErrorCallback(const DMA_HandleTypeDef *hdma) // NOLINT(readability-identifier-naming)
 {
-    int32_t port_id = get_port_id_from_handle(hdma);
-    if ((port_id >= 0) && (port_drivers[port_id] != NULL))
+    uint32_t port_id = get_port_id_from_handle(hdma);
+    if ((port_id != UINT32_MAX) && (port_drivers[port_id] != NULL))
     {
         cfn_hal_dma_t *driver = port_drivers[port_id];
         if (driver->cb != NULL)
@@ -250,6 +305,22 @@ void HAL_DMA_XferErrorCallback(const DMA_HandleTypeDef *hdma) // NOLINT(readabil
 /* Raw ISR Handlers -------------------------------------------------*/
 
 #ifndef CFN_HAL_PORT_DISABLE_IRQ_DMA
+void DMA1_Stream0_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA1_Stream1_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA1_Stream2_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA1_Stream3_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA1_Stream4_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA1_Stream5_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA1_Stream6_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA1_Stream7_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA2_Stream0_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA2_Stream1_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA2_Stream2_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA2_Stream3_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA2_Stream4_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA2_Stream5_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA2_Stream6_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void DMA2_Stream7_IRQHandler(void); // NOLINT(readability-identifier-naming)
 
 void DMA1_Stream0_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
@@ -334,25 +405,30 @@ static cfn_hal_error_code_t port_dma_stop(cfn_hal_dma_t *driver)
 }
 
 static const cfn_hal_dma_api_t DMA_API = {
-    .base = {
-        .init = port_base_init,
-        .deinit = port_base_deinit,
-        .power_state_set = NULL,
-        .config_set = port_base_config_set,
-        .callback_register = NULL,
-        .event_enable = port_base_event_enable,
-        .event_disable = port_base_event_disable,
-        .event_get = port_base_event_get,
-        .error_enable = port_base_error_enable,
-        .error_disable = port_base_error_disable,
-        .error_get = port_base_error_get,
-    },
+    .base =
+        {
+            .init = port_base_init,
+            .deinit = port_base_deinit,
+            .power_state_set = NULL,
+            .config_set = port_base_config_set,
+            .config_validate = NULL,
+            .callback_register = NULL,
+            .event_enable = port_base_event_enable,
+            .event_disable = port_base_event_disable,
+            .event_get = port_base_event_get,
+            .error_enable = port_base_error_enable,
+            .error_disable = port_base_error_disable,
+            .error_get = port_base_error_get,
+        },
     .start = port_dma_start,
-    .stop = port_dma_stop
-};
+    .stop = port_dma_stop};
 
-cfn_hal_error_code_t
-cfn_hal_dma_construct(cfn_hal_dma_t *driver, const cfn_hal_dma_config_t *config, const cfn_hal_dma_phy_t *phy)
+cfn_hal_error_code_t cfn_hal_dma_construct(cfn_hal_dma_t              *driver,
+                                           const cfn_hal_dma_config_t *config,
+                                           const cfn_hal_dma_phy_t    *phy,
+                                           struct cfn_hal_clock_s     *clock,
+                                           cfn_hal_dma_callback_t      callback,
+                                           void                       *user_arg)
 {
     if ((driver == NULL) || (phy == NULL))
     {
@@ -360,16 +436,14 @@ cfn_hal_dma_construct(cfn_hal_dma_t *driver, const cfn_hal_dma_config_t *config,
     }
 
     uint32_t port_id = (uint32_t) (uintptr_t) phy->instance;
-    if (port_id >= CFN_HAL_DMA_PORT_MAX)
+    if (port_id >= CFN_HAL_DMA_PORT_MAX || PORT_INSTANCES[port_id] == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    driver->api                  = &DMA_API;
-    driver->base.type            = CFN_HAL_PERIPHERAL_TYPE_DMA;
-    driver->base.status          = CFN_HAL_DRIVER_STATUS_CONSTRUCTED;
-    driver->config               = config;
-    driver->phy                  = phy;
+    uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
+
+    cfn_hal_dma_populate(driver, peripheral_id, clock, &DMA_API, phy, config, callback, user_arg);
 
     port_hdmas[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -384,17 +458,16 @@ cfn_hal_error_code_t cfn_hal_dma_destruct(cfn_hal_dma_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    if (port_id < CFN_HAL_DMA_PORT_MAX)
+    if (driver->phy != NULL)
     {
-        port_drivers[port_id] = NULL;
+        uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+        if (port_id < CFN_HAL_DMA_PORT_MAX)
+        {
+            port_drivers[port_id] = NULL;
+        }
     }
 
-    driver->api         = NULL;
-    driver->base.type   = CFN_HAL_PERIPHERAL_TYPE_DMA;
-    driver->base.status = CFN_HAL_DRIVER_STATUS_UNKNOWN;
-    driver->config      = NULL;
-    driver->phy         = NULL;
-
+    driver->config = NULL;
+    driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;
 }
