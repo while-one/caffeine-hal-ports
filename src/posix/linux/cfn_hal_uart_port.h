@@ -28,10 +28,6 @@ typedef enum
 
 /* Functions prototypes ---------------------------------------------*/
 
-
-
-
-
 #ifdef __cplusplus
 }
 #endif
