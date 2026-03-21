@@ -27,8 +27,7 @@
 #define CAFFEINE_HAL_PORT_QSPI_STM32F4_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /* Includes ---------------------------------------------------------*/
@@ -39,10 +38,9 @@ extern "C"
 /**
  * @brief STM32F4 Physical QSPI instances.
  */
-typedef enum
-{
-    CFN_HAL_QSPI_PORT_QSPI1,
-    CFN_HAL_QSPI_PORT_MAX
+typedef enum {
+  CFN_HAL_QSPI_PORT_QSPI1,
+  CFN_HAL_QSPI_PORT_MAX
 } cfn_hal_qspi_port_t;
 
 /* Functions prototypes ---------------------------------------------*/

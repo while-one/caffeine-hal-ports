@@ -33,13 +33,6 @@
 #include "stm32f4xx_hal.h"
 
 /* Private Prototypes ----------------------------------------------*/
-void UART4_IRQHandler(void);
-void UART5_IRQHandler(void);
-void USART1_IRQHandler(void);
-void USART2_IRQHandler(void);
-void USART3_IRQHandler(void);
-void USART6_IRQHandler(void);
-
 /* Private Prototypes ----------------------------------------------*/
 #ifdef HAL_UART_MODULE_ENABLED
 
@@ -117,6 +110,51 @@ static USART_TypeDef *const PORT_INSTANCES[CFN_HAL_UART_PORT_MAX] = {
 #endif
 #if defined(USART6)
     [CFN_HAL_UART_PORT_USART6] = USART6,
+#endif
+#if defined(UART7)
+    [CFN_HAL_UART_PORT_UART7] = UART7,
+#endif
+#if defined(UART8)
+    [CFN_HAL_UART_PORT_UART8] = UART8,
+#endif
+#if defined(UART9)
+    [CFN_HAL_UART_PORT_UART9] = UART9,
+#endif
+#if defined(UART10)
+    [CFN_HAL_UART_PORT_UART10] = UART10,
+#endif
+};
+
+static const uint32_t PORT_MAP_PERIPHERAL_ID[CFN_HAL_UART_PORT_MAX] = {
+#if defined(USART1)
+    [CFN_HAL_UART_PORT_USART1] = CFN_HAL_PORT_PERIPH_USART1,
+#endif
+#if defined(USART2)
+    [CFN_HAL_UART_PORT_USART2] = CFN_HAL_PORT_PERIPH_USART2,
+#endif
+#if defined(USART3)
+    [CFN_HAL_UART_PORT_USART3] = CFN_HAL_PORT_PERIPH_USART3,
+#endif
+#if defined(UART4)
+    [CFN_HAL_UART_PORT_UART4] = CFN_HAL_PORT_PERIPH_UART4,
+#endif
+#if defined(UART5)
+    [CFN_HAL_UART_PORT_UART5] = CFN_HAL_PORT_PERIPH_UART5,
+#endif
+#if defined(USART6)
+    [CFN_HAL_UART_PORT_USART6] = CFN_HAL_PORT_PERIPH_USART6,
+#endif
+#if defined(UART7)
+    [CFN_HAL_UART_PORT_UART7] = CFN_HAL_PORT_PERIPH_UART7,
+#endif
+#if defined(UART8)
+    [CFN_HAL_UART_PORT_UART8] = CFN_HAL_PORT_PERIPH_UART8,
+#endif
+#if defined(UART9)
+    [CFN_HAL_UART_PORT_UART9] = CFN_HAL_PORT_PERIPH_UART9,
+#endif
+#if defined(UART10)
+    [CFN_HAL_UART_PORT_UART10] = CFN_HAL_PORT_PERIPH_UART10,
 #endif
 };
 
@@ -829,20 +867,27 @@ cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_ha
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-
     uint32_t port_id = (uint32_t) (uintptr_t) phy->instance;
-    if (port_id >= CFN_HAL_UART_PORT_MAX || PORT_INSTANCES[port_id] == NULL)
+    if (port_id >= CFN_HAL_UART_PORT_MAX)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    cfn_hal_uart_populate(driver, clock, &UART_API, phy, config, callback, user_arg);
+    if (PORT_INSTANCES[port_id] == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
+
+    cfn_hal_uart_populate(driver, peripheral_id, clock, &UART_API, phy, config, callback, user_arg);
 
     port_huarts[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]         = driver;
 
     return CFN_HAL_ERROR_OK;
 #else
+    CFN_HAL_UNUSED(port_id);
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);

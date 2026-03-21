@@ -27,12 +27,18 @@
 #define CAFFEINE_HAL_PORT_COMP_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_comp.h"
+
+/* Types ------------------------------------------------------------*/
+
+typedef enum {
+  CFN_HAL_COMP_PORT_COMP,
+  CFN_HAL_COMP_PORT_MAX
+} cfn_hal_comp_port_t;
 
 /* Functions prototypes ---------------------------------------------*/
 

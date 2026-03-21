@@ -27,12 +27,20 @@
 #define CAFFEINE_HAL_PORT_CRYPTO_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_crypto.h"
+
+/* Types ------------------------------------------------------------*/
+
+typedef enum {
+  CFN_HAL_CRYPTO_PORT_CRYP,
+  CFN_HAL_CRYPTO_PORT_HASH,
+  CFN_HAL_CRYPTO_PORT_RNG,
+  CFN_HAL_CRYPTO_PORT_MAX
+} cfn_hal_crypto_port_t;
 
 /* Functions prototypes ---------------------------------------------*/
 

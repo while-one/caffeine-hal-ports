@@ -27,8 +27,7 @@
 #define CAFFEINE_HAL_PORT_TIMER_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /* Includes ---------------------------------------------------------*/
@@ -47,7 +46,10 @@ extern "C"
  * @param user_arg User-defined argument passed to the callback.
  * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
  */
-cfn_hal_error_code_t cfn_hal_timer_construct(cfn_hal_timer_t *driver, const cfn_hal_timer_config_t *config, const cfn_hal_timer_phy_t *phy, struct cfn_hal_clock_s *clock, cfn_hal_timer_callback_t callback, void *user_arg);
+cfn_hal_error_code_t cfn_hal_timer_construct(
+    cfn_hal_timer_t *driver, const cfn_hal_timer_config_t *config,
+    const cfn_hal_timer_phy_t *phy, struct cfn_hal_clock_s *clock,
+    cfn_hal_timer_callback_t callback, void *user_arg);
 
 /**
  * @brief Destruct the timer driver.

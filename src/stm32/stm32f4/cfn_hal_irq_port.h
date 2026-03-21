@@ -27,8 +27,7 @@
 #define CAFFEINE_HAL_PORT_IRQ_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /* Includes ---------------------------------------------------------*/

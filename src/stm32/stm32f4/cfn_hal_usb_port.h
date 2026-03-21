@@ -27,8 +27,7 @@
 #define CAFFEINE_HAL_PORT_USB_STM32F4_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /* Includes ---------------------------------------------------------*/
@@ -39,11 +38,10 @@ extern "C"
 /**
  * @brief STM32F4 Physical USB instances.
  */
-typedef enum
-{
-    CFN_HAL_USB_PORT_OTG_FS,
-    CFN_HAL_USB_PORT_OTG_HS,
-    CFN_HAL_USB_PORT_MAX
+typedef enum {
+  CFN_HAL_USB_PORT_OTG_FS,
+  CFN_HAL_USB_PORT_OTG_HS,
+  CFN_HAL_USB_PORT_MAX
 } cfn_hal_usb_port_t;
 
 /* Functions prototypes ---------------------------------------------*/

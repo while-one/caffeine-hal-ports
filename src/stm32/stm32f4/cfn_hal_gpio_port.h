@@ -27,8 +27,7 @@
 #define CAFFEINE_HAL_PORT_GPIO_STM32F4_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /* Includes ---------------------------------------------------------*/
@@ -39,20 +38,19 @@ extern "C"
 /**
  * @brief STM32F4 Physical GPIO Ports.
  */
-typedef enum
-{
-    CFN_HAL_GPIO_PORT_A,
-    CFN_HAL_GPIO_PORT_B,
-    CFN_HAL_GPIO_PORT_C,
-    CFN_HAL_GPIO_PORT_D,
-    CFN_HAL_GPIO_PORT_E,
-    CFN_HAL_GPIO_PORT_F,
-    CFN_HAL_GPIO_PORT_G,
-    CFN_HAL_GPIO_PORT_H,
-    CFN_HAL_GPIO_PORT_I,
-    CFN_HAL_GPIO_PORT_J,
-    CFN_HAL_GPIO_PORT_K,
-    CFN_HAL_GPIO_PORT_MAX
+typedef enum {
+  CFN_HAL_GPIO_PORT_A,
+  CFN_HAL_GPIO_PORT_B,
+  CFN_HAL_GPIO_PORT_C,
+  CFN_HAL_GPIO_PORT_D,
+  CFN_HAL_GPIO_PORT_E,
+  CFN_HAL_GPIO_PORT_F,
+  CFN_HAL_GPIO_PORT_G,
+  CFN_HAL_GPIO_PORT_H,
+  CFN_HAL_GPIO_PORT_I,
+  CFN_HAL_GPIO_PORT_J,
+  CFN_HAL_GPIO_PORT_K,
+  CFN_HAL_GPIO_PORT_MAX
 } cfn_hal_gpio_port_t;
 
 /* Functions prototypes ---------------------------------------------*/

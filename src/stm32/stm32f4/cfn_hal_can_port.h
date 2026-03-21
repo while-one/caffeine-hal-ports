@@ -27,8 +27,7 @@
 #define CAFFEINE_HAL_PORT_CAN_STM32F4_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /* Includes ---------------------------------------------------------*/
@@ -39,13 +38,12 @@ extern "C"
 /**
  * @brief STM32F4 Physical CAN instances.
  */
-typedef enum
-{
-    CFN_HAL_CAN_PORT_CAN1,
-    CFN_HAL_CAN_PORT_CAN2,
-    CFN_HAL_CAN_PORT_CAN3,
+typedef enum {
+  CFN_HAL_CAN_PORT_CAN1,
+  CFN_HAL_CAN_PORT_CAN2,
+  CFN_HAL_CAN_PORT_CAN3,
 
-    CFN_HAL_CAN_PORT_MAX
+  CFN_HAL_CAN_PORT_MAX
 } cfn_hal_can_port_t;
 
 /* Functions prototypes ---------------------------------------------*/

@@ -27,8 +27,7 @@
 #define CAFFEINE_HAL_PORT_SPI_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /* Includes ---------------------------------------------------------*/
@@ -39,15 +38,14 @@ extern "C"
 /**
  * @brief SPI port identifiers for STM32F4.
  */
-typedef enum
-{
-    CFN_HAL_SPI_PORT_1,
-    CFN_HAL_SPI_PORT_2,
-    CFN_HAL_SPI_PORT_3,
-    CFN_HAL_SPI_PORT_4,
-    CFN_HAL_SPI_PORT_5,
-    CFN_HAL_SPI_PORT_6,
-    CFN_HAL_SPI_PORT_MAX
+typedef enum {
+  CFN_HAL_SPI_PORT_1,
+  CFN_HAL_SPI_PORT_2,
+  CFN_HAL_SPI_PORT_3,
+  CFN_HAL_SPI_PORT_4,
+  CFN_HAL_SPI_PORT_5,
+  CFN_HAL_SPI_PORT_6,
+  CFN_HAL_SPI_PORT_MAX
 } cfn_hal_spi_port_t;
 
 /* Functions prototypes ---------------------------------------------*/
@@ -55,6 +53,7 @@ typedef enum
 /**
  * @brief Construct the spi driver.
  *
+ * @param port_id Port identifier.
  * @param driver Pointer to the peripheral driver instance.
  * @param config Pointer to the configuration structure.
  * @param phy Pointer to the physical mapping structure.
@@ -63,7 +62,12 @@ typedef enum
  * @param user_arg User-defined argument passed to the callback.
  * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
  */
-cfn_hal_error_code_t cfn_hal_spi_construct(cfn_hal_spi_t *driver, const cfn_hal_spi_config_t *config, const cfn_hal_spi_phy_t *phy, struct cfn_hal_clock_s *clock, cfn_hal_spi_callback_t callback, void *user_arg);
+cfn_hal_error_code_t cfn_hal_spi_construct(cfn_hal_spi_t *driver,
+                                           const cfn_hal_spi_config_t *config,
+                                           const cfn_hal_spi_phy_t *phy,
+                                           struct cfn_hal_clock_s *clock,
+                                           cfn_hal_spi_callback_t callback,
+                                           void *user_arg);
 
 /**
  * @brief Destruct the spi driver.
