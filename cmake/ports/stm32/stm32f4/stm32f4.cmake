@@ -139,7 +139,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE $<TARGET_OBJECTS:vendor_sdk>)
 
 # Export port-specific headers and generated config to downstream users
 target_include_directories(${PROJECT_NAME} PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/../../../src/stm32/stm32f4>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/stm32/stm32f4>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
 )
 
@@ -159,7 +159,7 @@ endif()
 if(DEFINED CAFFEINE_LINKER_SCRIPT)
     find_file(LINKER_SCRIPT_FULL_PATH 
         NAMES ${CAFFEINE_LINKER_SCRIPT}
-        PATHS "${CMAKE_CURRENT_LIST_DIR}/../../../linker"
+        PATHS "${PROJECT_SOURCE_DIR}/linker"
         NO_DEFAULT_PATH
     )
     if(LINKER_SCRIPT_FULL_PATH)

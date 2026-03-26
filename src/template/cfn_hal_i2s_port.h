@@ -33,9 +33,6 @@ extern "C"
 
 #include "cfn_hal_i2s.h"
 
-
-
-
 #ifdef __cplusplus
 }
 #endif

@@ -158,10 +158,10 @@ cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t *driver, const cfn_ha
 
 ## 4. Testing Requirements (CTest & GoogleTest)
 
-This repository follows the standardized Caffeine Framework testing pattern, but employs a dedicated architecture for mocking hardware:
-1.  **The `tests-native` Preset:** Because hardware presets (`stm32f4`) inject cross-compilation flags (`-mcpu=cortex-m4`) that crash host PC compilers, all unit tests must be executed using the `tests-native` CMake preset.
-2.  **The `mock-tests` Recipe:** The `tests-native` preset loads the `mock-tests` port family. This recipe does *not* compile a generic library. Instead, it provides an empty interface.
-3.  **Compiling VMTs for Testing:** Inside `tests/CMakeLists.txt`, you must manually append the specific `.c` VMT sources (e.g., `src/stm32/stm32f4/cfn_hal_uart.c`) to the test executable so they are compiled using the native host compiler alongside your `gmock` stubs.
+This repository follows the standardized Caffeine Framework testing pattern:
+1.  **The `unit-tests-gtest` Preset:** All unit tests must be executed using the `unit-tests-gtest` CMake preset.
+2.  **Mock Interface:** When `CFN_HAL_PORT_BUILD_TESTS` is enabled, the repository automatically links against `caffeine::hal-mock` from the core HAL.
+3.  **Compiling VMTs for Testing:** Inside `tests/CMakeLists.txt`, you manually append the specific `.c` VMT sources (e.g., `src/stm32/stm32f4/cfn_hal_uart.c`) to the test executable to verify port logic natively.
 
 ## 5. Coding Standards & Tooling
 

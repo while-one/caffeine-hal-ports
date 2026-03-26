@@ -33,9 +33,6 @@ extern "C"
 
 #include "cfn_hal_irq.h"
 
-
-
-
 #ifdef __cplusplus
 }
 #endif

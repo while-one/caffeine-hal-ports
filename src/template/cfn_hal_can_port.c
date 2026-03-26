@@ -26,11 +26,27 @@
 #include "cfn_hal_can.h"
 #include "cfn_hal_can_port.h"
 
-static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask) { CFN_HAL_UNUSED(base); if (event_mask) { *event_mask = 0; } return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
+{
+    CFN_HAL_UNUSED(base);
+    if (event_mask)
+    {
+        *event_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
+}
 
-static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask) { CFN_HAL_UNUSED(base); if (error_mask) { *error_mask = 0; } return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
+{
+    CFN_HAL_UNUSED(base);
+    if (error_mask)
+    {
+        *error_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
+}
 
-static const cfn_hal_can_api_t can_api = {
+static const cfn_hal_can_api_t CAN_API = {
     .base = {
         .init = NULL,
         .deinit = NULL,
@@ -56,14 +72,20 @@ cfn_hal_error_code_t cfn_hal_can_construct(cfn_hal_can_t              *driver,
                                            cfn_hal_can_callback_t      callback,
                                            void                       *user_arg)
 {
-    if ((driver == NULL) || (phy == NULL)) { return CFN_HAL_ERROR_BAD_PARAM; }
-    cfn_hal_can_populate(driver, 0, clock, &can_api, phy, config, callback, user_arg);
+    if ((driver == NULL) || (phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    cfn_hal_can_populate(driver, 0, clock, &CAN_API, phy, config, callback, user_arg);
     return CFN_HAL_ERROR_OK;
 }
 
 cfn_hal_error_code_t cfn_hal_can_destruct(cfn_hal_can_t *driver)
 {
-    if (driver == NULL) { return CFN_HAL_ERROR_BAD_PARAM; }
+    if (driver == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     cfn_hal_can_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 }

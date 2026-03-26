@@ -33,9 +33,6 @@ extern "C"
 
 #include "cfn_hal_nvm.h"
 
-
-
-
 #ifdef __cplusplus
 }
 #endif
