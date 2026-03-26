@@ -33,9 +33,6 @@ extern "C"
 
 #include "cfn_hal_uart.h"
 
-
-
-
 #ifdef __cplusplus
 }
 #endif

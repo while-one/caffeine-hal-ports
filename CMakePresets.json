@@ -7,20 +7,52 @@
   },
   "include": [
     "caffeine-build/cmake/presets/base.json",
-    "caffeine-build/cmake/presets/stm32/stm32f4.json",
-    "caffeine-build/cmake/presets/gigadevice/gd32v.json",
-    "caffeine-build/cmake/presets/posix/linux.json",
-    "caffeine-build/cmake/presets/mock/tests.json",
-    "caffeine-build/cmake/presets/template/compliance.json"
+    "cmake/presets/posix/linux.json"
   ],
   "configurePresets": [
     {
       "name": "unit-tests-gtest",
-      "displayName": "HAL Ports Unit Tests (Native GTest)",
-      "inherits": "tests-native",
+      "displayName": "HAL Ports Unit Tests (Native GTest - Template Compliance)",
+      "inherits": "base-common",
       "binaryDir": "${sourceDir}/build/unit-tests-gtest",
       "cacheVariables": {
-        "CFN_HAL_PORT_BUILD_TESTS": "ON"
+        "CFN_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "stm32f407-release",
+      "displayName": "STM32F407 (ARM Cortex-M4)",
+      "inherits": "base-arm",
+      "binaryDir": "${sourceDir}/build/stm32f407-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CFN_HAL_PORT_VENDOR": "stm32",
+        "CFN_HAL_PORT_FAMILY": "stm32f4",
+        "CFN_HAL_PORT_TARGET": "stm32f407vgtx"
+      }
+    },
+    {
+      "name": "stm32f417vg-release",
+      "displayName": "STM32F417VG (ARM Cortex-M4)",
+      "inherits": "base-arm",
+      "binaryDir": "${sourceDir}/build/stm32f417vg-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CFN_HAL_PORT_VENDOR": "stm32",
+        "CFN_HAL_PORT_FAMILY": "stm32f4",
+        "CFN_HAL_PORT_TARGET": "stm32f417vgtx"
+      }
+    },
+    {
+      "name": "gd32vf103-release",
+      "displayName": "GD32VF103 (RISC-V rv32imac)",
+      "inherits": "base-riscv",
+      "binaryDir": "${sourceDir}/build/gd32vf103-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CFN_HAL_PORT_VENDOR": "gigadevice",
+        "CFN_HAL_PORT_FAMILY": "gd32v",
+        "CFN_HAL_PORT_TARGET": "gd32vf103"
       }
     }
   ]

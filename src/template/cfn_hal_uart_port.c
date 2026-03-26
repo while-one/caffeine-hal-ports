@@ -26,13 +26,32 @@
 #include "cfn_hal_uart.h"
 #include "cfn_hal_uart_port.h"
 
-static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask) { CFN_HAL_UNUSED(base); if (event_mask) { *event_mask = 0; } return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
+{
+    CFN_HAL_UNUSED(base);
+    if (event_mask)
+    {
+        *event_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
+}
 
-static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask) { CFN_HAL_UNUSED(base); if (error_mask) { *error_mask = 0; } return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
+{
+    CFN_HAL_UNUSED(base);
+    if (error_mask)
+    {
+        *error_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
+}
 
 static cfn_hal_error_code_t port_uart_rx_n_irq(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes)
 {
-    if (driver) { driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX; }
+    if (driver)
+    {
+        driver->base.flags &= ~CFN_HAL_UART_FLAG_CONTINUOUS_RX;
+    }
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(data);
     CFN_HAL_UNUSED(nbr_of_bytes);
@@ -41,12 +60,15 @@ static cfn_hal_error_code_t port_uart_rx_n_irq(cfn_hal_uart_t *driver, uint8_t *
 
 static cfn_hal_error_code_t port_uart_rx_irq(cfn_hal_uart_t *driver)
 {
-    if (driver) { driver->base.flags |= CFN_HAL_UART_FLAG_CONTINUOUS_RX; }
+    if (driver)
+    {
+        driver->base.flags |= CFN_HAL_UART_FLAG_CONTINUOUS_RX;
+    }
     CFN_HAL_UNUSED(driver);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 }
 
-static const cfn_hal_uart_api_t uart_api = {
+static const cfn_hal_uart_api_t UART_API = {
     .base = {
         .init = NULL,
         .deinit = NULL,
@@ -77,14 +99,20 @@ cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t              *driver,
                                             cfn_hal_uart_callback_t      callback,
                                             void                        *user_arg)
 {
-    if ((driver == NULL) || (phy == NULL)) { return CFN_HAL_ERROR_BAD_PARAM; }
-    cfn_hal_uart_populate(driver, 0, clock, &uart_api, phy, config, callback, user_arg);
+    if ((driver == NULL) || (phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    cfn_hal_uart_populate(driver, 0, clock, &UART_API, phy, config, callback, user_arg);
     return CFN_HAL_ERROR_OK;
 }
 
 cfn_hal_error_code_t cfn_hal_uart_destruct(cfn_hal_uart_t *driver)
 {
-    if (driver == NULL) { return CFN_HAL_ERROR_BAD_PARAM; }
+    if (driver == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     cfn_hal_uart_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 }

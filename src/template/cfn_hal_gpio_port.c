@@ -26,11 +26,27 @@
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_gpio_port.h"
 
-static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask) { CFN_HAL_UNUSED(base); if (event_mask) { *event_mask = 0; } return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
+{
+    CFN_HAL_UNUSED(base);
+    if (event_mask)
+    {
+        *event_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
+}
 
-static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask) { CFN_HAL_UNUSED(base); if (error_mask) { *error_mask = 0; } return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
+{
+    CFN_HAL_UNUSED(base);
+    if (error_mask)
+    {
+        *error_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
+}
 
-static const cfn_hal_gpio_api_t gpio_api = {
+static const cfn_hal_gpio_api_t GPIO_API = {
     .base = {
         .init = NULL,
         .deinit = NULL,
@@ -58,14 +74,20 @@ cfn_hal_error_code_t cfn_hal_gpio_construct(cfn_hal_gpio_t           *driver,
                                             cfn_hal_gpio_callback_t   callback,
                                             void                     *user_arg)
 {
-    if ((driver == NULL) || (phy == NULL)) { return CFN_HAL_ERROR_BAD_PARAM; }
-    cfn_hal_gpio_populate(driver, 0, clock, &gpio_api, phy, callback, user_arg);
+    if ((driver == NULL) || (phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    cfn_hal_gpio_populate(driver, 0, clock, &GPIO_API, phy, callback, user_arg);
     return CFN_HAL_ERROR_OK;
 }
 
 cfn_hal_error_code_t cfn_hal_gpio_destruct(cfn_hal_gpio_t *driver)
 {
-    if (driver == NULL) { return CFN_HAL_ERROR_BAD_PARAM; }
+    if (driver == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     cfn_hal_gpio_populate(driver, 0, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 }

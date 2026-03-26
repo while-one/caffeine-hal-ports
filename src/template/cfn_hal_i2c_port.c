@@ -26,11 +26,27 @@
 #include "cfn_hal_i2c.h"
 #include "cfn_hal_i2c_port.h"
 
-static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask) { CFN_HAL_UNUSED(base); if (event_mask) { *event_mask = 0; } return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t *event_mask)
+{
+    CFN_HAL_UNUSED(base);
+    if (event_mask)
+    {
+        *event_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
+}
 
-static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask) { CFN_HAL_UNUSED(base); if (error_mask) { *error_mask = 0; } return CFN_HAL_ERROR_OK; }
+static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t *error_mask)
+{
+    CFN_HAL_UNUSED(base);
+    if (error_mask)
+    {
+        *error_mask = 0;
+    }
+    return CFN_HAL_ERROR_OK;
+}
 
-static const cfn_hal_i2c_api_t i2c_api = {
+static const cfn_hal_i2c_api_t I2C_API = {
     .base = {
         .init = NULL,
         .deinit = NULL,
@@ -57,14 +73,20 @@ cfn_hal_error_code_t cfn_hal_i2c_construct(cfn_hal_i2c_t              *driver,
                                            cfn_hal_i2c_callback_t      callback,
                                            void                       *user_arg)
 {
-    if ((driver == NULL) || (phy == NULL)) { return CFN_HAL_ERROR_BAD_PARAM; }
-    cfn_hal_i2c_populate(driver, 0, clock, &i2c_api, phy, config, callback, user_arg);
+    if ((driver == NULL) || (phy == NULL))
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+    cfn_hal_i2c_populate(driver, 0, clock, &I2C_API, phy, config, callback, user_arg);
     return CFN_HAL_ERROR_OK;
 }
 
 cfn_hal_error_code_t cfn_hal_i2c_destruct(cfn_hal_i2c_t *driver)
 {
-    if (driver == NULL) { return CFN_HAL_ERROR_BAD_PARAM; }
+    if (driver == NULL)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
     cfn_hal_i2c_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 }

@@ -1,0 +1,19 @@
+{
+  "version": 4,
+  "include": [
+    "../../../caffeine-build/cmake/presets/base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-native",
+      "inherits": "base-common",
+      "displayName": "Linux Native (POSIX Port)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-native",
+      "cacheVariables": {
+        "CFN_HAL_PORT_VENDOR": "posix",
+        "CFN_HAL_PORT_FAMILY": "linux"
+      }
+    }
+  ]
+}
