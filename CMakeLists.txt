@@ -17,7 +17,7 @@ include(FetchContent)
 FetchContent_Declare(
     caffeine-hal
     GIT_REPOSITORY https://github.com/while-one/caffeine-hal.git
-    GIT_TAG        v0.4.13
+    GIT_TAG        v0.4.14
 )
 
 FetchContent_MakeAvailable(caffeine-hal)
@@ -158,12 +158,15 @@ endif()
 # 3. Static Analysis (clang-tidy)
 find_program(CLANG_TIDY clang-tidy)
 if(CLANG_TIDY AND ALL_ANALYSIS_SOURCES)
+    cfn_get_clang_tidy_extra_args(CLANG_TIDY_EXTRA_ARGS)
+
     add_custom_target(
         ${PROJECT_NAME}-tidy
         COMMAND ${CLANG_TIDY}
         -p=${CMAKE_BINARY_DIR}
         --config-file=${PROJECT_SOURCE_DIR}/caffeine-build/config/coding/.clang-tidy
         --header-filter="${PROJECT_SOURCE_DIR}/src/${ANALYSIS_SUBDIR}/.*"
+        ${CLANG_TIDY_EXTRA_ARGS}
         ${ALL_ANALYSIS_SOURCES}
         COMMENT "Running clang-tidy static analysis using compile_commands.json..."
     )
