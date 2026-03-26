@@ -133,7 +133,7 @@ endif()
 
 # 2. Static Analysis (cppcheck)
 find_program(CPPCHECK cppcheck)
-if(CPPCHECK AND ALL_ANALYSIS_SOURCES)
+if(CPPCHECK)
     add_custom_target(
         ${PROJECT_NAME}-cppcheck
         COMMAND ${CPPCHECK}

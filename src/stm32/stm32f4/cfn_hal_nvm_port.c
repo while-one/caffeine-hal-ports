@@ -98,7 +98,7 @@ static uint32_t get_sector(uint32_t address)
 
 /* VMT Implementations ----------------------------------------------*/
 
-static cfn_hal_error_code_t low_level_init(cfn_hal_nvm_t *driver)
+static cfn_hal_error_code_t low_level_init(const cfn_hal_nvm_t *driver)
 {
     if (driver == NULL || driver->phy == NULL)
     {

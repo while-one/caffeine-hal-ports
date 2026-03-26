@@ -12,9 +12,18 @@
   "configurePresets": [
     {
       "name": "unit-tests-gtest",
-      "displayName": "HAL Ports Unit Tests (Native GTest - Template Compliance)",
+      "displayName": "HAL Ports Unit Tests (Native GTest)",
       "inherits": "base-common",
       "binaryDir": "${sourceDir}/build/unit-tests-gtest",
+      "cacheVariables": {
+        "CFN_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "template-compliance",
+      "displayName": "Template Interface Compliance (Static Analysis)",
+      "inherits": "base-common",
+      "binaryDir": "${sourceDir}/build/template-compliance",
       "cacheVariables": {
         "CFN_BUILD_TESTS": "ON"
       }
