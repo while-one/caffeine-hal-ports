@@ -17,7 +17,7 @@ include(FetchContent)
 FetchContent_Declare(
     caffeine-hal
     GIT_REPOSITORY https://github.com/while-one/caffeine-hal.git
-    GIT_TAG        v0.4.14
+    GIT_TAG        v0.4.15
 )
 
 FetchContent_MakeAvailable(caffeine-hal)
@@ -133,19 +133,12 @@ endif()
 
 # 2. Static Analysis (cppcheck)
 find_program(CPPCHECK cppcheck)
-if(CPPCHECK)
+if(CPPCHECK AND ALL_ANALYSIS_SOURCES)
     add_custom_target(
         ${PROJECT_NAME}-cppcheck
         COMMAND ${CPPCHECK}
+        ${CFN_CPPCHECK_FLAGS}
         --project=${CMAKE_BINARY_DIR}/compile_commands.json
-        --enable=all
-        --suppress=missingInclude
-        --suppress=missingIncludeSystem
-        --suppress=unusedFunction
-        --suppress=*:*/_deps/*
-        --inline-suppr
-        --check-level=exhaustive
-        -D__GNUC__
         --file-filter=${PROJECT_SOURCE_DIR}/src/${ANALYSIS_SUBDIR}/*
         COMMENT "Running cppcheck static analysis using compile_commands.json..."
     )
