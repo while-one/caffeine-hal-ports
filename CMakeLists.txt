@@ -133,7 +133,7 @@ endif()
 
 # 2. Static Analysis (cppcheck)
 find_program(CPPCHECK cppcheck)
-if(CPPCHECK AND ALL_ANALYSIS_SOURCES)
+if(CPPCHECK)
     add_custom_target(
         ${PROJECT_NAME}-cppcheck
         COMMAND ${CPPCHECK}
@@ -150,7 +150,7 @@ endif()
 
 # 3. Static Analysis (clang-tidy)
 find_program(CLANG_TIDY clang-tidy)
-if(CLANG_TIDY AND ALL_ANALYSIS_SOURCES)
+if(CLANG_TIDY)
     cfn_get_clang_tidy_extra_args(CLANG_TIDY_EXTRA_ARGS)
 
     add_custom_target(
