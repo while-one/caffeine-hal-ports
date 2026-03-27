@@ -156,6 +156,3 @@ if(ALL_LINKER_SCRIPTS)
         DESTINATION ${PACKAGE_LINKER_INSTALL_DIR}
     )
 endif()
-IR}
-    )
-endif()
