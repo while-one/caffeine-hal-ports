@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.23)
-project(caffeine-hal-ports VERSION 0.2.14 LANGUAGES C ASM)
+project(caffeine-hal-ports VERSION 0.3.0 LANGUAGES C ASM)
 include(${PROJECT_SOURCE_DIR}/caffeine-build/cmake/CaffeineMacros.cmake)
 
 # Global standards for the Caffeine Framework
@@ -17,7 +17,7 @@ include(FetchContent)
 FetchContent_Declare(
     caffeine-hal
     GIT_REPOSITORY https://github.com/while-one/caffeine-hal.git
-    GIT_TAG        v0.5.0
+    GIT_TAG        v0.5.1
 )
 
 FetchContent_MakeAvailable(caffeine-hal)

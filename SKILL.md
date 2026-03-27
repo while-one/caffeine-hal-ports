@@ -29,17 +29,18 @@ This repository contains the hardware-specific implementations (VMT wrappers) fo
 ### A. Unified CI
 Every repository utilizes the framework's quality gate script:
 ```bash
-./caffeine-build/scripts/ci.sh
+./caffeine-build/scripts/ci.sh all
 ```
 
 ### B. Strict Analysis
-A **zero-warning policy** is enforced. `clang-tidy` and `cppcheck` violations will fail the build. Cross-compilation headers are automatically resolved via the `cfn_get_clang_tidy_extra_args` macro.
+A **zero-warning policy** is enforced. `clang-tidy` and `cppcheck` violations will fail the build. Static analysis targets are managed via the centralized `cfn_add_code_quality_targets()` macro. Cross-compilation headers are automatically resolved via the `cfn_get_clang_tidy_extra_args` macro.
 
 ### C. Template Compliance
-The default "no-hardware" mode (`unit-tests-gtest`) proactively analyzes the `template/` directory to prevent architectural rot in the boilerplate.
+The default "no-hardware" mode (`unit-tests-gtest`) proactively analyzes the `template/` directory to prevent architectural rot in the boilerplate. This preset must be defined in `CMakePresets.json` inheriting from `base-unit-tests-gtest`.
 
 ---
 
 ## 4. Testing Requirements
 - **Mock Interface:** Automatically links against `caffeine::hal-mock` when `CFN_BUILD_TESTS=ON`.
-- **VMT Verification:** Manually append specific `.c` VMT sources to test executables in `tests/CMakeLists.txt` to verify logic natively on the host.
+- **VMT Logic Verification (Native):** To test hardware-specific logic natively, use the **Mock SDK** pattern (refer to `.artifacts/native_port_testing_plan.md`). This allows compiling port source files using the host compiler by providing mocked vendor headers and function stubs.
+- **Test Execution:** Tests are executed using the `unit-tests-gtest` test preset.

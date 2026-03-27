@@ -69,15 +69,21 @@ The project includes built-in targets for maintaining code quality:
 
 ## Build Environment (Docker & Local)
 
-Use the `caffeine-build/scripts/build.sh` helper script to build your project inside a Docker container.
+Use the framework's centralized scripts for orchestration:
 
 ```bash
+# Full Quality Gate (Format -> Analyze -> Build -> Test)
+./caffeine-build/scripts/ci.sh all
+
 # Build using the native Linux stage (Template Compliance mode)
 ./caffeine-build/scripts/build.sh unit-tests-gtest
 
 # Perform a clean build for a specific cross-compiler preset
 ./caffeine-build/scripts/build.sh --clean stm32f407-release
 ```
+
+### Native Logic Testing (Experimental)
+To test hardware-specific VMT logic on your host without an ARM toolchain, use the **Mock SDK** pattern. This allows compiling the exact `.c` port files by providing a "fake" vendor environment. See `.artifacts/native_port_testing_plan.md` for details.
 
 ---
 
