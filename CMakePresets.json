@@ -56,5 +56,14 @@
         "CFN_HAL_PORT_TARGET": "stm32f417vgtx"
       }
     }
+  ],
+  "testPresets": [
+    {
+      "name": "unit-tests-gtest",
+      "configurePreset": "unit-tests-gtest",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
   ]
 }
