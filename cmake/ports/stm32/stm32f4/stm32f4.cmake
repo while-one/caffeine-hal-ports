@@ -1,6 +1,6 @@
 include(FetchContent)
 
-# Fetch the Vendor SDK dynamically.
+# Fetch the Vendor SDK dynamically for all F4 series targets.
 FetchContent_Declare(
     vendor_stm32cubef4
     GIT_REPOSITORY https://github.com/STMicroelectronics/STM32CubeF4.git
@@ -30,7 +30,7 @@ set(PORT_SOURCES_LIST "")
 macro(cfn_add_stm32f4_module NAME VENDOR_FILES PORT_FILES)
     # Port files are ALWAYS added to ensure construct/destruct symbols exist
     foreach(PFILE IN ITEMS ${PORT_FILES})
-        list(APPEND PORT_SOURCES_LIST "${CMAKE_CURRENT_SOURCE_DIR}/${PFILE}")
+        list(APPEND PORT_SOURCES_LIST "${PROJECT_SOURCE_DIR}/${PFILE}")
     endforeach()
 
     if(CFN_HAL_${NAME} STREQUAL "ON")
@@ -53,6 +53,7 @@ list(APPEND VENDOR_SOURCES_LIST
     "${HAL_SRC_DIR}/stm32f4xx_hal_pwr_ex.c"
     "${HAL_SRC_DIR}/stm32f4xx_hal_flash.c"
     "${HAL_SRC_DIR}/stm32f4xx_hal_flash_ex.c"
+    "${HAL_SRC_DIR}/stm32f4xx_hal_exti.c"
     "${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/system_stm32f4xx.c"
 )
 
@@ -65,7 +66,7 @@ cfn_add_stm32f4_module(CRYPTO "stm32f4xx_hal_cryp.c;stm32f4xx_hal_cryp_ex.c" "sr
 cfn_add_stm32f4_module(DAC    "stm32f4xx_hal_dac.c;stm32f4xx_hal_dac_ex.c" "src/stm32/stm32f4/cfn_hal_dac_port.c")
 cfn_add_stm32f4_module(DMA    "stm32f4xx_hal_dma.c;stm32f4xx_hal_dma_ex.c" "src/stm32/stm32f4/cfn_hal_dma_port.c")
 cfn_add_stm32f4_module(ETH    "stm32f4xx_hal_eth.c"                        "src/stm32/stm32f4/cfn_hal_eth_port.c")
-cfn_add_stm32f4_module(GPIO   "stm32f4xx_hal_gpio.c;stm32f4xx_hal_exti.c"  "src/stm32/stm32f4/cfn_hal_gpio_port.c")
+cfn_add_stm32f4_module(GPIO   "stm32f4xx_hal_gpio.c"                       "src/stm32/stm32f4/cfn_hal_gpio_port.c")
 cfn_add_stm32f4_module(I2C    "stm32f4xx_hal_i2c.c;stm32f4xx_hal_i2c_ex.c" "src/stm32/stm32f4/cfn_hal_i2c_port.c")
 cfn_add_stm32f4_module(I2S    "stm32f4xx_hal_i2s.c;stm32f4xx_hal_i2s_ex.c" "src/stm32/stm32f4/cfn_hal_i2s_port.c")
 cfn_add_stm32f4_module(IRQ    ""                                           "src/stm32/stm32f4/cfn_hal_irq_port.c")
@@ -84,19 +85,44 @@ cfn_add_stm32f4_module(WDT    "stm32f4xx_hal_iwdg.c;stm32f4xx_hal_wwdg.c"  "src/
 if(CFN_HAL_HASH STREQUAL "ON")
     list(APPEND VENDOR_SOURCES_LIST "${HAL_SRC_DIR}/stm32f4xx_hal_hash.c" "${HAL_SRC_DIR}/stm32f4xx_hal_hash_ex.c")
     set(HAL_HASH_MODULE_ENABLED 1)
+else()
+    set(HAL_HASH_MODULE_ENABLED 0)
 endif()
 if(CFN_HAL_RNG STREQUAL "ON")
     list(APPEND VENDOR_SOURCES_LIST "${HAL_SRC_DIR}/stm32f4xx_hal_rng.c")
     set(HAL_RNG_MODULE_ENABLED 1)
+else()
+    set(HAL_RNG_MODULE_ENABLED 0)
 endif()
 
 # --- Generate stm32f4xx_hal_conf.h ---
 configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/stm32/stm32f4/stm32f4xx_hal_conf.h.in"
+    "${PROJECT_SOURCE_DIR}/src/stm32/stm32f4/stm32f4xx_hal_conf.h.in"
     "${CMAKE_CURRENT_BINARY_DIR}/generated/stm32f4xx_hal_conf.h"
 )
 
-# --- 1. Vendor SDK Isolation Target ---
+# --- 1. Centralized SDK Include Paths ---
+set(VENDOR_SDK_INC_DIRS
+    "${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc"
+    "${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy"
+    "${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Include"
+    "${SDK_DIR}/Drivers/CMSIS/Include"
+)
+
+# For Static Analysis (exported to main CMakeLists)
+set(CFN_HAL_PORT_ANALYSIS_INCLUDES
+    ${VENDOR_SDK_INC_DIRS}
+    "${CMAKE_CURRENT_BINARY_DIR}/generated"
+    CACHE INTERNAL "Port-specific include paths for static analysis"
+)
+
+# Wrap for build interface
+set(VENDOR_SDK_BUILD_INCS "")
+foreach(INC IN LISTS VENDOR_SDK_INC_DIRS)
+    list(APPEND VENDOR_SDK_BUILD_INCS "$<BUILD_INTERFACE:${INC}>")
+endforeach()
+
+# --- 2. Vendor SDK Isolation Target ---
 add_library(vendor_sdk OBJECT ${VENDOR_SOURCES_LIST} ${STARTUP_FILE})
 target_compile_options(vendor_sdk PRIVATE -w)
 target_link_libraries(vendor_sdk PRIVATE caffeine::hal)
@@ -111,61 +137,56 @@ if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
     target_compile_options(vendor_sdk PRIVATE ${MCU_FLAGS_LIST})
 endif()
 
-target_include_directories(vendor_sdk SYSTEM PRIVATE
-    ${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc
-    ${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Include
-    ${SDK_DIR}/Drivers/CMSIS/Include
-)
+target_include_directories(vendor_sdk SYSTEM PUBLIC ${VENDOR_SDK_BUILD_INCS})
 target_include_directories(vendor_sdk PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 target_compile_definitions(vendor_sdk PUBLIC USE_HAL_DRIVER ${CAFFEINE_MCU_MACRO})
 
-# --- 2. Main Port Library ---
-add_library(${PROJECT_NAME} STATIC ${PORT_SOURCES_LIST})
-target_compile_options(${PROJECT_NAME} PRIVATE ${CPU_FLAGS})
-target_compile_options(${PROJECT_NAME} INTERFACE ${CPU_FLAGS})
-target_link_options(${PROJECT_NAME} INTERFACE ${CPU_FLAGS})
+# --- 3. Main Port Target Configuration (delegated to root CMakeLists) ---
+macro(cfn_port_apply_target_config TARGET_NAME)
+    # Link against the generic HAL interface
+    target_link_libraries(${TARGET_NAME} PUBLIC caffeine::hal)
 
-if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
-    separate_arguments(MCU_FLAGS_LIST NATIVE_COMMAND ${CAFFEINE_MCU_COMPILE_OPTIONS})
-    target_compile_options(${PROJECT_NAME} PRIVATE ${MCU_FLAGS_LIST})
-    target_compile_options(${PROJECT_NAME} INTERFACE ${MCU_FLAGS_LIST})
-    target_link_options(${PROJECT_NAME} INTERFACE ${MCU_FLAGS_LIST})
-endif()
+    target_compile_options(${TARGET_NAME} PRIVATE ${CPU_FLAGS})
+    target_compile_options(${TARGET_NAME} INTERFACE ${CPU_FLAGS})
+    target_link_options(${TARGET_NAME} INTERFACE ${CPU_FLAGS})
 
-# We link vendor_sdk INTERFACE so that downstream executables pull in the object files (startup, etc)
-target_link_libraries(${PROJECT_NAME} INTERFACE $<TARGET_OBJECTS:vendor_sdk>)
-target_link_libraries(${PROJECT_NAME} PRIVATE $<TARGET_OBJECTS:vendor_sdk>)
-
-# Export port-specific headers and generated config to downstream users
-target_include_directories(${PROJECT_NAME} PUBLIC 
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/stm32/stm32f4>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
-)
-
-target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
-    ${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc
-    ${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Include
-    ${SDK_DIR}/Drivers/CMSIS/Include
-)
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
-
-target_compile_definitions(${PROJECT_NAME} PUBLIC USE_HAL_DRIVER ${CAFFEINE_MCU_MACRO})
-
-if(DEFINED CAFFEINE_BOOTLOADER_SIZE_HEX)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC USER_VECT_TAB_ADDRESS VECT_TAB_OFFSET=${CAFFEINE_BOOTLOADER_SIZE_HEX})
-endif()
-
-if(DEFINED CAFFEINE_LINKER_SCRIPT)
-    find_file(LINKER_SCRIPT_FULL_PATH 
-        NAMES ${CAFFEINE_LINKER_SCRIPT}
-        PATHS "${PROJECT_SOURCE_DIR}/linker"
-        NO_DEFAULT_PATH
-    )
-    if(LINKER_SCRIPT_FULL_PATH)
-        target_link_options(${PROJECT_NAME} INTERFACE
-            -T "${LINKER_SCRIPT_FULL_PATH}"
-        )
+    if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
+        separate_arguments(MCU_FLAGS_LIST NATIVE_COMMAND ${CAFFEINE_MCU_COMPILE_OPTIONS})
+        target_compile_options(${TARGET_NAME} PRIVATE ${MCU_FLAGS_LIST})
+        target_compile_options(${TARGET_NAME} INTERFACE ${MCU_FLAGS_LIST})
+        target_link_options(${TARGET_NAME} INTERFACE ${MCU_FLAGS_LIST})
     endif()
-endif()
 
+    # We link vendor_sdk INTERFACE so that downstream executables pull in the object files (startup, etc)
+    target_link_libraries(${TARGET_NAME} INTERFACE $<TARGET_OBJECTS:vendor_sdk>)
+    target_link_libraries(${TARGET_NAME} PRIVATE $<TARGET_OBJECTS:vendor_sdk>)
+
+    # Export port-specific headers and generated config to downstream users
+    target_include_directories(${TARGET_NAME} PUBLIC 
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/stm32/stm32f4>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
+    )
+
+    target_include_directories(${TARGET_NAME} SYSTEM PUBLIC ${VENDOR_SDK_BUILD_INCS})
+    target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
+
+    target_compile_definitions(${TARGET_NAME} PUBLIC USE_HAL_DRIVER ${CAFFEINE_MCU_MACRO})
+
+    if(DEFINED CAFFEINE_BOOTLOADER_SIZE_HEX)
+        target_compile_definitions(${TARGET_NAME} PUBLIC USER_VECT_TAB_ADDRESS VECT_TAB_OFFSET=${CAFFEINE_BOOTLOADER_SIZE_HEX})
+    endif()
+
+    if(DEFINED CAFFEINE_LINKER_SCRIPT)
+        find_file(LINKER_SCRIPT_FULL_PATH 
+            NAMES ${CAFFEINE_LINKER_SCRIPT}
+            PATHS "${PROJECT_SOURCE_DIR}/linker"
+            NO_DEFAULT_PATH
+        )
+        if(LINKER_SCRIPT_FULL_PATH)
+            target_link_options(${TARGET_NAME} INTERFACE
+                -T "${LINKER_SCRIPT_FULL_PATH}"
+            )
+        endif()
+    endif()
+endmacro()

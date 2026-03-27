@@ -114,7 +114,7 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    cfn_hal_nvm_t *driver = (cfn_hal_nvm_t *) base;
+    const cfn_hal_nvm_t *driver = (const cfn_hal_nvm_t *) base;
 
     return low_level_init(driver);
 }
