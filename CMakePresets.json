@@ -11,11 +11,13 @@
   ],
   "configurePresets": [
     {
-      "name": "template",
-      "displayName": "Template Implementation (Boilerplate Analysis)",
+      "name": "host-tests",
+      "displayName": "Caffeine Unit Tests (Native Host)",
+      "description": "Standardized unit test configuration using the host compiler",
       "inherits": "base-common",
-      "binaryDir": "${sourceDir}/build/template",
+      "binaryDir": "${sourceDir}/build/host-tests",
       "cacheVariables": {
+        "CFN_BUILD_TESTS": "ON",
         "CFN_HAL_PORT_VENDOR": "template",
         "CFN_HAL_PORT_FAMILY": "template",
         "CFN_HAL_PORT_TARGET": "template"
@@ -54,18 +56,6 @@
         "CFN_HAL_PORT_VENDOR": "stm32",
         "CFN_HAL_PORT_FAMILY": "stm32f4",
         "CFN_HAL_PORT_TARGET": "stm32f417vgtx"
-      }
-    },
-    {
-      "name": "gd32vf103-release",
-      "displayName": "GD32VF103 (RISC-V rv32imac)",
-      "inherits": "base-riscv",
-      "binaryDir": "${sourceDir}/build/gd32vf103-release",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CFN_HAL_PORT_VENDOR": "gigadevice",
-        "CFN_HAL_PORT_FAMILY": "gd32v",
-        "CFN_HAL_PORT_TARGET": "gd32vf103"
       }
     }
   ]
