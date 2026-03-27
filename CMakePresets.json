@@ -11,13 +11,11 @@
   ],
   "configurePresets": [
     {
-      "name": "host-tests",
+      "name": "unit-tests-gtest",
       "displayName": "Caffeine Unit Tests (Native Host)",
       "description": "Standardized unit test configuration using the host compiler",
-      "inherits": "base-common",
-      "binaryDir": "${sourceDir}/build/host-tests",
+      "inherits": "base-unit-tests-gtest",
       "cacheVariables": {
-        "CFN_BUILD_TESTS": "ON",
         "CFN_HAL_PORT_VENDOR": "template",
         "CFN_HAL_PORT_FAMILY": "template",
         "CFN_HAL_PORT_TARGET": "template"
