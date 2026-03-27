@@ -11,9 +11,26 @@
   ],
   "configurePresets": [
     {
-      "name": "template-compliance",
-      "displayName": "Template Interface Compliance (Static Analysis)",
-      "inherits": "unit-tests-gtest"
+      "name": "template",
+      "displayName": "Template Implementation (Boilerplate Analysis)",
+      "inherits": "base-common",
+      "binaryDir": "${sourceDir}/build/template",
+      "cacheVariables": {
+        "CFN_HAL_PORT_VENDOR": "template",
+        "CFN_HAL_PORT_FAMILY": "template",
+        "CFN_HAL_PORT_TARGET": "template"
+      }
+    },
+    {
+      "name": "posix-linux",
+      "displayName": "POSIX Linux Implementation",
+      "inherits": "base-common",
+      "binaryDir": "${sourceDir}/build/posix-linux",
+      "cacheVariables": {
+        "CFN_HAL_PORT_VENDOR": "posix",
+        "CFN_HAL_PORT_FAMILY": "linux",
+        "CFN_HAL_PORT_TARGET": "linux"
+      }
     },
     {
       "name": "stm32f407-release",

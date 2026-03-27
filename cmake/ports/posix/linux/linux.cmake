@@ -1,9 +1,9 @@
-add_library(${PROJECT_NAME} STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/posix/linux/cfn_hal_uart.c
+# This script defines the POSIX-compliant Linux port.
+# Used for host-side execution and high-level Linux applications.
+
+set(PORT_SOURCES_LIST
+    ${PROJECT_SOURCE_DIR}/src/posix/linux/cfn_hal_uart.c
 )
-# Export port-specific headers
-target_include_directories(${PROJECT_NAME} PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/posix/linux>
-)
-# Linux requires pthread for async operations
-target_link_libraries(${PROJECT_NAME} PRIVATE pthread)
+
+# Main target configuration is handled by the root CMakeLists.txt
+# using the PORT_SOURCES_LIST variable populated here.
