@@ -29,8 +29,21 @@ if(GTest_FOUND)
 else()
     target_link_libraries(${PROJECT_NAME}-gmock_main INTERFACE gmock_main)
 endif()
-# Gather all port tests
-file(GLOB_RECURSE TEST_SOURCES "stm32/**/*.cpp" "posix/**/*.cpp" "gigadevice/**/*.cpp")
+# Gather tests specific to the selected hardware family
+set(TEST_SOURCES "")
+if(CFN_HAL_PORT_VENDOR AND CFN_HAL_PORT_FAMILY)
+    # We only gather the actual unit test logic files from the src/ directory.
+    # The mock implementations are now handled by the vendor_sdk target.
+    file(GLOB_RECURSE FAMILY_TESTS "${CFN_HAL_PORT_VENDOR}/${CFN_HAL_PORT_FAMILY}/src/*.cpp")
+    list(APPEND TEST_SOURCES ${FAMILY_TESTS})
+endif()
+
+# Fallback: if no family-specific tests found, or we are in template mode, 
+# gather all generic tests (if any exist in the root of tests/)
+if(NOT TEST_SOURCES)
+    file(GLOB GENERIC_TESTS "*.cpp")
+    list(APPEND TEST_SOURCES ${GENERIC_TESTS})
+endif()
 
 # Gather all port headers for IDE support (syntax highlighting)
 file(GLOB_RECURSE PORT_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/../src/**/*.h")
@@ -44,7 +57,7 @@ if(TEST_SOURCES)
     add_executable(${PROJECT_NAME}-test ${TEST_SOURCES} ${PORT_HEADERS})
 
     # Always enable coverage instrumentation for host-side unit tests
-    target_compile_options(${PROJECT_NAME}-test PRIVATE --coverage -O0 -g)
+    target_compile_options(${PROJECT_NAME}-test PRIVATE --coverage -O0 -g -fpermissive)
     target_link_options(${PROJECT_NAME}-test PRIVATE --coverage)
 
     # Link the GoogleTest mock framework
@@ -53,6 +66,14 @@ if(TEST_SOURCES)
         caffeine::hal-ports # Empty interface in mock-tests preset
         ${PROJECT_NAME}-gmock_main
     )
+
+    # Ensure the vendor_sdk target (which contains our mocks in native mode) 
+    # can find the GTest/GMock headers.
+    if(TARGET vendor_sdk)
+        target_link_libraries(vendor_sdk PUBLIC ${PROJECT_NAME}-gmock_main)
+        # ST headers use C-style pointer casts that require -fpermissive in C++
+        target_compile_options(vendor_sdk PRIVATE -fpermissive)
+    endif()
 
     include(GoogleTest)
     gtest_discover_tests(${PROJECT_NAME}-test)

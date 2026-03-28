@@ -215,9 +215,9 @@ static cfn_hal_error_code_t port_nvm_get_info(cfn_hal_nvm_t *driver, cfn_hal_nvm
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    info->total_size   = 1024 * 1024; /* Assume 1MB for F417VG */
-    info->sector_size  = 128 * 1024;  /* Large sectors on F4 */
-    info->page_size    = 1;           /* Byte-programmable */
+    info->total_size   = 1024UL * 1024UL; /* Assume 1MB for F417VG */
+    info->sector_size  = 128UL * 1024UL;  /* Large sectors on F4 */
+    info->page_size    = 1;               /* Byte-programmable */
     info->write_cycles = 10000;
 
     return CFN_HAL_ERROR_OK;
