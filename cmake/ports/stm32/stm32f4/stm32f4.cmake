@@ -19,8 +19,12 @@ if(NOT DEFINED CAFFEINE_MCU_MACRO)
 endif()
 
 # --- Dynamic Assembly Startup Resolution ---
-string(TOLOWER "${CAFFEINE_MCU_MACRO}" LOWERCASE_MCU_MACRO)
-set(STARTUP_FILE "${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/gcc/startup_${LOWERCASE_MCU_MACRO}.s")
+if(NOT CFN_PORT_NATIVE_TEST)
+    string(TOLOWER "${CAFFEINE_MCU_MACRO}" LOWERCASE_MCU_MACRO)
+    set(STARTUP_FILE "${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/gcc/startup_${LOWERCASE_MCU_MACRO}.s")
+else()
+    set(STARTUP_FILE "")
+endif()
 
 # --- Modular Source Collection Logic ---
 set(VENDOR_SOURCES_LIST "")
@@ -34,9 +38,11 @@ macro(cfn_add_stm32f4_module NAME VENDOR_FILES PORT_FILES)
     endforeach()
 
     if(CFN_HAL_${NAME} STREQUAL "ON")
-        foreach(VFILE IN ITEMS ${VENDOR_FILES})
-            list(APPEND VENDOR_SOURCES_LIST "${HAL_SRC_DIR}/${VFILE}")
-        endforeach()
+        if(NOT CFN_PORT_NATIVE_TEST)
+            foreach(VFILE IN ITEMS ${VENDOR_FILES})
+                list(APPEND VENDOR_SOURCES_LIST "${HAL_SRC_DIR}/${VFILE}")
+            endforeach()
+        endif()
         set(HAL_${NAME}_MODULE_ENABLED 1)
     else()
         set(HAL_${NAME}_MODULE_ENABLED 0)
@@ -44,18 +50,23 @@ macro(cfn_add_stm32f4_module NAME VENDOR_FILES PORT_FILES)
 endmacro()
 
 # Always enable foundational modules
-list(APPEND VENDOR_SOURCES_LIST 
-    "${HAL_SRC_DIR}/stm32f4xx_hal.c"
-    "${HAL_SRC_DIR}/stm32f4xx_hal_cortex.c"
-    "${HAL_SRC_DIR}/stm32f4xx_hal_rcc.c"
-    "${HAL_SRC_DIR}/stm32f4xx_hal_rcc_ex.c"
-    "${HAL_SRC_DIR}/stm32f4xx_hal_pwr.c"
-    "${HAL_SRC_DIR}/stm32f4xx_hal_pwr_ex.c"
-    "${HAL_SRC_DIR}/stm32f4xx_hal_flash.c"
-    "${HAL_SRC_DIR}/stm32f4xx_hal_flash_ex.c"
-    "${HAL_SRC_DIR}/stm32f4xx_hal_exti.c"
-    "${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/system_stm32f4xx.c"
-)
+if(NOT CFN_PORT_NATIVE_TEST)
+    list(APPEND VENDOR_SOURCES_LIST 
+        "${HAL_SRC_DIR}/stm32f4xx_hal.c"
+        "${HAL_SRC_DIR}/stm32f4xx_hal_cortex.c"
+        "${HAL_SRC_DIR}/stm32f4xx_hal_rcc.c"
+        "${HAL_SRC_DIR}/stm32f4xx_hal_rcc_ex.c"
+        "${HAL_SRC_DIR}/stm32f4xx_hal_pwr.c"
+        "${HAL_SRC_DIR}/stm32f4xx_hal_pwr_ex.c"
+        "${HAL_SRC_DIR}/stm32f4xx_hal_flash.c"
+        "${HAL_SRC_DIR}/stm32f4xx_hal_flash_ex.c"
+        "${HAL_SRC_DIR}/stm32f4xx_hal_exti.c"
+        "${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/system_stm32f4xx.c"
+    )
+else()
+    # In native test mode, we use a single mock C file that implements the HAL functions
+    list(APPEND VENDOR_SOURCES_LIST "${PROJECT_SOURCE_DIR}/tests/stm32/stm32f4/mocks/hal_mock.c")
+endif()
 
 # Map CFN_HAL flags to Vendor and Port files
 cfn_add_stm32f4_module(ADC    "stm32f4xx_hal_adc.c;stm32f4xx_hal_adc_ex.c" "src/stm32/stm32f4/cfn_hal_adc_port.c")
@@ -83,13 +94,17 @@ cfn_add_stm32f4_module(WDT    "stm32f4xx_hal_iwdg.c;stm32f4xx_hal_wwdg.c"  "src/
 
 # Special handling for sub-features of CRYPTO
 if(CFN_HAL_HASH STREQUAL "ON")
-    list(APPEND VENDOR_SOURCES_LIST "${HAL_SRC_DIR}/stm32f4xx_hal_hash.c" "${HAL_SRC_DIR}/stm32f4xx_hal_hash_ex.c")
+    if(NOT CFN_PORT_NATIVE_TEST)
+        list(APPEND VENDOR_SOURCES_LIST "${HAL_SRC_DIR}/stm32f4xx_hal_hash.c" "${HAL_SRC_DIR}/stm32f4xx_hal_hash_ex.c")
+    endif()
     set(HAL_HASH_MODULE_ENABLED 1)
 else()
     set(HAL_HASH_MODULE_ENABLED 0)
 endif()
 if(CFN_HAL_RNG STREQUAL "ON")
-    list(APPEND VENDOR_SOURCES_LIST "${HAL_SRC_DIR}/stm32f4xx_hal_rng.c")
+    if(NOT CFN_PORT_NATIVE_TEST)
+        list(APPEND VENDOR_SOURCES_LIST "${HAL_SRC_DIR}/stm32f4xx_hal_rng.c")
+    endif()
     set(HAL_RNG_MODULE_ENABLED 1)
 else()
     set(HAL_RNG_MODULE_ENABLED 0)
@@ -102,12 +117,22 @@ configure_file(
 )
 
 # --- 1. Centralized SDK Include Paths ---
-set(VENDOR_SDK_INC_DIRS
-    "${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc"
-    "${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy"
-    "${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Include"
-    "${SDK_DIR}/Drivers/CMSIS/Include"
-)
+if(NOT CFN_PORT_NATIVE_TEST)
+    set(VENDOR_SDK_INC_DIRS
+        "${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc"
+        "${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy"
+        "${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Include"
+        "${SDK_DIR}/Drivers/CMSIS/Include"
+    )
+else()
+    set(VENDOR_SDK_INC_DIRS
+        "${PROJECT_SOURCE_DIR}/tests/stm32/stm32f4/mocks"
+        "${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc"
+        "${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy"
+        "${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Include"
+        # We omit real CMSIS/Include or override it via the mocks folder
+    )
+endif()
 
 # For Static Analysis (exported to main CMakeLists)
 set(CFN_HAL_PORT_ANALYSIS_INCLUDES
@@ -127,14 +152,18 @@ add_library(vendor_sdk OBJECT ${VENDOR_SOURCES_LIST} ${STARTUP_FILE})
 target_compile_options(vendor_sdk PRIVATE -w)
 target_link_libraries(vendor_sdk PRIVATE caffeine::hal)
 
-set(CPU_FLAGS -mcpu=${CAFFEINE_MCU_CORE} -mthumb)
-target_compile_options(vendor_sdk PUBLIC ${CPU_FLAGS})
-target_compile_options(vendor_sdk PRIVATE ${CPU_FLAGS})
+if(NOT CFN_PORT_NATIVE_TEST)
+    set(CPU_FLAGS -mcpu=${CAFFEINE_MCU_CORE} -mthumb)
+    target_compile_options(vendor_sdk PUBLIC ${CPU_FLAGS})
+    target_compile_options(vendor_sdk PRIVATE ${CPU_FLAGS})
 
-if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
-    separate_arguments(MCU_FLAGS_LIST NATIVE_COMMAND ${CAFFEINE_MCU_COMPILE_OPTIONS})
-    target_compile_options(vendor_sdk PUBLIC ${MCU_FLAGS_LIST})
-    target_compile_options(vendor_sdk PRIVATE ${MCU_FLAGS_LIST})
+    if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
+        separate_arguments(MCU_FLAGS_LIST NATIVE_COMMAND ${CAFFEINE_MCU_COMPILE_OPTIONS})
+        target_compile_options(vendor_sdk PUBLIC ${MCU_FLAGS_LIST})
+        target_compile_options(vendor_sdk PRIVATE ${MCU_FLAGS_LIST})
+    endif()
+else()
+    set(CPU_FLAGS "")
 endif()
 
 target_include_directories(vendor_sdk SYSTEM PUBLIC ${VENDOR_SDK_BUILD_INCS})
@@ -147,15 +176,17 @@ macro(cfn_port_apply_target_config TARGET_NAME)
     # Link against the generic HAL interface
     target_link_libraries(${TARGET_NAME} PUBLIC caffeine::hal)
 
-    target_compile_options(${TARGET_NAME} PRIVATE ${CPU_FLAGS})
-    target_compile_options(${TARGET_NAME} INTERFACE ${CPU_FLAGS})
-    target_link_options(${TARGET_NAME} INTERFACE ${CPU_FLAGS})
+    if(NOT CFN_PORT_NATIVE_TEST)
+        target_compile_options(${TARGET_NAME} PRIVATE ${CPU_FLAGS})
+        target_compile_options(${TARGET_NAME} INTERFACE ${CPU_FLAGS})
+        target_link_options(${TARGET_NAME} INTERFACE ${CPU_FLAGS})
 
-    if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
-        separate_arguments(MCU_FLAGS_LIST NATIVE_COMMAND ${CAFFEINE_MCU_COMPILE_OPTIONS})
-        target_compile_options(${TARGET_NAME} PRIVATE ${MCU_FLAGS_LIST})
-        target_compile_options(${TARGET_NAME} INTERFACE ${MCU_FLAGS_LIST})
-        target_link_options(${TARGET_NAME} INTERFACE ${MCU_FLAGS_LIST})
+        if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
+            separate_arguments(MCU_FLAGS_LIST NATIVE_COMMAND ${CAFFEINE_MCU_COMPILE_OPTIONS})
+            target_compile_options(${TARGET_NAME} PRIVATE ${MCU_FLAGS_LIST})
+            target_compile_options(${TARGET_NAME} INTERFACE ${MCU_FLAGS_LIST})
+            target_link_options(${TARGET_NAME} INTERFACE ${MCU_FLAGS_LIST})
+        endif()
     endif()
 
     # We link vendor_sdk INTERFACE so that downstream executables pull in the object files (startup, etc)
@@ -177,16 +208,18 @@ macro(cfn_port_apply_target_config TARGET_NAME)
         target_compile_definitions(${TARGET_NAME} PUBLIC USER_VECT_TAB_ADDRESS VECT_TAB_OFFSET=${CAFFEINE_BOOTLOADER_SIZE_HEX})
     endif()
 
-    if(DEFINED CAFFEINE_LINKER_SCRIPT)
-        find_file(LINKER_SCRIPT_FULL_PATH 
-            NAMES ${CAFFEINE_LINKER_SCRIPT}
-            PATHS "${PROJECT_SOURCE_DIR}/linker"
-            NO_DEFAULT_PATH
-        )
-        if(LINKER_SCRIPT_FULL_PATH)
-            target_link_options(${TARGET_NAME} INTERFACE
-                -T "${LINKER_SCRIPT_FULL_PATH}"
+    if(NOT CFN_PORT_NATIVE_TEST)
+        if(DEFINED CAFFEINE_LINKER_SCRIPT)
+            find_file(LINKER_SCRIPT_FULL_PATH 
+                NAMES ${CAFFEINE_LINKER_SCRIPT}
+                PATHS "${PROJECT_SOURCE_DIR}/linker"
+                NO_DEFAULT_PATH
             )
+            if(LINKER_SCRIPT_FULL_PATH)
+                target_link_options(${TARGET_NAME} INTERFACE
+                    -T "${LINKER_SCRIPT_FULL_PATH}"
+                )
+            endif()
         endif()
     endif()
 endmacro()

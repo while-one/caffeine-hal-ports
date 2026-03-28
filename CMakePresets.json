@@ -22,6 +22,20 @@
       }
     },
     {
+      "name": "stm32f4-mock-tests",
+      "displayName": "STM32F4 Mock Tests (Native Host)",
+      "description": "Standardized unit test configuration using the host compiler with STM32 mock SDK",
+      "inherits": "base-unit-tests-gtest",
+      "binaryDir": "${sourceDir}/build/stm32f4-mock-tests",
+      "cacheVariables": {
+        "CFN_HAL_PORT_VENDOR": "stm32",
+        "CFN_HAL_PORT_FAMILY": "stm32f4",
+        "CFN_HAL_PORT_TARGET": "stm32f407vgtx",
+        "CFN_PORT_NATIVE_TEST": "ON",
+        "CFN_BUILD_TESTS": "ON"
+      }
+    },
+    {
       "name": "posix-linux",
       "displayName": "POSIX Linux Implementation",
       "inherits": "base-common",
@@ -61,6 +75,13 @@
     {
       "name": "unit-tests-gtest",
       "configurePreset": "unit-tests-gtest",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "stm32f4-mock-tests",
+      "configurePreset": "stm32f4-mock-tests",
       "output": {
         "outputOnFailure": true
       }
