@@ -82,8 +82,16 @@ Use the framework's centralized scripts for orchestration:
 ./caffeine-build/scripts/build.sh --clean stm32f407-release
 ```
 
-### Native Logic Testing (Experimental)
-To test hardware-specific VMT logic on your host without an ARM toolchain, use the **Mock SDK** pattern. This allows compiling the exact `.c` port files by providing a "fake" vendor environment. See `.artifacts/native_port_testing_plan.md` for details.
+### Native Hardware Logic Testing
+To test hardware-specific VMT translation logic on your host without an ARM toolchain, use the **Mock SDK** pattern. This allows compiling the exact `.c` port files by substituting the real vendor headers with a native-compatible mock environment using Google Mock.
+
+```bash
+# Build and run the STM32F4 native mock tests
+./caffeine-build/scripts/build.sh stm32f4-mock-tests all
+ctest --preset stm32f4-mock-tests
+```
+
+For guidelines on expanding these tests to new peripherals, refer to [SKILL.md](SKILL.md).
 
 ---
 
