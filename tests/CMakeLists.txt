@@ -32,7 +32,9 @@ endif()
 # Gather tests specific to the selected hardware family
 set(TEST_SOURCES "")
 if(CFN_HAL_PORT_VENDOR AND CFN_HAL_PORT_FAMILY)
-    file(GLOB_RECURSE FAMILY_TESTS "${CFN_HAL_PORT_VENDOR}/${CFN_HAL_PORT_FAMILY}/**/*.cpp")
+    # We only gather the actual unit test logic files from the src/ directory.
+    # The mock implementations are now handled by the vendor_sdk target.
+    file(GLOB_RECURSE FAMILY_TESTS "${CFN_HAL_PORT_VENDOR}/${CFN_HAL_PORT_FAMILY}/src/*.cpp")
     list(APPEND TEST_SOURCES ${FAMILY_TESTS})
 endif()
 
@@ -64,6 +66,14 @@ if(TEST_SOURCES)
         caffeine::hal-ports # Empty interface in mock-tests preset
         ${PROJECT_NAME}-gmock_main
     )
+
+    # Ensure the vendor_sdk target (which contains our mocks in native mode) 
+    # can find the GTest/GMock headers.
+    if(TARGET vendor_sdk)
+        target_link_libraries(vendor_sdk PUBLIC ${PROJECT_NAME}-gmock_main)
+        # ST headers use C-style pointer casts that require -fpermissive in C++
+        target_compile_options(vendor_sdk PRIVATE -fpermissive)
+    endif()
 
     include(GoogleTest)
     gtest_discover_tests(${PROJECT_NAME}-test)

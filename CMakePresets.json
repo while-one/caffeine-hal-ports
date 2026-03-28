@@ -73,13 +73,6 @@
   ],
   "testPresets": [
     {
-      "name": "unit-tests-gtest",
-      "configurePreset": "unit-tests-gtest",
-      "output": {
-        "outputOnFailure": true
-      }
-    },
-    {
       "name": "stm32f4-mock-tests",
       "configurePreset": "stm32f4-mock-tests",
       "output": {

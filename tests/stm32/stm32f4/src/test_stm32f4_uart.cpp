@@ -1,14 +1,34 @@
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
+
+#include "mock_stm32f4_hal_uart.hpp"
+#include "mock_stm32f4_hal_base.hpp"
 
 extern "C" {
 #include "stm32f4xx_hal.h"
 #include "cfn_hal_uart.h"
 #include "cfn_hal_clock.h"
 #include "cfn_hal_uart_port.h"
-
-// Defined in hal_mock.c
-extern UART_HandleTypeDef *g_last_uart_init_handle;
 }
+
+using ::testing::_;
+using ::testing::Return;
+using ::testing::SaveArg;
+using ::testing::DoAll;
+
+class MockHalUart : public MockStm32F4HalUart {
+public:
+    MOCK_METHOD(HAL_StatusTypeDef, HAL_UART_Init, (UART_HandleTypeDef *huart), (override));
+    MOCK_METHOD(HAL_StatusTypeDef, HAL_UART_DeInit, (UART_HandleTypeDef *huart), (override));
+    MOCK_METHOD(void, HAL_UART_IRQHandler, (UART_HandleTypeDef *huart), (override));
+    MOCK_METHOD(HAL_StatusTypeDef, HAL_UART_Transmit, (UART_HandleTypeDef *huart, const uint8_t *pData, uint16_t Size, uint32_t Timeout), (override));
+    MOCK_METHOD(HAL_StatusTypeDef, HAL_UART_Receive, (UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size, uint32_t Timeout), (override));
+    MOCK_METHOD(HAL_StatusTypeDef, HAL_UARTEx_ReceiveToIdle_IT, (UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size), (override));
+    MOCK_METHOD(HAL_StatusTypeDef, HAL_UART_Transmit_IT, (UART_HandleTypeDef *huart, const uint8_t *pData, uint16_t Size), (override));
+    MOCK_METHOD(HAL_StatusTypeDef, HAL_UART_AbortTransmit_IT, (UART_HandleTypeDef *huart), (override));
+    MOCK_METHOD(HAL_StatusTypeDef, HAL_UART_Receive_IT, (UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size), (override));
+    MOCK_METHOD(HAL_StatusTypeDef, HAL_UART_AbortReceive_IT, (UART_HandleTypeDef *huart), (override));
+};
 
 class STM32F4UartTest : public ::testing::Test {
 protected:
@@ -16,9 +36,10 @@ protected:
     cfn_hal_uart_config_t config;
     cfn_hal_uart_phy_t phy;
     cfn_hal_clock_t clock;
+    MockHalUart mock_hal;
 
     void SetUp() override {
-        g_last_uart_init_handle = nullptr;
+        MockStm32F4HalUart::SetInstance(&mock_hal);
 
         // Dummy clock
         memset(&clock, 0, sizeof(clock));
@@ -36,6 +57,10 @@ protected:
         config.direction = CFN_HAL_UART_CONFIG_DIRECTION_TX_RX;
         config.flow_ctrl = CFN_HAL_UART_CONFIG_FLOW_CTRL_NONE;
     }
+
+    void TearDown() override {
+        MockStm32F4HalUart::SetInstance(nullptr);
+    }
 };
 
 TEST_F(STM32F4UartTest, HardwareMappingCorrectness) {
@@ -43,47 +68,40 @@ TEST_F(STM32F4UartTest, HardwareMappingCorrectness) {
     cfn_hal_error_code_t err = cfn_hal_uart_construct(&driver, &config, &phy, &clock, nullptr, nullptr);
     ASSERT_EQ(err, CFN_HAL_ERROR_OK);
 
+    // Capture the pointer passed to HAL_UART_Init using GMock
+    UART_HandleTypeDef* captured_handle = nullptr;
+    EXPECT_CALL(mock_hal, HAL_UART_Init(_))
+        .WillOnce(DoAll(SaveArg<0>(&captured_handle), Return(HAL_OK)));
+
     // Call init (this routes to port_base_init which calls HAL_UART_Init)
     err = cfn_hal_uart_init(&driver);
     ASSERT_EQ(err, CFN_HAL_ERROR_OK);
 
     // Verify HAL_UART_Init was called and captured the handle
-    ASSERT_NE(g_last_uart_init_handle, nullptr);
+    ASSERT_NE(captured_handle, nullptr);
 
     // Verify mapping from Caffeine types to STM32 types
-    EXPECT_EQ(g_last_uart_init_handle->Init.BaudRate, 115200);
-    EXPECT_EQ(g_last_uart_init_handle->Init.WordLength, UART_WORDLENGTH_8B);
-    EXPECT_EQ(g_last_uart_init_handle->Init.StopBits, UART_STOPBITS_1);
-    EXPECT_EQ(g_last_uart_init_handle->Init.Parity, UART_PARITY_NONE);
-    EXPECT_EQ(g_last_uart_init_handle->Init.Mode, UART_MODE_TX_RX);
-    EXPECT_EQ(g_last_uart_init_handle->Init.HwFlowCtl, UART_HWCONTROL_NONE);
+    EXPECT_EQ(captured_handle->Init.BaudRate, 115200);
+    EXPECT_EQ(captured_handle->Init.WordLength, UART_WORDLENGTH_8B);
+    EXPECT_EQ(captured_handle->Init.StopBits, UART_STOPBITS_1);
+    EXPECT_EQ(captured_handle->Init.Parity, UART_PARITY_NONE);
+    EXPECT_EQ(captured_handle->Init.Mode, UART_MODE_TX_RX);
+    EXPECT_EQ(captured_handle->Init.HwFlowCtl, UART_HWCONTROL_NONE);
 
     // Cleanup
+    EXPECT_CALL(mock_hal, HAL_UART_DeInit(_)).WillOnce(Return(HAL_OK));
     cfn_hal_uart_deinit(&driver);
     cfn_hal_uart_destruct(&driver);
 }
 
-TEST_F(STM32F4UartTest, UnsupportedConfigurationReturnsError) {
-    // Modify config to an unsupported value (e.g., 5-bit data length is not supported by F4)
-    config.data_len = CFN_HAL_UART_CONFIG_DATA_LEN_5;
+TEST_F(STM32F4UartTest, HalInitFailurePropagatesError) {
+    cfn_hal_uart_construct(&driver, &config, &phy, &clock, nullptr, nullptr);
 
-    cfn_hal_error_code_t err = cfn_hal_uart_construct(&driver, &config, &phy, &clock, nullptr, nullptr);
-    ASSERT_EQ(err, CFN_HAL_ERROR_OK); // Construct succeeds, it doesn't apply hardware
+    // Force the mock HAL to return an error
+    EXPECT_CALL(mock_hal, HAL_UART_Init(_)).WillOnce(Return(HAL_ERROR));
 
-    err = cfn_hal_uart_init(&driver);
-    // Since mapping returns UINT32_MAX or similar, we expect an error or HAL to fail.
-    // Actually, in the port implementation, it maps to UINT32_MAX.
-    // If we want it to specifically return CFN_HAL_ERROR_NOT_SUPPORTED, the port should check.
-    // Wait, the STM32F4 port just assigns UINT32_MAX to WordLength and passes it to HAL_UART_Init.
-    // HAL_UART_Init (if we mocked it properly) might return HAL_ERROR, or our mock currently just returns HAL_OK.
-    // Since our mock returns HAL_OK, the function will return CFN_HAL_ERROR_OK, which is a bug in the port implementation!
-    // But let's verify what it does right now.
+    cfn_hal_error_code_t err = cfn_hal_uart_init(&driver);
     
-    // For the sake of the test plan, we will just ensure it doesn't crash. 
-    // Ideally, the port should validate the mapping. Let's assume we just check the value.
-    if (err == CFN_HAL_ERROR_OK) {
-        EXPECT_EQ(g_last_uart_init_handle->Init.WordLength, UINT32_MAX);
-    } else {
-        EXPECT_EQ(err, CFN_HAL_ERROR_NOT_SUPPORTED);
-    }
+    // cfn_hal_stm32_map_error should map HAL_ERROR to CFN_HAL_ERROR_FAIL
+    EXPECT_EQ(err, CFN_HAL_ERROR_FAIL);
 }

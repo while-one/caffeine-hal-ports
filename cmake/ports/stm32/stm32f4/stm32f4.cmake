@@ -64,8 +64,10 @@ if(NOT CFN_PORT_NATIVE_TEST)
         "${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/system_stm32f4xx.c"
     )
 else()
-    # In native test mode, we use a single mock C file that implements the HAL functions
-    list(APPEND VENDOR_SOURCES_LIST "${PROJECT_SOURCE_DIR}/tests/stm32/stm32f4/mocks/hal_mock.c")
+    # In native test mode, the "Vendor SDK" is actually our collection of mocks.
+    # This maintains a clean linker graph where hal-ports always depends on vendor_sdk.
+    file(GLOB MOCK_SOURCES "${PROJECT_SOURCE_DIR}/tests/stm32/stm32f4/mocks/*.cpp")
+    list(APPEND VENDOR_SOURCES_LIST ${MOCK_SOURCES})
 endif()
 
 # Map CFN_HAL flags to Vendor and Port files
