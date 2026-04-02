@@ -265,8 +265,9 @@ void HAL_DACEx_ErrorCallbackCh2(DAC_HandleTypeDef *hdac)
 
 /* DAC Specific Functions */
 
-static cfn_hal_error_code_t port_dac_set_value(cfn_hal_dac_t *driver, uint32_t value)
+static cfn_hal_error_code_t port_dac_set_value(cfn_hal_dac_t *driver, uint32_t value, uint32_t timeout)
 {
+    CFN_HAL_UNUSED(timeout);
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     DAC_HandleTypeDef *hdac    = &port_hdacs[port_id];
     uint32_t           channel = (driver->phy->channel == 1) ? DAC_CHANNEL_1 : DAC_CHANNEL_2;
