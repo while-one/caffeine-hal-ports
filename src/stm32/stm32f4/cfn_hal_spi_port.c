@@ -172,8 +172,53 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
             return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    hspi->Init.NSS               = SPI_NSS_SOFT;
-    hspi->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32; /* Default */
+    hspi->Init.NSS       = SPI_NSS_SOFT;
+
+    uint32_t periph_freq = 0;
+    (void) cfn_hal_clock_get_peripheral_freq(
+        (cfn_hal_clock_t *) driver->base.clock_driver, driver->base.peripheral_id, &periph_freq);
+
+    uint32_t target_bitrate = driver->config->bitrate;
+    uint32_t prescaler      = SPI_BAUDRATEPRESCALER_256;
+
+    if ((periph_freq > 0) && (target_bitrate > 0))
+    {
+        uint32_t div = periph_freq / target_bitrate;
+        if (div <= 2)
+        {
+            prescaler = SPI_BAUDRATEPRESCALER_2;
+        }
+        else if (div <= 4)
+        {
+            prescaler = SPI_BAUDRATEPRESCALER_4;
+        }
+        else if (div <= 8)
+        {
+            prescaler = SPI_BAUDRATEPRESCALER_8;
+        }
+        else if (div <= 16)
+        {
+            prescaler = SPI_BAUDRATEPRESCALER_16;
+        }
+        else if (div <= 32)
+        {
+            prescaler = SPI_BAUDRATEPRESCALER_32;
+        }
+        else if (div <= 64)
+        {
+            prescaler = SPI_BAUDRATEPRESCALER_64;
+        }
+        else if (div <= 128)
+        {
+            prescaler = SPI_BAUDRATEPRESCALER_128;
+        }
+        else
+        {
+            prescaler = SPI_BAUDRATEPRESCALER_256;
+        }
+    }
+
+    hspi->Init.BaudRatePrescaler = prescaler;
     hspi->Init.FirstBit          = SPI_FIRSTBIT_MSB;
     hspi->Init.TIMode            = SPI_TIMODE_DISABLE;
     hspi->Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLE;

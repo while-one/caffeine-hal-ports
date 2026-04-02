@@ -346,18 +346,14 @@ static cfn_hal_error_code_t port_pwm_set_frequency(cfn_hal_pwm_t *driver, uint32
     uint32_t           port_id   = (uint32_t) (uintptr_t) driver->phy->instance;
     TIM_HandleTypeDef *htim      = &port_htims[port_id];
     uint32_t           timer_clk = get_timer_clock(PORT_INSTANCES[port_id]);
-    uint32_t           prescaler = htim->Init.Prescaler;
-    uint32_t           period    = (timer_clk / (prescaler + 1)) / frequency_hz;
+    uint32_t           prescaler = 0;
+    uint32_t           period    = 0;
+    bool               is_32bit  = (PORT_INSTANCES[port_id] == TIM2 || PORT_INSTANCES[port_id] == TIM5);
 
-    if (period > 0xFFFF && (PORT_INSTANCES[port_id] != TIM2 && PORT_INSTANCES[port_id] != TIM5))
-    {
-        /* Need to adjust prescaler for 16-bit timers */
-        prescaler = (timer_clk / 65535 / frequency_hz);
-        period    = (timer_clk / (prescaler + 1)) / frequency_hz;
-    }
+    calculate_pwm_params(timer_clk, frequency_hz, is_32bit, &prescaler, &period);
 
     __HAL_TIM_SET_PRESCALER(htim, prescaler);
-    __HAL_TIM_SET_AUTORELOAD(htim, period - 1);
+    __HAL_TIM_SET_AUTORELOAD(htim, period);
 
     return CFN_HAL_ERROR_OK;
 }
@@ -444,6 +440,16 @@ cfn_hal_error_code_t cfn_hal_pwm_destruct(cfn_hal_pwm_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
+
+    if (driver->phy != NULL)
+    {
+        uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+        if (port_id < CFN_HAL_TIMER_PORT_MAX)
+        {
+            port_drivers[port_id] = NULL;
+        }
+    }
+
     driver->config = NULL;
     driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;

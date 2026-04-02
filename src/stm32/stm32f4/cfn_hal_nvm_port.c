@@ -139,16 +139,20 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
     return CFN_HAL_ERROR_OK;
 }
 
-static cfn_hal_error_code_t port_nvm_read(cfn_hal_nvm_t *driver, uint32_t addr, uint8_t *buffer, size_t size)
+static cfn_hal_error_code_t
+port_nvm_read(cfn_hal_nvm_t *driver, uint32_t addr, uint8_t *buffer, size_t size, uint32_t timeout)
 {
     CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(timeout);
     memcpy(buffer, (const void *) (uintptr_t) addr, size); // NOLINT(performance-no-int-to-ptr)
     return CFN_HAL_ERROR_OK;
 }
 
-static cfn_hal_error_code_t port_nvm_write(cfn_hal_nvm_t *driver, uint32_t addr, const uint8_t *data, size_t size)
+static cfn_hal_error_code_t
+port_nvm_write(cfn_hal_nvm_t *driver, uint32_t addr, const uint8_t *data, size_t size, uint32_t timeout)
 {
     CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(timeout);
     HAL_StatusTypeDef status = HAL_OK;
 
     HAL_FLASH_Unlock();
@@ -167,9 +171,10 @@ static cfn_hal_error_code_t port_nvm_write(cfn_hal_nvm_t *driver, uint32_t addr,
     return cfn_hal_stm32_map_error(status);
 }
 
-static cfn_hal_error_code_t port_nvm_erase_sector(cfn_hal_nvm_t *driver, uint32_t sector_addr)
+static cfn_hal_error_code_t port_nvm_erase_sector(cfn_hal_nvm_t *driver, uint32_t sector_addr, uint32_t timeout)
 {
     CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(timeout);
     FLASH_EraseInitTypeDef erase_init   = { 0 };
     uint32_t               sector_error = 0;
     HAL_StatusTypeDef      status       = HAL_OK;
@@ -188,9 +193,10 @@ static cfn_hal_error_code_t port_nvm_erase_sector(cfn_hal_nvm_t *driver, uint32_
     return cfn_hal_stm32_map_error(status);
 }
 
-static cfn_hal_error_code_t port_nvm_erase_chip(cfn_hal_nvm_t *driver)
+static cfn_hal_error_code_t port_nvm_erase_chip(cfn_hal_nvm_t *driver, uint32_t timeout)
 {
     CFN_HAL_UNUSED(driver);
+    CFN_HAL_UNUSED(timeout);
     FLASH_EraseInitTypeDef erase_init   = { 0 };
     uint32_t               sector_error = 0;
     HAL_StatusTypeDef      status       = HAL_OK;
@@ -207,7 +213,7 @@ static cfn_hal_error_code_t port_nvm_erase_chip(cfn_hal_nvm_t *driver)
     return cfn_hal_stm32_map_error(status);
 }
 
-static cfn_hal_error_code_t port_nvm_get_info(cfn_hal_nvm_t *driver, cfn_hal_nvm_info_t *info)
+static cfn_hal_error_code_t port_nvm_get_info(cfn_hal_nvm_t *driver, uint32_t addr, cfn_hal_nvm_info_t *info)
 {
     CFN_HAL_UNUSED(driver);
     if (info == NULL)
@@ -215,10 +221,30 @@ static cfn_hal_error_code_t port_nvm_get_info(cfn_hal_nvm_t *driver, cfn_hal_nvm
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    info->total_size   = 1024UL * 1024UL; /* Assume 1MB for F417VG */
-    info->sector_size  = 128UL * 1024UL;  /* Large sectors on F4 */
-    info->page_size    = 1;               /* Byte-programmable */
+    uint32_t sector = get_sector(addr);
+    if (sector == 0xFFFFFFFF)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    /* FLASHSIZE_BASE points to a 16-bit register containing flash size in KB */
+    info->total_size   = (*((uint16_t *) FLASHSIZE_BASE)) * 1024UL;
+    info->page_size    = 1; /* Byte-programmable */
     info->write_cycles = 10000;
+
+    /* Sectors 0-3 are 16KB, Sector 4 is 64KB, Sectors 5-11 are 128KB */
+    if (sector <= FLASH_SECTOR_3)
+    {
+        info->sector_size = 16UL * 1024UL;
+    }
+    else if (sector == FLASH_SECTOR_4)
+    {
+        info->sector_size = 64UL * 1024UL;
+    }
+    else
+    {
+        info->sector_size = 128UL * 1024UL;
+    }
 
     return CFN_HAL_ERROR_OK;
 }

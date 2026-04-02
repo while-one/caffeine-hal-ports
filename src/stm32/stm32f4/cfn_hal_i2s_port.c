@@ -128,10 +128,62 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
         return error;
     }
 
-    hi2s->Instance         = PORT_INSTANCES[port_id];
-    hi2s->Init.Mode        = I2S_MODE_MASTER_TX; /* Default, can be changed via config if needed */
-    hi2s->Init.Standard    = I2S_STANDARD_PHILIPS;
-    hi2s->Init.DataFormat  = I2S_DATAFORMAT_16B;
+    hi2s->Instance = PORT_INSTANCES[port_id];
+
+    switch (driver->config->mode)
+    {
+        case CFN_HAL_I2S_CONFIG_MODE_MASTER_RX:
+            hi2s->Init.Mode = I2S_MODE_MASTER_RX;
+            break;
+        case CFN_HAL_I2S_CONFIG_MODE_SLAVE_TX:
+            hi2s->Init.Mode = I2S_MODE_SLAVE_TX;
+            break;
+        case CFN_HAL_I2S_CONFIG_MODE_SLAVE_RX:
+            hi2s->Init.Mode = I2S_MODE_SLAVE_RX;
+            break;
+        case CFN_HAL_I2S_CONFIG_MODE_MASTER_TX:
+        default:
+            hi2s->Init.Mode = I2S_MODE_MASTER_TX;
+            break;
+    }
+
+    switch (driver->config->standard)
+    {
+        case CFN_HAL_I2S_CONFIG_STANDARD_MSB:
+            hi2s->Init.Standard = I2S_STANDARD_MSB;
+            break;
+        case CFN_HAL_I2S_CONFIG_STANDARD_LSB:
+            hi2s->Init.Standard = I2S_STANDARD_LSB;
+            break;
+        case CFN_HAL_I2S_CONFIG_STANDARD_PCM_SHORT:
+            hi2s->Init.Standard = I2S_STANDARD_PCM_SHORT;
+            break;
+        case CFN_HAL_I2S_CONFIG_STANDARD_PCM_LONG:
+            hi2s->Init.Standard = I2S_STANDARD_PCM_LONG;
+            break;
+        case CFN_HAL_I2S_CONFIG_STANDARD_PHILIPS:
+        default:
+            hi2s->Init.Standard = I2S_STANDARD_PHILIPS;
+            break;
+    }
+
+    switch (driver->config->data_format)
+    {
+        case CFN_HAL_I2S_CONFIG_DATAFORMAT_16B_EXTENDED:
+            hi2s->Init.DataFormat = I2S_DATAFORMAT_16B_EXTENDED;
+            break;
+        case CFN_HAL_I2S_CONFIG_DATAFORMAT_24B:
+            hi2s->Init.DataFormat = I2S_DATAFORMAT_24B;
+            break;
+        case CFN_HAL_I2S_CONFIG_DATAFORMAT_32B:
+            hi2s->Init.DataFormat = I2S_DATAFORMAT_32B;
+            break;
+        case CFN_HAL_I2S_CONFIG_DATAFORMAT_16B:
+        default:
+            hi2s->Init.DataFormat = I2S_DATAFORMAT_16B;
+            break;
+    }
+
     hi2s->Init.MCLKOutput  = I2S_MCLKOUTPUT_ENABLE;
     hi2s->Init.AudioFreq   = driver->config->sample_rate;
     hi2s->Init.CPOL        = I2S_CPOL_LOW;
