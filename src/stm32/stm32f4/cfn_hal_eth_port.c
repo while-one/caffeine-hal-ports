@@ -269,6 +269,8 @@ static cfn_hal_error_code_t port_eth_stop(cfn_hal_eth_t *driver)
     return cfn_hal_stm32_map_error(HAL_ETH_Stop(&port_heths[port_id]));
 }
 
+#define CFN_HAL_ETH_TX_TIMEOUT_MS 100U
+
 static cfn_hal_error_code_t port_eth_transmit_frame(cfn_hal_eth_t *driver, const uint8_t *frame, size_t length)
 {
     uint32_t                  port_id   = (uint32_t) (uintptr_t) driver->phy->instance;
@@ -276,7 +278,7 @@ static cfn_hal_error_code_t port_eth_transmit_frame(cfn_hal_eth_t *driver, const
     tx_config.Attributes                = ETH_TX_PACKETS_FEATURES_CSUM | ETH_TX_PACKETS_FEATURES_CRCPAD;
     tx_config.Length                    = (uint32_t) length;
     tx_config.pData                     = (uint8_t *) frame;
-    return cfn_hal_stm32_map_error(HAL_ETH_Transmit(&port_heths[port_id], &tx_config, 100));
+    return cfn_hal_stm32_map_error(HAL_ETH_Transmit(&port_heths[port_id], &tx_config, CFN_HAL_ETH_TX_TIMEOUT_MS));
 }
 
 static cfn_hal_error_code_t
@@ -340,9 +342,64 @@ static cfn_hal_error_code_t port_eth_get_link_status(cfn_hal_eth_t *driver, cfn_
         return CFN_HAL_ERROR_FAIL;
     }
 
-    status->is_up  = (bsr & 0x0004) != 0;
-    status->speed  = CFN_HAL_ETH_LINK_SPEED_100M;  /* Simplified */
-    status->duplex = CFN_HAL_ETH_LINK_DUPLEX_FULL; /* Simplified */
+    status->is_up = (bsr & 0x0004) != 0;
+
+    if (!status->is_up)
+    {
+        status->speed  = CFN_HAL_ETH_LINK_SPEED_10M;
+        status->duplex = CFN_HAL_ETH_LINK_DUPLEX_HALF;
+        return CFN_HAL_ERROR_OK;
+    }
+
+    uint16_t bmcr = 0;
+    if (port_eth_read_phy_reg(driver, 1, 0, &bmcr) != CFN_HAL_ERROR_OK)
+    {
+        return CFN_HAL_ERROR_FAIL;
+    }
+
+    if (bmcr & 0x1000) /* Auto-Negotiation Enable */
+    {
+        if (bsr & 0x0020) /* Auto-Negotiation Complete */
+        {
+            uint16_t anar   = 0;
+            uint16_t anlpar = 0;
+            port_eth_read_phy_reg(driver, 1, 4, &anar);
+            port_eth_read_phy_reg(driver, 1, 5, &anlpar);
+
+            uint16_t common_caps = anar & anlpar;
+            if (common_caps & 0x0100) /* 100Base-TX Full Duplex */
+            {
+                status->speed  = CFN_HAL_ETH_LINK_SPEED_100M;
+                status->duplex = CFN_HAL_ETH_LINK_DUPLEX_FULL;
+            }
+            else if (common_caps & 0x0080) /* 100Base-TX Half Duplex */
+            {
+                status->speed  = CFN_HAL_ETH_LINK_SPEED_100M;
+                status->duplex = CFN_HAL_ETH_LINK_DUPLEX_HALF;
+            }
+            else if (common_caps & 0x0040) /* 10Base-T Full Duplex */
+            {
+                status->speed  = CFN_HAL_ETH_LINK_SPEED_10M;
+                status->duplex = CFN_HAL_ETH_LINK_DUPLEX_FULL;
+            }
+            else
+            {
+                status->speed  = CFN_HAL_ETH_LINK_SPEED_10M;
+                status->duplex = CFN_HAL_ETH_LINK_DUPLEX_HALF;
+            }
+        }
+        else
+        {
+            /* Fallback if auto-neg not complete but link is up */
+            status->speed  = CFN_HAL_ETH_LINK_SPEED_100M;
+            status->duplex = CFN_HAL_ETH_LINK_DUPLEX_FULL;
+        }
+    }
+    else
+    {
+        status->speed  = (bmcr & 0x2000) ? CFN_HAL_ETH_LINK_SPEED_100M : CFN_HAL_ETH_LINK_SPEED_10M;
+        status->duplex = (bmcr & 0x0100) ? CFN_HAL_ETH_LINK_DUPLEX_FULL : CFN_HAL_ETH_LINK_DUPLEX_HALF;
+    }
 
     return CFN_HAL_ERROR_OK;
 }

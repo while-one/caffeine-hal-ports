@@ -338,3 +338,4 @@ cfn_hal_error_code_t cfn_hal_gpio_destruct(cfn_hal_gpio_t *driver)
     return CFN_HAL_ERROR_NOT_SUPPORTED;
 #endif
 }
+

@@ -86,9 +86,74 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
         return error;
     }
 
+    uint32_t timeout_ms = driver->config->timeout_ms;
+    if (timeout_ms == 0)
+    {
+        timeout_ms = 512; /* Default fallback */
+    }
+
+    uint32_t prescaler     = IWDG_PRESCALER_4;
+    uint32_t reload        = 0;
+    uint32_t prescaler_div = 4;
+
+    while (prescaler_div <= 256)
+    {
+        /* LSI is 32kHz (32 ticks per ms) */
+        reload = (timeout_ms * 32) / prescaler_div;
+        if (reload <= 4095)
+        {
+            break;
+        }
+
+        switch (prescaler)
+        {
+            case IWDG_PRESCALER_4:
+                prescaler     = IWDG_PRESCALER_8;
+                prescaler_div = 8;
+                break;
+            case IWDG_PRESCALER_8:
+                prescaler     = IWDG_PRESCALER_16;
+                prescaler_div = 16;
+                break;
+            case IWDG_PRESCALER_16:
+                prescaler     = IWDG_PRESCALER_32;
+                prescaler_div = 32;
+                break;
+            case IWDG_PRESCALER_32:
+                prescaler     = IWDG_PRESCALER_64;
+                prescaler_div = 64;
+                break;
+            case IWDG_PRESCALER_64:
+                prescaler     = IWDG_PRESCALER_128;
+                prescaler_div = 128;
+                break;
+            case IWDG_PRESCALER_128:
+                prescaler     = IWDG_PRESCALER_256;
+                prescaler_div = 256;
+                break;
+            default:
+                break;
+        }
+
+        if (prescaler_div == 256)
+        {
+            reload = (timeout_ms * 32) / 256;
+            if (reload > 4095)
+            {
+                reload = 4095; /* Cap at max possible timeout (~32.7 seconds) */
+            }
+            break;
+        }
+    }
+
+    if (reload == 0)
+    {
+        reload = 1;
+    }
+
     hiwdg->Instance       = PORT_INSTANCES[port_id];
-    hiwdg->Init.Prescaler = IWDG_PRESCALER_4;
-    hiwdg->Init.Reload    = 4095;
+    hiwdg->Init.Prescaler = prescaler;
+    hiwdg->Init.Reload    = reload;
 
     return cfn_hal_stm32_map_error(HAL_IWDG_Init(hiwdg));
 }

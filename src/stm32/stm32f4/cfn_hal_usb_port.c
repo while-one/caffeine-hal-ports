@@ -143,7 +143,7 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
     }
 
     hpcd->Instance                 = PORT_INSTANCES[port_id];
-    hpcd->Init.dev_endpoints       = 7;
+    hpcd->Init.dev_endpoints       = driver->config->dev_endpoints ? driver->config->dev_endpoints : 7;
     hpcd->Init.speed               = PCD_SPEED_FULL;
     hpcd->Init.phy_itface          = PCD_PHY_EMBEDDED;
     hpcd->Init.Sof_enable          = DISABLE;
@@ -472,15 +472,18 @@ cfn_hal_error_code_t cfn_hal_usb_construct(cfn_hal_usb_t              *driver,
 cfn_hal_error_code_t cfn_hal_usb_destruct(cfn_hal_usb_t *driver)
 {
 #ifdef HAL_PCD_MODULE_ENABLED
-    if (driver == NULL || driver->phy == NULL)
+    if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
-    if (port_id < CFN_HAL_USB_PORT_MAX)
+    if (driver->phy != NULL)
     {
-        port_drivers[port_id] = NULL;
+        uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+        if (port_id < CFN_HAL_USB_PORT_MAX)
+        {
+            port_drivers[port_id] = NULL;
+        }
     }
 
     driver->config = NULL;

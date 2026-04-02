@@ -91,7 +91,29 @@ To test hardware-specific VMT translation logic on your host without an ARM tool
 ctest --preset stm32f4-mock-tests
 ```
 
-For guidelines on expanding these tests to new peripherals, refer to [SKILL.md](SKILL.md).
+### Developing with a Local HAL Dependency
+If you are simultaneously making changes to the generic `caffeine-hal` and need `caffeine-hal-ports` to consume those local changes instead of fetching the remote repository, you can override the FetchContent path using a `CMakeUserPresets.json` file. 
+
+Create a `CMakeUserPresets.json` in the root of `caffeine-hal-ports` that inherits from the desired target preset and sets `FETCHCONTENT_SOURCE_DIR_CAFFEINE-HAL` to your local path (either absolute, or relative to `${sourceDir}`):
+
+```json
+{
+  "version": 4,
+  "configurePresets": [
+    {
+      "name": "stm32f4-mock-tests-local",
+      "displayName": "STM32F4 Mock Tests with Local HAL",
+      "inherits": "stm32f4-mock-tests",
+      "binaryDir": "${sourceDir}/build/stm32f4-mock-tests-local",
+      "cacheVariables": {
+        "FETCHCONTENT_SOURCE_DIR_CAFFEINE-HAL": "${sourceDir}/../caffeine-hal"
+      }
+    }
+  ]
+}
+```
+
+Then, execute your builds targeting your custom `stm32f4-mock-tests-local` preset.
 
 ---
 

@@ -144,12 +144,7 @@ static cfn_hal_error_code_t port_base_deinit(cfn_hal_driver_t *base)
 
 static cfn_hal_error_code_t port_base_config_set(cfn_hal_driver_t *base, const void *config)
 {
-    cfn_hal_crypto_t *driver = (cfn_hal_crypto_t *) base;
-    if ((driver == NULL) || (config == NULL))
-    {
-        return CFN_HAL_ERROR_BAD_PARAM;
-    }
-    driver->config = (const cfn_hal_crypto_config_t *) config;
+    CFN_HAL_UNUSED(config);
     return port_base_init(base);
 }
 
@@ -173,6 +168,8 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
     return CFN_HAL_ERROR_OK;
 }
 
+#define CFN_HAL_CRYPTO_TIMEOUT_MS 100U
+
 static cfn_hal_error_code_t port_crypto_encrypt(cfn_hal_crypto_t *driver, const uint8_t *in, uint8_t *out, size_t size)
 {
     CFN_HAL_UNUSED(driver);
@@ -182,7 +179,7 @@ static cfn_hal_error_code_t port_crypto_encrypt(cfn_hal_crypto_t *driver, const 
                          (uint32_t *) (uintptr_t) /* NOLINT(performance-no-int-to-ptr) */ in,
                          (uint16_t) size,
                          (uint32_t *) (uintptr_t) /* NOLINT(performance-no-int-to-ptr) */ out,
-                         100));
+                         CFN_HAL_CRYPTO_TIMEOUT_MS));
 #else
     CFN_HAL_UNUSED(in);
     CFN_HAL_UNUSED(out);
@@ -200,7 +197,7 @@ static cfn_hal_error_code_t port_crypto_decrypt(cfn_hal_crypto_t *driver, const 
                          (uint32_t *) (uintptr_t) /* NOLINT(performance-no-int-to-ptr) */ in,
                          (uint16_t) size,
                          (uint32_t *) (uintptr_t) /* NOLINT(performance-no-int-to-ptr) */ out,
-                         100));
+                         CFN_HAL_CRYPTO_TIMEOUT_MS));
 #else
     CFN_HAL_UNUSED(in);
     CFN_HAL_UNUSED(out);
@@ -225,7 +222,7 @@ static cfn_hal_error_code_t port_crypto_hash_finish(cfn_hal_crypto_t *driver, ui
 {
     CFN_HAL_UNUSED(driver);
 #ifdef HAL_HASH_MODULE_ENABLED
-    return cfn_hal_stm32_map_error(HAL_HASHEx_SHA256_Finish(&port_hhash, hash, 100));
+    return cfn_hal_stm32_map_error(HAL_HASHEx_SHA256_Finish(&port_hhash, hash, CFN_HAL_CRYPTO_TIMEOUT_MS));
 #else
     CFN_HAL_UNUSED(hash);
     return CFN_HAL_ERROR_NOT_SUPPORTED;

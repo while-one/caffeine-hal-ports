@@ -353,6 +353,16 @@ cfn_hal_error_code_t cfn_hal_qspi_destruct(cfn_hal_qspi_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
+
+    if (driver->phy != NULL)
+    {
+        uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+        if (port_id < CFN_HAL_QSPI_PORT_MAX)
+        {
+            port_drivers[port_id] = NULL;
+        }
+    }
+
     driver->config = NULL;
     driver->phy    = NULL;
     return CFN_HAL_ERROR_OK;

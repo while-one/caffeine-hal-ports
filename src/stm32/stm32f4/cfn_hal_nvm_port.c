@@ -207,7 +207,7 @@ static cfn_hal_error_code_t port_nvm_erase_chip(cfn_hal_nvm_t *driver)
     return cfn_hal_stm32_map_error(status);
 }
 
-static cfn_hal_error_code_t port_nvm_get_info(cfn_hal_nvm_t *driver, cfn_hal_nvm_info_t *info)
+static cfn_hal_error_code_t port_nvm_get_info(cfn_hal_nvm_t *driver, uint32_t addr, cfn_hal_nvm_info_t *info)
 {
     CFN_HAL_UNUSED(driver);
     if (info == NULL)
@@ -215,10 +215,29 @@ static cfn_hal_error_code_t port_nvm_get_info(cfn_hal_nvm_t *driver, cfn_hal_nvm
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
+    uint32_t sector = get_sector(addr);
+    if (sector == 0xFFFFFFFF)
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
     info->total_size   = 1024UL * 1024UL; /* Assume 1MB for F417VG */
-    info->sector_size  = 128UL * 1024UL;  /* Large sectors on F4 */
     info->page_size    = 1;               /* Byte-programmable */
     info->write_cycles = 10000;
+
+    /* Sectors 0-3 are 16KB, Sector 4 is 64KB, Sectors 5-11 are 128KB */
+    if (sector <= FLASH_SECTOR_3)
+    {
+        info->sector_size = 16UL * 1024UL;
+    }
+    else if (sector == FLASH_SECTOR_4)
+    {
+        info->sector_size = 64UL * 1024UL;
+    }
+    else
+    {
+        info->sector_size = 128UL * 1024UL;
+    }
 
     return CFN_HAL_ERROR_OK;
 }
