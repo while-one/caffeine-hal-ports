@@ -77,7 +77,8 @@
       "cacheVariables": {
         "CFN_HAL_PORT_VENDOR": "template",
         "CFN_HAL_PORT_FAMILY": "template",
-        "CFN_HAL_PORT_TARGET": "template"
+        "CFN_HAL_PORT_TARGET": "template",
+        "CAFFEINE_UNIVERSE_TARGET": "ON"
       }
     }
   ],

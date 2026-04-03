@@ -8,7 +8,6 @@ file(GLOB_RECURSE ALL_UNIVERSE_SOURCES
     "${PROJECT_SOURCE_DIR}/tests/*.cpp"
     "${PROJECT_SOURCE_DIR}/tests/*.c"
     "${PROJECT_SOURCE_DIR}/tests/*.h"
-    "${PROJECT_SOURCE_DIR}/linker/*.ld"
 )
 
 include(${PROJECT_SOURCE_DIR}/caffeine-build/cmake/CaffeineMacros.cmake)
@@ -29,7 +28,7 @@ include(FetchContent)
 FetchContent_Declare(
     caffeine-hal
     GIT_REPOSITORY https://github.com/while-one/caffeine-hal.git
-    GIT_TAG        v0.5.5
+    GIT_TAG        v0.5.6
 )
 
 FetchContent_MakeAvailable(caffeine-hal)
@@ -93,7 +92,6 @@ endif()
 
 cfn_add_code_quality_targets(
     ${PROJECT_NAME}
-    FORMAT_SOURCES ${PORT_SOURCES_LIST}
     ANALYSIS_SOURCES ${PORT_SOURCES_LIST}
     CPPCHECK_FILE_FILTER "${PROJECT_SOURCE_DIR}/src/${ANALYSIS_SUBDIR}/*"
     TIDY_HEADER_FILTER "${PROJECT_SOURCE_DIR}/src/${ANALYSIS_SUBDIR}/.*"

@@ -58,14 +58,46 @@
 /* RCC Enable Macros for all possible peripherals */
 /* We use unique dummy variables to ensure clang-tidy doesn't flag identical branches */
 static volatile uint32_t __mock_rcc_gate;
-#define __HAL_RCC_UART7_CLK_ENABLE()  do { __mock_rcc_gate = 7; } while(0)
-#define __HAL_RCC_UART8_CLK_ENABLE()  do { __mock_rcc_gate = 8; } while(0)
-#define __HAL_RCC_UART9_CLK_ENABLE()  do { __mock_rcc_gate = 9; } while(0)
-#define __HAL_RCC_UART10_CLK_ENABLE() do { __mock_rcc_gate = 10; } while(0)
-#define __HAL_RCC_SPI4_CLK_ENABLE()   do { __mock_rcc_gate = 44; } while(0)
-#define __HAL_RCC_SPI5_CLK_ENABLE()   do { __mock_rcc_gate = 55; } while(0)
-#define __HAL_RCC_SPI6_CLK_ENABLE()   do { __mock_rcc_gate = 66; } while(0)
-#define __HAL_RCC_CAN3_CLK_ENABLE()   do { __mock_rcc_gate = 333; } while(0)
+#define __HAL_RCC_UART7_CLK_ENABLE()                                                                                   \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        __mock_rcc_gate = 7;                                                                                           \
+    } while (0)
+#define __HAL_RCC_UART8_CLK_ENABLE()                                                                                   \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        __mock_rcc_gate = 8;                                                                                           \
+    } while (0)
+#define __HAL_RCC_UART9_CLK_ENABLE()                                                                                   \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        __mock_rcc_gate = 9;                                                                                           \
+    } while (0)
+#define __HAL_RCC_UART10_CLK_ENABLE()                                                                                  \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        __mock_rcc_gate = 10;                                                                                          \
+    } while (0)
+#define __HAL_RCC_SPI4_CLK_ENABLE()                                                                                    \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        __mock_rcc_gate = 44;                                                                                          \
+    } while (0)
+#define __HAL_RCC_SPI5_CLK_ENABLE()                                                                                    \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        __mock_rcc_gate = 55;                                                                                          \
+    } while (0)
+#define __HAL_RCC_SPI6_CLK_ENABLE()                                                                                    \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        __mock_rcc_gate = 66;                                                                                          \
+    } while (0)
+#define __HAL_RCC_CAN3_CLK_ENABLE()                                                                                    \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        __mock_rcc_gate = 333;                                                                                         \
+    } while (0)
 
 /* Missing register defines that some headers might expect */
 #define RCC_APB2ENR_SPI4EN 0
