@@ -28,7 +28,7 @@ include(FetchContent)
 FetchContent_Declare(
     caffeine-hal
     GIT_REPOSITORY https://github.com/while-one/caffeine-hal.git
-    GIT_TAG        v0.5.6
+    GIT_TAG        v0.5.7
 )
 
 FetchContent_MakeAvailable(caffeine-hal)
@@ -157,6 +157,7 @@ endif()
 # 7. Doxygen Documentation
 cfn_add_docs(
     ${PROJECT_NAME}-docs
-    INPUTS ${CFN_UNIVERSE_SOURCES} ${PROJECT_SOURCE_DIR}/README.md
+    INPUTS ${ALL_UNIVERSE_SOURCES} ${PROJECT_SOURCE_DIR}/README.md
+    EXCLUDE_PATTERNS "*/tests/*" "*/test/*"
     COMMENT "Generating API documentation with Doxygen"
 )
