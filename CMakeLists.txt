@@ -1,6 +1,18 @@
 cmake_minimum_required(VERSION 3.23)
 project(caffeine-hal-ports VERSION 0.3.4 LANGUAGES C CXX ASM)
+# 3. Code Quality (Formatting & Analysis)
+# Define the absolute universe of sources for this repository
+file(GLOB_RECURSE ALL_UNIVERSE_SOURCES 
+    "${PROJECT_SOURCE_DIR}/src/*.c"
+    "${PROJECT_SOURCE_DIR}/src/*.h"
+    "${PROJECT_SOURCE_DIR}/tests/*.cpp"
+    "${PROJECT_SOURCE_DIR}/tests/*.c"
+    "${PROJECT_SOURCE_DIR}/tests/*.h"
+    "${PROJECT_SOURCE_DIR}/linker/*.ld"
+)
+
 include(${PROJECT_SOURCE_DIR}/caffeine-build/cmake/CaffeineMacros.cmake)
+cfn_add_universe_targets(INPUTS ${ALL_UNIVERSE_SOURCES})
 
 # Global standards for the Caffeine Framework
 set(CMAKE_C_STANDARD 11)
@@ -37,27 +49,14 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${PORT_BASE_CMAKE}")
     # Initialize port source list
     set(PORT_SOURCES_LIST "")
 
-    # 1. First include the target-specific definitions if provided
-    if(DEFINED CFN_HAL_PORT_TARGET)
-        set(PORT_TARGET_CMAKE "${PORT_FAMILY_DIR}/${CFN_HAL_PORT_TARGET}.cmake")
-        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${PORT_TARGET_CMAKE}")
-            include("${PORT_TARGET_CMAKE}")
-            message(STATUS "Loaded hardware target: ${CFN_HAL_PORT_TARGET}")
-        else()
-            message(FATAL_ERROR "Target definition not found: ${PORT_TARGET_CMAKE}")
-        endif()
-    endif()
-
-    # 2. Then include the base family logic
+    # Include the base family logic (Modules and Vendor SDK)
     include("${PORT_BASE_CMAKE}")
     set(ANALYSIS_SUBDIR "${CFN_HAL_PORT_VENDOR}/${CFN_HAL_PORT_FAMILY}")
     
     # --- Universal Port Target Configuration ---
-    # We create the library here using the sources identified by the port scripts
     add_library(${PROJECT_NAME} STATIC ${PORT_SOURCES_LIST})
 
     # Apply hardware-specific configuration (CPU flags, includes, linker scripts)
-    # This macro is defined by the specific port script (e.g., stm32f4.cmake)
     if(COMMAND cfn_port_apply_target_config)
         cfn_port_apply_target_config(${PROJECT_NAME})
     else()
@@ -160,6 +159,6 @@ endif()
 # 7. Doxygen Documentation
 cfn_add_docs(
     ${PROJECT_NAME}-docs
-    ${PROJECT_SOURCE_DIR}/src
+    INPUTS ${CFN_UNIVERSE_SOURCES} ${PROJECT_SOURCE_DIR}/README.md
     COMMENT "Generating API documentation with Doxygen"
 )
