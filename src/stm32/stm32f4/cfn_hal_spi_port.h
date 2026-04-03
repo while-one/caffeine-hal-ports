@@ -55,7 +55,6 @@ typedef enum
 /**
  * @brief Construct the spi driver.
  *
- * @param port_id Port identifier.
  * @param driver Pointer to the peripheral driver instance.
  * @param config Pointer to the configuration structure.
  * @param phy Pointer to the physical mapping structure.

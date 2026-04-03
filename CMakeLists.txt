@@ -156,3 +156,10 @@ if(ALL_LINKER_SCRIPTS)
         DESTINATION ${PACKAGE_LINKER_INSTALL_DIR}
     )
 endif()
+
+# 7. Doxygen Documentation
+cfn_add_docs(
+    ${PROJECT_NAME}-docs
+    ${PROJECT_SOURCE_DIR}/src
+    COMMENT "Generating API documentation with Doxygen"
+)
