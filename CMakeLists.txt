@@ -1,6 +1,17 @@
 cmake_minimum_required(VERSION 3.23)
 project(caffeine-hal-ports VERSION 0.3.4 LANGUAGES C CXX ASM)
+# 3. Code Quality (Formatting & Analysis)
+# Define the absolute universe of sources for this repository
+file(GLOB_RECURSE ALL_UNIVERSE_SOURCES 
+    "${PROJECT_SOURCE_DIR}/src/*.c"
+    "${PROJECT_SOURCE_DIR}/src/*.h"
+    "${PROJECT_SOURCE_DIR}/tests/*.cpp"
+    "${PROJECT_SOURCE_DIR}/tests/*.c"
+    "${PROJECT_SOURCE_DIR}/tests/*.h"
+)
+
 include(${PROJECT_SOURCE_DIR}/caffeine-build/cmake/CaffeineMacros.cmake)
+cfn_add_universe_targets(INPUTS ${ALL_UNIVERSE_SOURCES})
 
 # Global standards for the Caffeine Framework
 set(CMAKE_C_STANDARD 11)
@@ -17,7 +28,7 @@ include(FetchContent)
 FetchContent_Declare(
     caffeine-hal
     GIT_REPOSITORY https://github.com/while-one/caffeine-hal.git
-    GIT_TAG        v0.5.3
+    GIT_TAG        v0.5.7
 )
 
 FetchContent_MakeAvailable(caffeine-hal)
@@ -37,27 +48,14 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${PORT_BASE_CMAKE}")
     # Initialize port source list
     set(PORT_SOURCES_LIST "")
 
-    # 1. First include the target-specific definitions if provided
-    if(DEFINED CFN_HAL_PORT_TARGET)
-        set(PORT_TARGET_CMAKE "${PORT_FAMILY_DIR}/${CFN_HAL_PORT_TARGET}.cmake")
-        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${PORT_TARGET_CMAKE}")
-            include("${PORT_TARGET_CMAKE}")
-            message(STATUS "Loaded hardware target: ${CFN_HAL_PORT_TARGET}")
-        else()
-            message(FATAL_ERROR "Target definition not found: ${PORT_TARGET_CMAKE}")
-        endif()
-    endif()
-
-    # 2. Then include the base family logic
+    # Include the base family logic (Modules and Vendor SDK)
     include("${PORT_BASE_CMAKE}")
     set(ANALYSIS_SUBDIR "${CFN_HAL_PORT_VENDOR}/${CFN_HAL_PORT_FAMILY}")
     
     # --- Universal Port Target Configuration ---
-    # We create the library here using the sources identified by the port scripts
     add_library(${PROJECT_NAME} STATIC ${PORT_SOURCES_LIST})
 
     # Apply hardware-specific configuration (CPU flags, includes, linker scripts)
-    # This macro is defined by the specific port script (e.g., stm32f4.cmake)
     if(COMMAND cfn_port_apply_target_config)
         cfn_port_apply_target_config(${PROJECT_NAME})
     else()
@@ -94,7 +92,6 @@ endif()
 
 cfn_add_code_quality_targets(
     ${PROJECT_NAME}
-    FORMAT_SOURCES ${PORT_SOURCES_LIST}
     ANALYSIS_SOURCES ${PORT_SOURCES_LIST}
     CPPCHECK_FILE_FILTER "${PROJECT_SOURCE_DIR}/src/${ANALYSIS_SUBDIR}/*"
     TIDY_HEADER_FILTER "${PROJECT_SOURCE_DIR}/src/${ANALYSIS_SUBDIR}/.*"
@@ -158,8 +155,10 @@ if(ALL_LINKER_SCRIPTS)
 endif()
 
 # 7. Doxygen Documentation
+set(ALL_UNIVERSE_SOURCES_NO_TESTS ${ALL_UNIVERSE_SOURCES})
+list(FILTER ALL_UNIVERSE_SOURCES_NO_TESTS EXCLUDE REGEX ".*/tests/.*")
 cfn_add_docs(
     ${PROJECT_NAME}-docs
-    ${PROJECT_SOURCE_DIR}/src
+    INPUTS ${ALL_UNIVERSE_SOURCES_NO_TESTS} ${PROJECT_SOURCE_DIR}/README.md
     COMMENT "Generating API documentation with Doxygen"
 )

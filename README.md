@@ -35,7 +35,8 @@ This repository contains the hardware-specific implementations (VMT wrappers) fo
 ## Architecture & Hardware Contract
 
 This repository employs an encapsulated, target-based CMake architecture driven by a **"Hardware Contract"** model:
-- **Encapsulated Targets:** All low-level MCU definitions (core, FPU, compiler flags, macros, linker scripts) are contained within target-specific `.cmake` scripts (e.g., `cmake/ports/stm32/stm32f4/stm32f417vgtx.cmake`).
+- **Centralized Targets:** All low-level MCU definitions (core, FPU, compiler flags, macros, linker scripts) are inherited from the centralized `caffeine-build/cmake/ports` definitions.
+- **ABI Consistency:** Binary compatibility is enforced globally via `CMAKE_CROSSCOMPILING` logic in `CaffeineMacros.cmake`.
 - **Zero Boilerplate:** Applications only need to specify their vendor, family, and target MCU to receive full hardware support.
 - **Dynamic Configuration:** The vendor HAL (`hal_conf.h`) and source file lists are automatically generated based on the selected target.
 
@@ -119,8 +120,7 @@ Then, execute your builds targeting your custom `stm32f4-mock-tests-local` prese
 
 ## Directory Structure
 
-- `caffeine-build/`: Submodule containing centralized build presets, toolchains, and scripts.
-- `cmake/ports/<vendor>/<family>/`: Hardware target definitions.
+- `caffeine-build/`: Submodule containing centralized build presets, toolchains, scripts, and hardware target definitions.
 - `src/<vendor>/<family>/`: VMT implementations mapping generic APIs to vendor code.
 - `linker/`: device-specific linker scripts.
 

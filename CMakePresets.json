@@ -31,7 +31,6 @@
         "CFN_HAL_PORT_VENDOR": "stm32",
         "CFN_HAL_PORT_FAMILY": "stm32f4",
         "CFN_HAL_PORT_TARGET": "stm32f407vgtx",
-        "CFN_PORT_NATIVE_TEST": "ON",
         "CFN_BUILD_TESTS": "ON"
       }
     },
@@ -68,6 +67,18 @@
         "CFN_HAL_PORT_VENDOR": "stm32",
         "CFN_HAL_PORT_FAMILY": "stm32f4",
         "CFN_HAL_PORT_TARGET": "stm32f417vgtx"
+      }
+    },
+    {
+      "name": "universe-all-sources",
+      "displayName": "Universe Target (All Sources)",
+      "inherits": "base-common",
+      "binaryDir": "${sourceDir}/build/universe-all-sources",
+      "cacheVariables": {
+        "CFN_HAL_PORT_VENDOR": "template",
+        "CFN_HAL_PORT_FAMILY": "template",
+        "CFN_HAL_PORT_TARGET": "template",
+        "CAFFEINE_UNIVERSE_TARGET": "ON"
       }
     }
   ],

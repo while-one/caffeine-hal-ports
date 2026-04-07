@@ -19,7 +19,7 @@ if(NOT DEFINED CAFFEINE_MCU_MACRO)
 endif()
 
 # --- Dynamic Assembly Startup Resolution ---
-if(NOT CFN_PORT_NATIVE_TEST)
+if(CMAKE_CROSSCOMPILING)
     string(TOLOWER "${CAFFEINE_MCU_MACRO}" LOWERCASE_MCU_MACRO)
     set(STARTUP_FILE "${SDK_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/gcc/startup_${LOWERCASE_MCU_MACRO}.s")
 else()
@@ -38,7 +38,7 @@ macro(cfn_add_stm32f4_module NAME VENDOR_FILES PORT_FILES)
     endforeach()
 
     if(CFN_HAL_${NAME} STREQUAL "ON")
-        if(NOT CFN_PORT_NATIVE_TEST)
+        if(CMAKE_CROSSCOMPILING)
             foreach(VFILE IN ITEMS ${VENDOR_FILES})
                 list(APPEND VENDOR_SOURCES_LIST "${HAL_SRC_DIR}/${VFILE}")
             endforeach()
@@ -50,7 +50,7 @@ macro(cfn_add_stm32f4_module NAME VENDOR_FILES PORT_FILES)
 endmacro()
 
 # Always enable foundational modules
-if(NOT CFN_PORT_NATIVE_TEST)
+if(CMAKE_CROSSCOMPILING)
     list(APPEND VENDOR_SOURCES_LIST 
         "${HAL_SRC_DIR}/stm32f4xx_hal.c"
         "${HAL_SRC_DIR}/stm32f4xx_hal_cortex.c"
@@ -96,7 +96,7 @@ cfn_add_stm32f4_module(WDT    "stm32f4xx_hal_iwdg.c;stm32f4xx_hal_wwdg.c"  "src/
 
 # Special handling for sub-features of CRYPTO
 if(CFN_HAL_HASH STREQUAL "ON")
-    if(NOT CFN_PORT_NATIVE_TEST)
+    if(CMAKE_CROSSCOMPILING)
         list(APPEND VENDOR_SOURCES_LIST "${HAL_SRC_DIR}/stm32f4xx_hal_hash.c" "${HAL_SRC_DIR}/stm32f4xx_hal_hash_ex.c")
     endif()
     set(HAL_HASH_MODULE_ENABLED 1)
@@ -104,7 +104,7 @@ else()
     set(HAL_HASH_MODULE_ENABLED 0)
 endif()
 if(CFN_HAL_RNG STREQUAL "ON")
-    if(NOT CFN_PORT_NATIVE_TEST)
+    if(CMAKE_CROSSCOMPILING)
         list(APPEND VENDOR_SOURCES_LIST "${HAL_SRC_DIR}/stm32f4xx_hal_rng.c")
     endif()
     set(HAL_RNG_MODULE_ENABLED 1)
@@ -119,7 +119,7 @@ configure_file(
 )
 
 # --- 1. Centralized SDK Include Paths ---
-if(NOT CFN_PORT_NATIVE_TEST)
+if(CMAKE_CROSSCOMPILING)
     set(VENDOR_SDK_INC_DIRS
         "${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc"
         "${SDK_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy"
@@ -154,20 +154,6 @@ add_library(vendor_sdk OBJECT ${VENDOR_SOURCES_LIST} ${STARTUP_FILE})
 target_compile_options(vendor_sdk PRIVATE -w)
 target_link_libraries(vendor_sdk PRIVATE caffeine::hal)
 
-if(NOT CFN_PORT_NATIVE_TEST)
-    set(CPU_FLAGS -mcpu=${CAFFEINE_MCU_CORE} -mthumb)
-    target_compile_options(vendor_sdk PUBLIC ${CPU_FLAGS})
-    target_compile_options(vendor_sdk PRIVATE ${CPU_FLAGS})
-
-    if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
-        separate_arguments(MCU_FLAGS_LIST NATIVE_COMMAND ${CAFFEINE_MCU_COMPILE_OPTIONS})
-        target_compile_options(vendor_sdk PUBLIC ${MCU_FLAGS_LIST})
-        target_compile_options(vendor_sdk PRIVATE ${MCU_FLAGS_LIST})
-    endif()
-else()
-    set(CPU_FLAGS "")
-endif()
-
 target_include_directories(vendor_sdk SYSTEM PUBLIC ${VENDOR_SDK_BUILD_INCS})
 target_include_directories(vendor_sdk PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
@@ -178,26 +164,13 @@ macro(cfn_port_apply_target_config TARGET_NAME)
     # Link against the generic HAL interface
     target_link_libraries(${TARGET_NAME} PUBLIC caffeine::hal)
 
-    if(NOT CFN_PORT_NATIVE_TEST)
-        target_compile_options(${TARGET_NAME} PRIVATE ${CPU_FLAGS})
-        target_compile_options(${TARGET_NAME} INTERFACE ${CPU_FLAGS})
-        target_link_options(${TARGET_NAME} INTERFACE ${CPU_FLAGS})
-
-        if(DEFINED CAFFEINE_MCU_COMPILE_OPTIONS)
-            separate_arguments(MCU_FLAGS_LIST NATIVE_COMMAND ${CAFFEINE_MCU_COMPILE_OPTIONS})
-            target_compile_options(${TARGET_NAME} PRIVATE ${MCU_FLAGS_LIST})
-            target_compile_options(${TARGET_NAME} INTERFACE ${MCU_FLAGS_LIST})
-            target_link_options(${TARGET_NAME} INTERFACE ${MCU_FLAGS_LIST})
-        endif()
-    endif()
-
     # We link vendor_sdk INTERFACE so that downstream executables pull in the object files (startup, etc)
     target_link_libraries(${TARGET_NAME} INTERFACE $<TARGET_OBJECTS:vendor_sdk>)
     target_link_libraries(${TARGET_NAME} PRIVATE $<TARGET_OBJECTS:vendor_sdk>)
 
     # Export port-specific headers and generated config to downstream users
     target_include_directories(${TARGET_NAME} PUBLIC 
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/stm32/stm32f4>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/stm32/stm32f4>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
     )
 
@@ -210,11 +183,11 @@ macro(cfn_port_apply_target_config TARGET_NAME)
         target_compile_definitions(${TARGET_NAME} PUBLIC USER_VECT_TAB_ADDRESS VECT_TAB_OFFSET=${CAFFEINE_BOOTLOADER_SIZE_HEX})
     endif()
 
-    if(NOT CFN_PORT_NATIVE_TEST)
+    if(CMAKE_CROSSCOMPILING)
         if(DEFINED CAFFEINE_LINKER_SCRIPT)
             find_file(LINKER_SCRIPT_FULL_PATH 
                 NAMES ${CAFFEINE_LINKER_SCRIPT}
-                PATHS "${PROJECT_SOURCE_DIR}/linker"
+                PATHS "${CMAKE_CURRENT_SOURCE_DIR}/linker"
                 NO_DEFAULT_PATH
             )
             if(LINKER_SCRIPT_FULL_PATH)
