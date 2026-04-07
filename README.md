@@ -126,6 +126,14 @@ Then, execute your builds targeting your custom `stm32f4-mock-tests-local` prese
 
 ---
 
+## Documentation
+
+The API reference for this repository is generated automatically via Doxygen and hosted on GitHub Pages.
+
+📚 **[View the Caffeine-HAL-Ports API Documentation](https://while-one.github.io/caffeine-hal-ports)**
+
+---
+
 ## Support the Gallery
 
 While this library is no Mondrian, it deals with a different form of **abstraction art**. Hardware abstraction is a craft of its own—one that keeps your application code portable and your debugging sessions short.
