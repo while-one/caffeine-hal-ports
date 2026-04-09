@@ -49,6 +49,28 @@ static const uint32_t PORT_MAP_PERIPHERAL_ID[CFN_HAL_I2S_PORT_MAX] = {
     [CFN_HAL_I2S_PORT_3] = CFN_HAL_PORT_PERIPH_SPI3,
 };
 
+static const uint32_t PORT_MAP_MODE[] = {
+    [CFN_HAL_I2S_CONFIG_MODE_MASTER_TX] = I2S_MODE_MASTER_TX,
+    [CFN_HAL_I2S_CONFIG_MODE_MASTER_RX] = I2S_MODE_MASTER_RX,
+    [CFN_HAL_I2S_CONFIG_MODE_SLAVE_TX]  = I2S_MODE_SLAVE_TX,
+    [CFN_HAL_I2S_CONFIG_MODE_SLAVE_RX]  = I2S_MODE_SLAVE_RX,
+};
+
+static const uint32_t PORT_MAP_STANDARD[] = {
+    [CFN_HAL_I2S_CONFIG_STANDARD_PHILIPS]   = I2S_STANDARD_PHILIPS,
+    [CFN_HAL_I2S_CONFIG_STANDARD_MSB]       = I2S_STANDARD_MSB,
+    [CFN_HAL_I2S_CONFIG_STANDARD_LSB]       = I2S_STANDARD_LSB,
+    [CFN_HAL_I2S_CONFIG_STANDARD_PCM_SHORT] = I2S_STANDARD_PCM_SHORT,
+    [CFN_HAL_I2S_CONFIG_STANDARD_PCM_LONG]  = I2S_STANDARD_PCM_LONG,
+};
+
+static const uint32_t PORT_MAP_DATAFORMAT[] = {
+    [CFN_HAL_I2S_CONFIG_DATAFORMAT_16B]          = I2S_DATAFORMAT_16B,
+    [CFN_HAL_I2S_CONFIG_DATAFORMAT_16B_EXTENDED] = I2S_DATAFORMAT_16B_EXTENDED,
+    [CFN_HAL_I2S_CONFIG_DATAFORMAT_24B]          = I2S_DATAFORMAT_24B,
+    [CFN_HAL_I2S_CONFIG_DATAFORMAT_32B]          = I2S_DATAFORMAT_32B,
+};
+
 static I2S_HandleTypeDef port_hi2ss[CFN_HAL_I2S_PORT_MAX];
 static cfn_hal_i2s_t    *port_drivers[CFN_HAL_I2S_PORT_MAX];
 
@@ -68,6 +90,29 @@ static uint32_t get_port_id_from_handle(I2S_HandleTypeDef *hi2s)
 }
 
 /* VMT Implementations ----------------------------------------------*/
+static void i2s_configure_pins(const cfn_hal_i2s_phy_t *phy)
+{
+    if (phy->ck)
+    {
+        (void) cfn_hal_gpio_init(phy->ck->port);
+    }
+    if (phy->ws)
+    {
+        (void) cfn_hal_gpio_init(phy->ws->port);
+    }
+    if (phy->sd)
+    {
+        (void) cfn_hal_gpio_init(phy->sd->port);
+    }
+    if (phy->ext_sd)
+    {
+        (void) cfn_hal_gpio_init(phy->ext_sd->port);
+    }
+    if (phy->mck)
+    {
+        (void) cfn_hal_gpio_init(phy->mck->port);
+    }
+}
 
 static cfn_hal_error_code_t low_level_init(cfn_hal_i2s_t *driver)
 {
@@ -82,36 +127,11 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_i2s_t *driver)
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    if (PORT_INSTANCES[port_id] == SPI2)
-    {
-        __HAL_RCC_SPI2_CLK_ENABLE();
-    }
-    else if (PORT_INSTANCES[port_id] == SPI3)
-    {
-        __HAL_RCC_SPI3_CLK_ENABLE();
-    }
+    /* 1. Enable Clock */
+    cfn_hal_clock_enable_gate((cfn_hal_clock_t *) driver->base.clock_driver, driver->base.peripheral_id);
 
     /* 2. Initialize Pins */
-    if (driver->phy->ck)
-    {
-        (void) cfn_hal_gpio_init(driver->phy->ck->port);
-    }
-    if (driver->phy->ws)
-    {
-        (void) cfn_hal_gpio_init(driver->phy->ws->port);
-    }
-    if (driver->phy->sd)
-    {
-        (void) cfn_hal_gpio_init(driver->phy->sd->port);
-    }
-    if (driver->phy->ext_sd)
-    {
-        (void) cfn_hal_gpio_init(driver->phy->ext_sd->port);
-    }
-    if (driver->phy->mck)
-    {
-        (void) cfn_hal_gpio_init(driver->phy->mck->port);
-    }
+    i2s_configure_pins(driver->phy);
 
     return CFN_HAL_ERROR_OK;
 }
@@ -128,61 +148,10 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
         return error;
     }
 
-    hi2s->Instance = PORT_INSTANCES[port_id];
-
-    switch (driver->config->mode)
-    {
-        case CFN_HAL_I2S_CONFIG_MODE_MASTER_RX:
-            hi2s->Init.Mode = I2S_MODE_MASTER_RX;
-            break;
-        case CFN_HAL_I2S_CONFIG_MODE_SLAVE_TX:
-            hi2s->Init.Mode = I2S_MODE_SLAVE_TX;
-            break;
-        case CFN_HAL_I2S_CONFIG_MODE_SLAVE_RX:
-            hi2s->Init.Mode = I2S_MODE_SLAVE_RX;
-            break;
-        case CFN_HAL_I2S_CONFIG_MODE_MASTER_TX:
-        default:
-            hi2s->Init.Mode = I2S_MODE_MASTER_TX;
-            break;
-    }
-
-    switch (driver->config->standard)
-    {
-        case CFN_HAL_I2S_CONFIG_STANDARD_MSB:
-            hi2s->Init.Standard = I2S_STANDARD_MSB;
-            break;
-        case CFN_HAL_I2S_CONFIG_STANDARD_LSB:
-            hi2s->Init.Standard = I2S_STANDARD_LSB;
-            break;
-        case CFN_HAL_I2S_CONFIG_STANDARD_PCM_SHORT:
-            hi2s->Init.Standard = I2S_STANDARD_PCM_SHORT;
-            break;
-        case CFN_HAL_I2S_CONFIG_STANDARD_PCM_LONG:
-            hi2s->Init.Standard = I2S_STANDARD_PCM_LONG;
-            break;
-        case CFN_HAL_I2S_CONFIG_STANDARD_PHILIPS:
-        default:
-            hi2s->Init.Standard = I2S_STANDARD_PHILIPS;
-            break;
-    }
-
-    switch (driver->config->data_format)
-    {
-        case CFN_HAL_I2S_CONFIG_DATAFORMAT_16B_EXTENDED:
-            hi2s->Init.DataFormat = I2S_DATAFORMAT_16B_EXTENDED;
-            break;
-        case CFN_HAL_I2S_CONFIG_DATAFORMAT_24B:
-            hi2s->Init.DataFormat = I2S_DATAFORMAT_24B;
-            break;
-        case CFN_HAL_I2S_CONFIG_DATAFORMAT_32B:
-            hi2s->Init.DataFormat = I2S_DATAFORMAT_32B;
-            break;
-        case CFN_HAL_I2S_CONFIG_DATAFORMAT_16B:
-        default:
-            hi2s->Init.DataFormat = I2S_DATAFORMAT_16B;
-            break;
-    }
+    hi2s->Instance         = PORT_INSTANCES[port_id];
+    hi2s->Init.Mode        = PORT_MAP_MODE[driver->config->mode];
+    hi2s->Init.Standard    = PORT_MAP_STANDARD[driver->config->standard];
+    hi2s->Init.DataFormat  = PORT_MAP_DATAFORMAT[driver->config->data_format];
 
     hi2s->Init.MCLKOutput  = I2S_MCLKOUTPUT_ENABLE;
     hi2s->Init.AudioFreq   = driver->config->sample_rate;
@@ -328,6 +297,7 @@ cfn_hal_error_code_t cfn_hal_i2s_construct(cfn_hal_i2s_t              *driver,
                                            const cfn_hal_i2s_config_t *config,
                                            const cfn_hal_i2s_phy_t    *phy,
                                            struct cfn_hal_clock_s     *clock,
+                                           void                       *dependency,
                                            cfn_hal_i2s_callback_t      callback,
                                            void                       *user_arg)
 {
@@ -344,7 +314,7 @@ cfn_hal_error_code_t cfn_hal_i2s_construct(cfn_hal_i2s_t              *driver,
     }
 
     uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
-    cfn_hal_i2s_populate(driver, peripheral_id, clock, &I2S_API, phy, config, callback, user_arg);
+    cfn_hal_i2s_populate(driver, peripheral_id, clock, dependency, &I2S_API, phy, config, callback, user_arg);
 
     port_hi2ss[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -355,6 +325,7 @@ cfn_hal_error_code_t cfn_hal_i2s_construct(cfn_hal_i2s_t              *driver,
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
     CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(dependency);
     CFN_HAL_UNUSED(callback);
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
@@ -378,8 +349,7 @@ cfn_hal_error_code_t cfn_hal_i2s_destruct(cfn_hal_i2s_t *driver)
         }
     }
 
-    driver->config = NULL;
-    driver->phy    = NULL;
+    cfn_hal_i2s_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

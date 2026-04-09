@@ -76,6 +76,29 @@ static const uint32_t PORT_MAP_PERIPHERAL_ID[CFN_HAL_GPIO_PORT_MAX] = {
     [CFN_HAL_GPIO_PORT_J] = CFN_HAL_PORT_PERIPH_GPIOJ, //
     [CFN_HAL_GPIO_PORT_K] = CFN_HAL_PORT_PERIPH_GPIOK, //
 };
+
+static const uint32_t PORT_MAP_MODE[] = {
+    [CFN_HAL_GPIO_CONFIG_MODE_INPUT]        = GPIO_MODE_INPUT,
+    [CFN_HAL_GPIO_CONFIG_MODE_OUTPUT_PP]    = GPIO_MODE_OUTPUT_PP,
+    [CFN_HAL_GPIO_CONFIG_MODE_OUTPUT_OD]    = GPIO_MODE_OUTPUT_OD,
+    [CFN_HAL_GPIO_CONFIG_MODE_ALTERNATE_PP] = GPIO_MODE_AF_PP,
+    [CFN_HAL_GPIO_CONFIG_MODE_ALTERNATE_OD] = GPIO_MODE_AF_OD,
+    [CFN_HAL_GPIO_CONFIG_MODE_ANALOG]       = GPIO_MODE_ANALOG,
+};
+
+static const uint32_t PORT_MAP_PULL[] = {
+    [CFN_HAL_GPIO_CONFIG_PULL_NOPULL]   = GPIO_NOPULL,
+    [CFN_HAL_GPIO_CONFIG_PULL_PULLUP]   = GPIO_PULLUP,
+    [CFN_HAL_GPIO_CONFIG_PULL_PULLDOWN] = GPIO_PULLDOWN,
+};
+
+static const uint32_t PORT_MAP_SPEED[] = {
+    [CFN_HAL_GPIO_CONFIG_SPEED_LOW]       = GPIO_SPEED_FREQ_LOW,
+    [CFN_HAL_GPIO_CONFIG_SPEED_MEDIUM]    = GPIO_SPEED_FREQ_MEDIUM,
+    [CFN_HAL_GPIO_CONFIG_SPEED_HIGH]      = GPIO_SPEED_FREQ_HIGH,
+    [CFN_HAL_GPIO_CONFIG_SPEED_VERY_HIGH] = GPIO_SPEED_FREQ_VERY_HIGH,
+};
+
 /* VMT Implementations ----------------------------------------------*/
 
 static cfn_hal_error_code_t low_level_init(cfn_hal_gpio_t *driver)
@@ -145,67 +168,14 @@ static cfn_hal_error_code_t port_gpio_pin_config(cfn_hal_gpio_t *port, const cfn
     GPIO_InitTypeDef st_cfg  = { 0 };
 
     st_cfg.Pin               = pin_cfg->pin_mask;
+    st_cfg.Mode              = PORT_MAP_MODE[pin_cfg->mode];
+    st_cfg.Pull              = PORT_MAP_PULL[pin_cfg->pull];
+    st_cfg.Speed             = PORT_MAP_SPEED[pin_cfg->speed];
 
-    switch (pin_cfg->mode)
+    if ((pin_cfg->mode == CFN_HAL_GPIO_CONFIG_MODE_ALTERNATE_PP) ||
+        (pin_cfg->mode == CFN_HAL_GPIO_CONFIG_MODE_ALTERNATE_OD))
     {
-        case CFN_HAL_GPIO_CONFIG_MODE_INPUT:
-            st_cfg.Mode = GPIO_MODE_INPUT;
-            break;
-        case CFN_HAL_GPIO_CONFIG_MODE_OUTPUT_PP:
-            st_cfg.Mode = GPIO_MODE_OUTPUT_PP;
-            break;
-        case CFN_HAL_GPIO_CONFIG_MODE_OUTPUT_OD:
-            st_cfg.Mode = GPIO_MODE_OUTPUT_OD;
-            break;
-        case CFN_HAL_GPIO_CONFIG_MODE_ALTERNATE_PP:
-            st_cfg.Mode      = GPIO_MODE_AF_PP;
-            st_cfg.Alternate = (uint32_t) (uintptr_t) pin_cfg->alternate;
-            break;
-        case CFN_HAL_GPIO_CONFIG_MODE_ALTERNATE_OD:
-            st_cfg.Mode      = GPIO_MODE_AF_OD;
-            st_cfg.Alternate = (uint32_t) (uintptr_t) pin_cfg->alternate;
-            break;
-        case CFN_HAL_GPIO_CONFIG_MODE_ANALOG:
-            st_cfg.Mode = GPIO_MODE_ANALOG;
-            break;
-
-        default:
-            return CFN_HAL_ERROR_BAD_PARAM;
-    }
-
-    switch (pin_cfg->pull)
-    {
-        case CFN_HAL_GPIO_CONFIG_PULL_NOPULL:
-            st_cfg.Pull = GPIO_NOPULL;
-            break;
-        case CFN_HAL_GPIO_CONFIG_PULL_PULLUP:
-            st_cfg.Pull = GPIO_PULLUP;
-            break;
-        case CFN_HAL_GPIO_CONFIG_PULL_PULLDOWN:
-            st_cfg.Pull = GPIO_PULLDOWN;
-            break;
-
-        default:
-            return CFN_HAL_ERROR_BAD_PARAM;
-    }
-
-    switch (pin_cfg->speed)
-    {
-        case CFN_HAL_GPIO_CONFIG_SPEED_LOW:
-            st_cfg.Speed = GPIO_SPEED_FREQ_LOW;
-            break;
-        case CFN_HAL_GPIO_CONFIG_SPEED_MEDIUM:
-            st_cfg.Speed = GPIO_SPEED_FREQ_MEDIUM;
-            break;
-        case CFN_HAL_GPIO_CONFIG_SPEED_HIGH:
-            st_cfg.Speed = GPIO_SPEED_FREQ_HIGH;
-            break;
-        case CFN_HAL_GPIO_CONFIG_SPEED_VERY_HIGH:
-            st_cfg.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-            break;
-
-        default:
-            return CFN_HAL_ERROR_BAD_PARAM;
+        st_cfg.Alternate = (uint32_t) (uintptr_t) pin_cfg->alternate;
     }
 
     HAL_GPIO_Init(PORT_INSTANCES[port_id], &st_cfg);
@@ -294,6 +264,7 @@ static const cfn_hal_gpio_api_t GPIO_API = {
 cfn_hal_error_code_t cfn_hal_gpio_construct(cfn_hal_gpio_t           *driver,
                                             const cfn_hal_gpio_phy_t *phy,
                                             struct cfn_hal_clock_s   *clock,
+                                            void                     *dependency,
                                             cfn_hal_gpio_callback_t   callback,
                                             void                     *user_arg)
 {
@@ -310,13 +281,14 @@ cfn_hal_error_code_t cfn_hal_gpio_construct(cfn_hal_gpio_t           *driver,
     }
 
     uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
-    cfn_hal_gpio_populate(driver, peripheral_id, clock, &GPIO_API, phy, callback, user_arg);
+    cfn_hal_gpio_populate(driver, peripheral_id, clock, dependency, &GPIO_API, phy, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(phy);
     CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(dependency);
     CFN_HAL_UNUSED(callback);
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
@@ -330,8 +302,7 @@ cfn_hal_error_code_t cfn_hal_gpio_destruct(cfn_hal_gpio_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    driver->config = NULL;
-    driver->phy    = NULL;
+    cfn_hal_gpio_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

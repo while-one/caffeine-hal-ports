@@ -30,7 +30,7 @@
 #include "cfn_hal_comp.h"
 #include "stm32f4xx_hal.h"
 
-#ifdef HAL_COMP_MODULE_ENABLED
+#if defined(HAL_COMP_MODULE_ENABLED) && (defined(COMP1) || defined(COMP2))
 
 /* Private Data -----------------------------------------------------*/
 
@@ -126,7 +126,7 @@ static const cfn_hal_comp_api_t COMP_API = {
     .start = NULL,
     .stop = NULL};
 
-#endif /* HAL_COMP_MODULE_ENABLED */
+#endif /* defined(HAL_COMP_MODULE_ENABLED) && (defined(COMP1) || defined(COMP2)) */
 
 /* Instantiation ----------------------------------------------------*/
 
@@ -134,10 +134,11 @@ cfn_hal_error_code_t cfn_hal_comp_construct(cfn_hal_comp_t              *driver,
                                             const cfn_hal_comp_config_t *config,
                                             const cfn_hal_comp_phy_t    *phy,
                                             struct cfn_hal_clock_s      *clock,
+                                            void                        *dependency,
                                             cfn_hal_comp_callback_t      callback,
                                             void                        *user_arg)
 {
-#ifdef HAL_COMP_MODULE_ENABLED
+#if defined(HAL_COMP_MODULE_ENABLED) && (defined(COMP1) || defined(COMP2))
     if ((driver == NULL) || (phy == NULL))
     {
         return CFN_HAL_ERROR_BAD_PARAM;
@@ -152,7 +153,7 @@ cfn_hal_error_code_t cfn_hal_comp_construct(cfn_hal_comp_t              *driver,
 
     uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
 
-    cfn_hal_comp_populate(driver, peripheral_id, clock, &COMP_API, phy, config, callback, user_arg);
+    cfn_hal_comp_populate(driver, peripheral_id, clock, dependency, &COMP_API, phy, config, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
 #else
@@ -160,6 +161,7 @@ cfn_hal_error_code_t cfn_hal_comp_construct(cfn_hal_comp_t              *driver,
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
     CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(dependency);
     CFN_HAL_UNUSED(callback);
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
@@ -168,13 +170,12 @@ cfn_hal_error_code_t cfn_hal_comp_construct(cfn_hal_comp_t              *driver,
 
 cfn_hal_error_code_t cfn_hal_comp_destruct(cfn_hal_comp_t *driver)
 {
-#ifdef HAL_COMP_MODULE_ENABLED
+#if defined(HAL_COMP_MODULE_ENABLED) && (defined(COMP1) || defined(COMP2))
     if (driver == NULL)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    driver->config = NULL;
-    driver->phy    = NULL;
+    cfn_hal_comp_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

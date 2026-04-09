@@ -175,11 +175,11 @@ static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint3
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     CAN_HandleTypeDef *hcan    = &port_hcans[port_id];
 
-    if (event_mask & CFN_HAL_CAN_EVENT_TX_COMPLETE)
+    if (event_mask & (uint32_t) CFN_HAL_CAN_EVENT_TX_COMPLETE)
     {
         __HAL_CAN_ENABLE_IT(hcan, CAN_IT_TX_MAILBOX_EMPTY);
     }
-    if (event_mask & CFN_HAL_CAN_EVENT_RX_READY)
+    if (event_mask & (uint32_t) CFN_HAL_CAN_EVENT_RX_READY)
     {
         __HAL_CAN_ENABLE_IT(hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
     }
@@ -193,11 +193,11 @@ static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     CAN_HandleTypeDef *hcan    = &port_hcans[port_id];
 
-    if (event_mask & CFN_HAL_CAN_EVENT_TX_COMPLETE)
+    if (event_mask & (uint32_t) CFN_HAL_CAN_EVENT_TX_COMPLETE)
     {
         __HAL_CAN_DISABLE_IT(hcan, CAN_IT_TX_MAILBOX_EMPTY);
     }
-    if (event_mask & CFN_HAL_CAN_EVENT_RX_READY)
+    if (event_mask & (uint32_t) CFN_HAL_CAN_EVENT_RX_READY)
     {
         __HAL_CAN_DISABLE_IT(hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
     }
@@ -215,11 +215,11 @@ static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t
     if (__HAL_CAN_GET_FLAG(hcan, CAN_FLAG_TME0) || __HAL_CAN_GET_FLAG(hcan, CAN_FLAG_TME1) ||
         __HAL_CAN_GET_FLAG(hcan, CAN_FLAG_TME2))
     {
-        mask |= CFN_HAL_CAN_EVENT_TX_COMPLETE;
+        mask |= (uint32_t) CFN_HAL_CAN_EVENT_TX_COMPLETE;
     }
     if (HAL_CAN_GetRxFifoFillLevel(hcan, CAN_RX_FIFO0) > 0)
     {
-        mask |= CFN_HAL_CAN_EVENT_RX_READY;
+        mask |= (uint32_t) CFN_HAL_CAN_EVENT_RX_READY;
     }
 
     if (event_mask != NULL)
@@ -268,11 +268,11 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
     if (__HAL_CAN_GET_FLAG(hcan, CAN_FLAG_BOF))
     {
-        mask |= CFN_HAL_CAN_ERROR_BUS_OFF;
+        mask |= (uint32_t) CFN_HAL_CAN_ERROR_BUS_OFF;
     }
     if (HAL_CAN_GetError(hcan) != HAL_CAN_ERROR_NONE)
     {
-        mask |= CFN_HAL_CAN_ERROR_GENERAL;
+        mask |= (uint32_t) CFN_HAL_CAN_ERROR_GENERAL;
     }
 
     if (error_mask != NULL)
@@ -431,10 +431,10 @@ static cfn_hal_error_code_t port_can_add_filter(cfn_hal_can_t *driver, const cfn
     uint32_t          port_id      = (uint32_t) (uintptr_t) driver->phy->instance;
     CAN_FilterTypeDef st_filter    = { 0 };
 
-    st_filter.FilterIdHigh         = (uint16_t) (filter->filter_id >> 16);
-    st_filter.FilterIdLow          = (uint16_t) (filter->filter_id & 0xFFFF);
-    st_filter.FilterMaskIdHigh     = (uint16_t) (filter->filter_mask >> 16);
-    st_filter.FilterMaskIdLow      = (uint16_t) (filter->filter_mask & 0xFFFF);
+    st_filter.FilterIdHigh         = (uint16_t) (filter->filter_id >> 16UL);
+    st_filter.FilterIdLow          = (uint16_t) (filter->filter_id & 0xFFFFUL);
+    st_filter.FilterMaskIdHigh     = (uint16_t) (filter->filter_mask >> 16UL);
+    st_filter.FilterMaskIdLow      = (uint16_t) (filter->filter_mask & 0xFFFFUL);
     st_filter.FilterFIFOAssignment = CAN_FILTER_FIFO0;
     st_filter.FilterBank           = 0;
     st_filter.FilterMode           = CAN_FILTERMODE_IDMASK;
@@ -473,6 +473,7 @@ cfn_hal_error_code_t cfn_hal_can_construct(cfn_hal_can_t              *driver,
                                            const cfn_hal_can_config_t *config,
                                            const cfn_hal_can_phy_t    *phy,
                                            struct cfn_hal_clock_s     *clock,
+                                           void                       *dependency,
                                            cfn_hal_can_callback_t      callback,
                                            void                       *user_arg)
 {
@@ -490,7 +491,7 @@ cfn_hal_error_code_t cfn_hal_can_construct(cfn_hal_can_t              *driver,
 
     uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
 
-    cfn_hal_can_populate(driver, peripheral_id, clock, &CAN_API, phy, config, callback, user_arg);
+    cfn_hal_can_populate(driver, peripheral_id, clock, dependency, &CAN_API, phy, config, callback, user_arg);
 
     port_hcans[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -501,6 +502,7 @@ cfn_hal_error_code_t cfn_hal_can_construct(cfn_hal_can_t              *driver,
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
     CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(dependency);
     CFN_HAL_UNUSED(callback);
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
@@ -514,8 +516,7 @@ cfn_hal_error_code_t cfn_hal_can_destruct(cfn_hal_can_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    driver->config = NULL;
-    driver->phy    = NULL;
+    cfn_hal_can_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

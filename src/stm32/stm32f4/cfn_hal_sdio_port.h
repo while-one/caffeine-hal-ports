@@ -47,32 +47,6 @@ typedef enum
 
 /* Functions prototypes ---------------------------------------------*/
 
-/**
- * @brief Construct the sdio driver.
- *
- * @param driver Pointer to the peripheral driver instance.
- * @param config Pointer to the configuration structure.
- * @param phy Pointer to the physical mapping structure.
- * @param clock Pointer to the clock instance.
- * @param callback The callback function to register.
- * @param user_arg User-defined argument passed to the callback.
- * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
- */
-cfn_hal_error_code_t cfn_hal_sdio_construct(cfn_hal_sdio_t              *driver,
-                                            const cfn_hal_sdio_config_t *config,
-                                            const cfn_hal_sdio_phy_t    *phy,
-                                            struct cfn_hal_clock_s      *clock,
-                                            cfn_hal_sdio_callback_t      callback,
-                                            void                        *user_arg);
-
-/**
- * @brief Destruct the sdio driver.
- *
- * @param driver Pointer to the peripheral driver instance.
- * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
- */
-cfn_hal_error_code_t cfn_hal_sdio_destruct(cfn_hal_sdio_t *driver);
-
 #ifdef __cplusplus
 }
 #endif

@@ -89,6 +89,13 @@
       "output": {
         "outputOnFailure": true
       }
+    },
+    {
+      "name": "unit-tests-gtest",
+      "configurePreset": "unit-tests-gtest",
+      "output": {
+        "outputOnFailure": true
+      }
     }
   ]
 }

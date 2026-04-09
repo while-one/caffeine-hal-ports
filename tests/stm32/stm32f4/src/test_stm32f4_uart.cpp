@@ -45,6 +45,14 @@ class MockHalUart : public MockStm32F4HalUart
                 (UART_HandleTypeDef * huart, uint8_t *pData, uint16_t Size),
                 (override));
     MOCK_METHOD(HAL_StatusTypeDef, HAL_UART_AbortReceive_IT, (UART_HandleTypeDef * huart), (override));
+    MOCK_METHOD(HAL_StatusTypeDef,
+                HAL_UART_Transmit_DMA,
+                (UART_HandleTypeDef * huart, const uint8_t *pData, uint16_t Size),
+                (override));
+    MOCK_METHOD(HAL_StatusTypeDef,
+                HAL_UART_Receive_DMA,
+                (UART_HandleTypeDef * huart, uint8_t *pData, uint16_t Size),
+                (override));
 };
 
 class STM32F4UartTest : public ::testing::Test
@@ -86,7 +94,7 @@ class STM32F4UartTest : public ::testing::Test
 TEST_F(STM32F4UartTest, HardwareMappingCorrectness)
 {
     // Construct the driver
-    cfn_hal_error_code_t err = cfn_hal_uart_construct(&driver, &config, &phy, &clock, nullptr, nullptr);
+    cfn_hal_error_code_t err = cfn_hal_uart_construct(&driver, &config, &phy, &clock, nullptr, nullptr, nullptr);
     ASSERT_EQ(err, CFN_HAL_ERROR_OK);
 
     // Capture the pointer passed to HAL_UART_Init using GMock
@@ -116,7 +124,7 @@ TEST_F(STM32F4UartTest, HardwareMappingCorrectness)
 
 TEST_F(STM32F4UartTest, HalInitFailurePropagatesError)
 {
-    cfn_hal_uart_construct(&driver, &config, &phy, &clock, nullptr, nullptr);
+    cfn_hal_uart_construct(&driver, &config, &phy, &clock, nullptr, nullptr, nullptr);
 
     // Force the mock HAL to return an error
     EXPECT_CALL(mock_hal, HAL_UART_Init(_)).WillOnce(Return(HAL_ERROR));

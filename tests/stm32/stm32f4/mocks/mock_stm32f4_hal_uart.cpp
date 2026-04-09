@@ -103,4 +103,22 @@ HAL_StatusTypeDef HAL_UART_AbortReceive_IT(UART_HandleTypeDef *huart)
     return HAL_OK;
 }
 
+HAL_StatusTypeDef HAL_UART_Transmit_DMA(UART_HandleTypeDef *huart, const uint8_t *pData, uint16_t Size)
+{
+    if (MockStm32F4HalUart::GetInstance())
+    {
+        return MockStm32F4HalUart::GetInstance()->HAL_UART_Transmit_DMA(huart, pData, Size);
+    }
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef HAL_UART_Receive_DMA(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size)
+{
+    if (MockStm32F4HalUart::GetInstance())
+    {
+        return MockStm32F4HalUart::GetInstance()->HAL_UART_Receive_DMA(huart, pData, Size);
+    }
+    return HAL_OK;
+}
+
 } // extern "C"

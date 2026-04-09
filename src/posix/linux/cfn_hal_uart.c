@@ -110,7 +110,9 @@ static cfn_hal_error_code_t port_base_unlock(cfn_hal_driver_t *base)
 
 /* UART Specific Extensions */
 
-static cfn_hal_error_code_t port_uart_rx_n_irq(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes)
+static cfn_hal_error_code_t port_uart_rx_n_irq(cfn_hal_uart_t *driver,
+                                               uint8_t        *data, // NOLINT(readability-non-const-parameter)
+                                               size_t          nbr_of_bytes)
 {
     if (driver)
     {
@@ -168,6 +170,7 @@ cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t              *driver,
                                             const cfn_hal_uart_config_t *config,
                                             const cfn_hal_uart_phy_t    *phy,
                                             struct cfn_hal_clock_s      *clock,
+                                            void                        *dependency,
                                             cfn_hal_uart_callback_t      callback,
                                             void                        *user_arg)
 {
@@ -196,7 +199,7 @@ cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t              *driver,
     driver->base.lock_obj = mutex;
 #endif
 
-    cfn_hal_uart_populate(driver, port_id, clock, &UART_API, phy, config, callback, user_arg);
+    cfn_hal_uart_populate(driver, port_id, clock, dependency, &UART_API, phy, config, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
 }
@@ -219,7 +222,7 @@ cfn_hal_error_code_t cfn_hal_uart_destruct(cfn_hal_uart_t *driver)
     }
 #endif
 
-    cfn_hal_uart_populate(driver, port_id, NULL, NULL, NULL, NULL, NULL, NULL);
+    cfn_hal_uart_populate(driver, port_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
     return CFN_HAL_ERROR_OK;
 }

@@ -46,6 +46,7 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
     return CFN_HAL_ERROR_OK;
 }
 
+// NOLINTNEXTLINE(readability-non-const-parameter)
 static cfn_hal_error_code_t port_uart_rx_n_irq(cfn_hal_uart_t *driver, uint8_t *data, size_t nbr_of_bytes)
 {
     if (driver)
@@ -96,6 +97,7 @@ cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t              *driver,
                                             const cfn_hal_uart_config_t *config,
                                             const cfn_hal_uart_phy_t    *phy,
                                             struct cfn_hal_clock_s      *clock,
+                                            void                        *dependency,
                                             cfn_hal_uart_callback_t      callback,
                                             void                        *user_arg)
 {
@@ -103,7 +105,7 @@ cfn_hal_error_code_t cfn_hal_uart_construct(cfn_hal_uart_t              *driver,
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    cfn_hal_uart_populate(driver, 0, clock, &UART_API, phy, config, callback, user_arg);
+    cfn_hal_uart_populate(driver, 0, clock, dependency, &UART_API, phy, config, callback, user_arg);
     return CFN_HAL_ERROR_OK;
 }
 
@@ -113,6 +115,6 @@ cfn_hal_error_code_t cfn_hal_uart_destruct(cfn_hal_uart_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    cfn_hal_uart_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL);
+    cfn_hal_uart_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 }

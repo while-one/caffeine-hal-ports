@@ -69,6 +69,7 @@ cfn_hal_error_code_t cfn_hal_wdt_construct(cfn_hal_wdt_t              *driver,
                                            const cfn_hal_wdt_config_t *config,
                                            const cfn_hal_wdt_phy_t    *phy,
                                            struct cfn_hal_clock_s     *clock,
+                                           void                       *dependency,
                                            cfn_hal_wdt_callback_t      callback,
                                            void                       *user_arg)
 {
@@ -76,7 +77,7 @@ cfn_hal_error_code_t cfn_hal_wdt_construct(cfn_hal_wdt_t              *driver,
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    cfn_hal_wdt_populate(driver, 0, clock, &WDT_API, phy, config, callback, user_arg);
+    cfn_hal_wdt_populate(driver, 0, clock, dependency, &WDT_API, phy, config, callback, user_arg);
     return CFN_HAL_ERROR_OK;
 }
 
@@ -86,6 +87,6 @@ cfn_hal_error_code_t cfn_hal_wdt_destruct(cfn_hal_wdt_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    cfn_hal_wdt_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL);
+    cfn_hal_wdt_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 }

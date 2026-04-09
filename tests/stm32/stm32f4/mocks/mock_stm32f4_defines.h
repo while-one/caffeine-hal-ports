@@ -55,9 +55,43 @@
 #define TIM13 ((TIM_TypeDef *) 0x40001C00)
 #define TIM14 ((TIM_TypeDef *) 0x40002000)
 
+// DMA
+#define DMA1_BASE 0x40026000
+#define DMA2_BASE 0x40026400
+#define DMA1      ((DMA_TypeDef *) DMA1_BASE)
+#define DMA2      ((DMA_TypeDef *) DMA2_BASE)
+
+#define DMA1_Stream0 ((DMA_Stream_TypeDef *) (DMA1_BASE + 0x010))
+#define DMA1_Stream1 ((DMA_Stream_TypeDef *) (DMA1_BASE + 0x028))
+#define DMA1_Stream2 ((DMA_Stream_TypeDef *) (DMA1_BASE + 0x040))
+#define DMA1_Stream3 ((DMA_Stream_TypeDef *) (DMA1_BASE + 0x058))
+#define DMA1_Stream4 ((DMA_Stream_TypeDef *) (DMA1_BASE + 0x070))
+#define DMA1_Stream5 ((DMA_Stream_TypeDef *) (DMA1_BASE + 0x088))
+#define DMA1_Stream6 ((DMA_Stream_TypeDef *) (DMA1_BASE + 0x0A0))
+#define DMA1_Stream7 ((DMA_Stream_TypeDef *) (DMA1_BASE + 0x0B8))
+
+#define DMA2_Stream0 ((DMA_Stream_TypeDef *) (DMA2_BASE + 0x010))
+#define DMA2_Stream1 ((DMA_Stream_TypeDef *) (DMA2_BASE + 0x028))
+#define DMA2_Stream2 ((DMA_Stream_TypeDef *) (DMA2_BASE + 0x040))
+#define DMA2_Stream3 ((DMA_Stream_TypeDef *) (DMA2_BASE + 0x058))
+#define DMA2_Stream4 ((DMA_Stream_TypeDef *) (DMA2_BASE + 0x070))
+#define DMA2_Stream5 ((DMA_Stream_TypeDef *) (DMA2_BASE + 0x088))
+#define DMA2_Stream6 ((DMA_Stream_TypeDef *) (DMA2_BASE + 0x0A0))
+#define DMA2_Stream7 ((DMA_Stream_TypeDef *) (DMA2_BASE + 0x0B8))
+
 /* RCC Enable Macros for all possible peripherals */
 /* We use unique dummy variables to ensure clang-tidy doesn't flag identical branches */
 static volatile uint32_t __mock_rcc_gate;
+#define __HAL_RCC_DMA1_CLK_ENABLE()                                                                                    \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        __mock_rcc_gate = 111;                                                                                         \
+    } while (0)
+#define __HAL_RCC_DMA2_CLK_ENABLE()                                                                                    \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        __mock_rcc_gate = 222;                                                                                         \
+    } while (0)
 #define __HAL_RCC_UART7_CLK_ENABLE()                                                                                   \
     do                                                                                                                 \
     {                                                                                                                  \

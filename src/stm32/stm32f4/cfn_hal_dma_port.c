@@ -63,8 +63,8 @@ static const uint32_t PORT_MAP_PERIPHERAL_ID[CFN_HAL_DMA_PORT_MAX] = {
     [CFN_HAL_DMA_PORT_DMA2_STREAM7] = CFN_HAL_PORT_PERIPH_DMA2,
 };
 
-static DMA_HandleTypeDef port_hdmas[CFN_HAL_DMA_PORT_MAX];
-static cfn_hal_dma_t    *port_drivers[CFN_HAL_DMA_PORT_MAX];
+DMA_HandleTypeDef     port_hdmas[CFN_HAL_DMA_PORT_MAX];
+static cfn_hal_dma_t *port_drivers[CFN_HAL_DMA_PORT_MAX];
 
 /* Internal Helpers -------------------------------------------------*/
 
@@ -169,11 +169,11 @@ static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint3
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     DMA_HandleTypeDef *hdma    = &port_hdmas[port_id];
 
-    if (event_mask & CFN_HAL_DMA_EVENT_TRANSFER_COMPLETE)
+    if (event_mask & (uint32_t) CFN_HAL_DMA_EVENT_TRANSFER_COMPLETE)
     {
         __HAL_DMA_ENABLE_IT(hdma, DMA_IT_TC);
     }
-    if (event_mask & CFN_HAL_DMA_EVENT_TRANSFER_HALF)
+    if (event_mask & (uint32_t) CFN_HAL_DMA_EVENT_TRANSFER_HALF)
     {
         __HAL_DMA_ENABLE_IT(hdma, DMA_IT_HT);
     }
@@ -187,11 +187,11 @@ static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     DMA_HandleTypeDef *hdma    = &port_hdmas[port_id];
 
-    if (event_mask & CFN_HAL_DMA_EVENT_TRANSFER_COMPLETE)
+    if (event_mask & (uint32_t) CFN_HAL_DMA_EVENT_TRANSFER_COMPLETE)
     {
         __HAL_DMA_DISABLE_IT(hdma, DMA_IT_TC);
     }
-    if (event_mask & CFN_HAL_DMA_EVENT_TRANSFER_HALF)
+    if (event_mask & (uint32_t) CFN_HAL_DMA_EVENT_TRANSFER_HALF)
     {
         __HAL_DMA_DISABLE_IT(hdma, DMA_IT_HT);
     }
@@ -246,7 +246,7 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
     if (HAL_DMA_GetError(hdma) != HAL_DMA_ERROR_NONE)
     {
-        mask |= CFN_HAL_DMA_ERROR_TRANSFER;
+        mask |= (uint32_t) CFN_HAL_DMA_ERROR_TRANSFER;
     }
 
     if (error_mask != NULL)
@@ -427,6 +427,7 @@ cfn_hal_error_code_t cfn_hal_dma_construct(cfn_hal_dma_t              *driver,
                                            const cfn_hal_dma_config_t *config,
                                            const cfn_hal_dma_phy_t    *phy,
                                            struct cfn_hal_clock_s     *clock,
+                                           void                       *dependency,
                                            cfn_hal_dma_callback_t      callback,
                                            void                       *user_arg)
 {
@@ -442,8 +443,7 @@ cfn_hal_error_code_t cfn_hal_dma_construct(cfn_hal_dma_t              *driver,
     }
 
     uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
-
-    cfn_hal_dma_populate(driver, peripheral_id, clock, &DMA_API, phy, config, callback, user_arg);
+    cfn_hal_dma_populate(driver, peripheral_id, clock, dependency, &DMA_API, phy, config, callback, user_arg);
 
     port_hdmas[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -467,7 +467,6 @@ cfn_hal_error_code_t cfn_hal_dma_destruct(cfn_hal_dma_t *driver)
         }
     }
 
-    driver->config = NULL;
-    driver->phy    = NULL;
+    cfn_hal_dma_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 }

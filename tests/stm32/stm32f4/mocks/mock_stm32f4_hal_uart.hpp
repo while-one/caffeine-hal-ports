@@ -20,9 +20,12 @@ public:
     virtual HAL_StatusTypeDef HAL_UART_Transmit_IT(UART_HandleTypeDef *huart, const uint8_t *pData, uint16_t Size) = 0;
     virtual HAL_StatusTypeDef HAL_UART_AbortTransmit_IT(UART_HandleTypeDef *huart) = 0;
     virtual HAL_StatusTypeDef HAL_UART_Receive_IT(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size) = 0;
-    virtual HAL_StatusTypeDef HAL_UART_AbortReceive_IT(UART_HandleTypeDef *huart) = 0;
+    virtual HAL_StatusTypeDef HAL_UART_AbortReceive_IT(UART_HandleTypeDef *huart)                          = 0;
 
-    static MockStm32F4HalUart* GetInstance();
+    virtual HAL_StatusTypeDef HAL_UART_Transmit_DMA(UART_HandleTypeDef *huart, const uint8_t *pData, uint16_t Size) = 0;
+    virtual HAL_StatusTypeDef HAL_UART_Receive_DMA(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size)       = 0;
+
+    static MockStm32F4HalUart *GetInstance();
     static void SetInstance(MockStm32F4HalUart* instance);
 
 private:
