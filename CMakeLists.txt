@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.23)
-project(caffeine-hal-ports VERSION 0.3.6 LANGUAGES C CXX ASM)
+project(caffeine-hal-ports VERSION 0.4.0 LANGUAGES C CXX ASM)
 # 3. Code Quality (Formatting & Analysis)
 # Define the absolute universe of sources for this repository
 file(GLOB_RECURSE ALL_UNIVERSE_SOURCES 
