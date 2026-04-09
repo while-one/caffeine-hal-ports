@@ -54,6 +54,25 @@ static HASH_HandleTypeDef port_hhash;
 static RNG_HandleTypeDef port_hrng;
 #endif
 
+/* Internal Helpers -------------------------------------------------*/
+
+#ifdef HAL_CRYP_MODULE_ENABLED
+static cfn_hal_error_code_t get_crypto_keysize(size_t key_size, uint32_t *out_keysize)
+{
+    if (key_size == 16)
+    {
+        *out_keysize = CRYP_KEYSIZE_128B;
+        return CFN_HAL_ERROR_OK;
+    }
+    if (key_size == 32)
+    {
+        *out_keysize = CRYP_KEYSIZE_256B;
+        return CFN_HAL_ERROR_OK;
+    }
+    return CFN_HAL_ERROR_BAD_PARAM;
+}
+#endif
+
 /* VMT Implementations ----------------------------------------------*/
 
 static cfn_hal_error_code_t low_level_init(cfn_hal_crypto_t *driver)
@@ -173,12 +192,11 @@ port_crypto_encrypt(cfn_hal_crypto_t *driver, const uint8_t *in, uint8_t *out, s
 {
     CFN_HAL_UNUSED(driver);
 #ifdef HAL_CRYP_MODULE_ENABLED
-    return cfn_hal_stm32_map_error(
-        HAL_CRYP_Encrypt(&port_hcryp,
-                         (uint32_t *) (uintptr_t) /* NOLINT(performance-no-int-to-ptr) */ in,
-                         (uint16_t) size,
-                         (uint32_t *) (uintptr_t) /* NOLINT(performance-no-int-to-ptr) */ out,
-                         timeout));
+    return cfn_hal_stm32_map_error(HAL_CRYP_Encrypt(&port_hcryp,
+                                                    (uint32_t *) (uintptr_t) /* NOLINT(performance-no-int-to-ptr) */ in,
+                                                    (uint16_t) size,
+                                                    (uint32_t *) out,
+                                                    timeout));
 #else
     CFN_HAL_UNUSED(in);
     CFN_HAL_UNUSED(out);
@@ -263,19 +281,15 @@ static cfn_hal_error_code_t port_crypto_set_key(cfn_hal_crypto_t *driver, const 
 {
     CFN_HAL_UNUSED(driver);
 #ifdef HAL_CRYP_MODULE_ENABLED
-    port_hcryp.Init.pKey = (uint32_t *) (uintptr_t) /* NOLINT(performance-no-int-to-ptr) */ key;
-    if (key_size == 16)
+    uint32_t             st_key_size = 0;
+    cfn_hal_error_code_t error       = get_crypto_keysize(key_size, &st_key_size);
+    if (error != CFN_HAL_ERROR_OK)
     {
-        port_hcryp.Init.KeySize = CRYP_KEYSIZE_128B;
+        return error;
     }
-    else if (key_size == 32)
-    {
-        port_hcryp.Init.KeySize = CRYP_KEYSIZE_256B;
-    }
-    else
-    {
-        return CFN_HAL_ERROR_BAD_PARAM;
-    }
+
+    port_hcryp.Init.pKey    = (uint32_t *) (uintptr_t) /* NOLINT(performance-no-int-to-ptr) */ key;
+    port_hcryp.Init.KeySize = st_key_size;
 
     return cfn_hal_stm32_map_error(HAL_CRYP_Init(&port_hcryp));
 #else
@@ -317,6 +331,7 @@ cfn_hal_error_code_t cfn_hal_crypto_construct(cfn_hal_crypto_t              *dri
                                               const cfn_hal_crypto_config_t *config,
                                               const cfn_hal_crypto_phy_t    *phy,
                                               struct cfn_hal_clock_s        *clock,
+                                              void                          *dependency,
                                               cfn_hal_crypto_callback_t      callback,
                                               void                          *user_arg)
 {
@@ -335,7 +350,7 @@ cfn_hal_error_code_t cfn_hal_crypto_construct(cfn_hal_crypto_t              *dri
 
     uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
 
-    cfn_hal_crypto_populate(driver, peripheral_id, clock, &CRYPTO_API, phy, config, callback, user_arg);
+    cfn_hal_crypto_populate(driver, peripheral_id, clock, dependency, &CRYPTO_API, phy, config, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
 #else
@@ -343,6 +358,7 @@ cfn_hal_error_code_t cfn_hal_crypto_construct(cfn_hal_crypto_t              *dri
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
     CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(dependency);
     CFN_HAL_UNUSED(callback);
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
@@ -356,8 +372,7 @@ cfn_hal_error_code_t cfn_hal_crypto_destruct(cfn_hal_crypto_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    driver->config = NULL;
-    driver->phy    = NULL;
+    cfn_hal_crypto_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

@@ -72,6 +72,7 @@ cfn_hal_error_code_t cfn_hal_clock_construct(cfn_hal_clock_t              *drive
                                              const cfn_hal_clock_config_t *config,
                                              const cfn_hal_clock_phy_t    *phy,
                                              struct cfn_hal_clock_s       *clock,
+                                             void                         *dependency,
                                              cfn_hal_clock_callback_t      callback,
                                              void                         *user_arg)
 {
@@ -79,7 +80,7 @@ cfn_hal_error_code_t cfn_hal_clock_construct(cfn_hal_clock_t              *drive
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    cfn_hal_clock_populate(driver, 0, clock, &CLOCK_API, phy, config, callback, user_arg);
+    cfn_hal_clock_populate(driver, 0, clock, dependency, &CLOCK_API, phy, config, callback, user_arg);
     return CFN_HAL_ERROR_OK;
 }
 
@@ -89,6 +90,6 @@ cfn_hal_error_code_t cfn_hal_clock_destruct(cfn_hal_clock_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    cfn_hal_clock_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL);
+    cfn_hal_clock_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 }

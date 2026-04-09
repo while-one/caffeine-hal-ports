@@ -33,6 +33,7 @@ extern "C"
 
 /* Includes ---------------------------------------------------------*/
 #include "cfn_hal_dma.h"
+#include "stm32f4xx_hal.h"
 
 /* Types Enums ------------------------------------------------------*/
 
@@ -77,6 +78,11 @@ typedef enum
 } cfn_hal_dma_channel_t;
 
 /* Functions prototypes ---------------------------------------------*/
+
+/**
+ * @brief Global tracking array for STM32 HAL DMA handles.
+ */
+extern DMA_HandleTypeDef port_hdmas[CFN_HAL_DMA_PORT_MAX];
 
 #ifdef __cplusplus
 }

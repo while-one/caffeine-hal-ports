@@ -27,6 +27,7 @@
 #include "cfn_hal_i2c_port.h"
 #include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
+#include "cfn_hal_dma_port.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_i2c.h"
 #include "cfn_hal_stm32_error.h"
@@ -53,6 +54,11 @@ static const uint32_t PORT_MAP_PERIPHERAL_ID[CFN_HAL_I2C_PORT_MAX] = {
     [CFN_HAL_I2C_PORT_I2C1] = CFN_HAL_PORT_PERIPH_I2C1,
     [CFN_HAL_I2C_PORT_I2C2] = CFN_HAL_PORT_PERIPH_I2C2,
     [CFN_HAL_I2C_PORT_I2C3] = CFN_HAL_PORT_PERIPH_I2C3,
+};
+
+static const uint32_t PORT_MAP_SPEED[] = {
+    [CFN_HAL_I2C_CONFIG_SPEED_100KHZ] = 100000,
+    [CFN_HAL_I2C_CONFIG_SPEED_400KHZ] = 400000,
 };
 
 static I2C_HandleTypeDef port_hi2cs[CFN_HAL_I2C_PORT_MAX];
@@ -106,6 +112,25 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_i2c_t *driver)
         (void) cfn_hal_gpio_init(driver->phy->scl->port);
     }
 
+    /* 3. DMA Dependency Linking */
+    if (driver->base.dependency != NULL)
+    {
+        cfn_hal_dma_t    **dma_deps = (cfn_hal_dma_t **) driver->base.dependency;
+        uint32_t           port_id  = (uint32_t) (uintptr_t) driver->phy->instance;
+        I2C_HandleTypeDef *hi2c     = &port_hi2cs[port_id];
+
+        if (dma_deps[0] != NULL)
+        {
+            uint32_t tx_dma_port_id = (uint32_t) (uintptr_t) dma_deps[0]->phy->instance;
+            __HAL_LINKDMA(hi2c, hdmatx, port_hdmas[tx_dma_port_id]);
+        }
+        if (dma_deps[1] != NULL)
+        {
+            uint32_t rx_dma_port_id = (uint32_t) (uintptr_t) dma_deps[1]->phy->instance;
+            __HAL_LINKDMA(hi2c, hdmarx, port_hdmas[rx_dma_port_id]);
+        }
+    }
+
     return CFN_HAL_ERROR_OK;
 }
 
@@ -121,20 +146,8 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
         return error;
     }
 
-    hi2c->Instance = PORT_INSTANCES[port_id];
-
-    switch (driver->config->speed)
-    {
-        case CFN_HAL_I2C_CONFIG_SPEED_100KHZ:
-            hi2c->Init.ClockSpeed = 100000;
-            break;
-        case CFN_HAL_I2C_CONFIG_SPEED_400KHZ:
-            hi2c->Init.ClockSpeed = 400000;
-            break;
-        default:
-            hi2c->Init.ClockSpeed = 100000;
-            break;
-    }
+    hi2c->Instance             = PORT_INSTANCES[port_id];
+    hi2c->Init.ClockSpeed      = PORT_MAP_SPEED[driver->config->speed];
 
     hi2c->Init.DutyCycle       = I2C_DUTYCYCLE_2;
     hi2c->Init.OwnAddress1     = 0;
@@ -167,7 +180,7 @@ static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint3
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     I2C_HandleTypeDef *hi2c    = &port_hi2cs[port_id];
 
-    if (event_mask & (CFN_HAL_I2C_EVENT_TX_COMPLETE | CFN_HAL_I2C_EVENT_RX_READY))
+    if (event_mask & (uint32_t) ((uint32_t) CFN_HAL_I2C_EVENT_TX_COMPLETE | (uint32_t) CFN_HAL_I2C_EVENT_RX_READY))
     {
         __HAL_I2C_ENABLE_IT(hi2c, I2C_IT_EVT);
         __HAL_I2C_ENABLE_IT(hi2c, I2C_IT_BUF);
@@ -182,7 +195,7 @@ static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     I2C_HandleTypeDef *hi2c    = &port_hi2cs[port_id];
 
-    if (event_mask & (CFN_HAL_I2C_EVENT_TX_COMPLETE | CFN_HAL_I2C_EVENT_RX_READY))
+    if (event_mask & (uint32_t) ((uint32_t) CFN_HAL_I2C_EVENT_TX_COMPLETE | (uint32_t) CFN_HAL_I2C_EVENT_RX_READY))
     {
         __HAL_I2C_DISABLE_IT(hi2c, I2C_IT_EVT);
         __HAL_I2C_DISABLE_IT(hi2c, I2C_IT_BUF);
@@ -200,11 +213,11 @@ static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t
 
     if (__HAL_I2C_GET_FLAG(hi2c, I2C_FLAG_TXE))
     {
-        mask |= CFN_HAL_I2C_EVENT_TX_COMPLETE;
+        mask |= (uint32_t) CFN_HAL_I2C_EVENT_TX_COMPLETE;
     }
     if (__HAL_I2C_GET_FLAG(hi2c, I2C_FLAG_RXNE))
     {
-        mask |= CFN_HAL_I2C_EVENT_RX_READY;
+        mask |= (uint32_t) CFN_HAL_I2C_EVENT_RX_READY;
     }
 
     if (event_mask != NULL)
@@ -251,15 +264,15 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
     if (__HAL_I2C_GET_FLAG(hi2c, I2C_FLAG_AF))
     {
-        mask |= CFN_HAL_I2C_ERROR_ACK;
+        mask |= (uint32_t) CFN_HAL_I2C_ERROR_ACK;
     }
     if (__HAL_I2C_GET_FLAG(hi2c, I2C_FLAG_BERR))
     {
-        mask |= CFN_HAL_I2C_ERROR_SMB;
+        mask |= (uint32_t) CFN_HAL_I2C_ERROR_SMB;
     }
     if (__HAL_I2C_GET_FLAG(hi2c, I2C_FLAG_ARLO))
     {
-        mask |= CFN_HAL_I2C_ERROR_ARBITRATION;
+        mask |= (uint32_t) CFN_HAL_I2C_ERROR_ARBITRATION;
     }
 
     if (error_mask != NULL)
@@ -295,6 +308,16 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
             driver->cb(driver, CFN_HAL_I2C_EVENT_RX_READY, CFN_HAL_I2C_ERROR_NONE, NULL, 0, driver->cb_user_arg);
         }
     }
+}
+
+void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+    HAL_I2C_MasterTxCpltCallback(hi2c);
+}
+
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+    HAL_I2C_MasterRxCpltCallback(hi2c);
 }
 
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
@@ -368,7 +391,7 @@ port_i2c_xfr_polling(cfn_hal_i2c_t *driver, const cfn_hal_i2c_transaction_t *xfr
     if (xfr->nbr_of_tx_bytes > 0)
     {
         status = HAL_I2C_Master_Transmit(&port_hi2cs[port_id],
-                                         xfr->slave_address << 1,
+                                         xfr->slave_address << 1UL,
                                          (uint8_t *) xfr->tx_payload,
                                          (uint16_t) xfr->nbr_of_tx_bytes,
                                          timeout);
@@ -381,7 +404,7 @@ port_i2c_xfr_polling(cfn_hal_i2c_t *driver, const cfn_hal_i2c_transaction_t *xfr
     if (xfr->nbr_of_rx_bytes > 0)
     {
         status = HAL_I2C_Master_Receive(
-            &port_hi2cs[port_id], xfr->slave_address << 1, xfr->rx_payload, (uint16_t) xfr->nbr_of_rx_bytes, timeout);
+            &port_hi2cs[port_id], xfr->slave_address << 1UL, xfr->rx_payload, (uint16_t) xfr->nbr_of_rx_bytes, timeout);
     }
 
     return cfn_hal_stm32_map_error(status);
@@ -393,7 +416,7 @@ port_i2c_mem_write(cfn_hal_i2c_t *driver, const cfn_hal_i2c_mem_transaction_t *m
     uint32_t port_id     = (uint32_t) (uintptr_t) driver->phy->instance;
     uint32_t st_mem_size = (mem_xfr->mem_addr_size == 1) ? I2C_MEMADD_SIZE_8BIT : I2C_MEMADD_SIZE_16BIT;
     return cfn_hal_stm32_map_error(HAL_I2C_Mem_Write(&port_hi2cs[port_id],
-                                                     mem_xfr->dev_addr << 1,
+                                                     mem_xfr->dev_addr << 1UL,
                                                      mem_xfr->mem_addr,
                                                      st_mem_size,
                                                      mem_xfr->data,
@@ -407,7 +430,7 @@ port_i2c_mem_read(cfn_hal_i2c_t *driver, const cfn_hal_i2c_mem_transaction_t *me
     uint32_t port_id     = (uint32_t) (uintptr_t) driver->phy->instance;
     uint32_t st_mem_size = (mem_xfr->mem_addr_size == 1) ? I2C_MEMADD_SIZE_8BIT : I2C_MEMADD_SIZE_16BIT;
     return cfn_hal_stm32_map_error(HAL_I2C_Mem_Read(&port_hi2cs[port_id],
-                                                    mem_xfr->dev_addr << 1,
+                                                    mem_xfr->dev_addr << 1UL,
                                                     mem_xfr->mem_addr,
                                                     st_mem_size,
                                                     mem_xfr->data,
@@ -423,14 +446,14 @@ static cfn_hal_error_code_t port_i2c_xfr_irq(cfn_hal_i2c_t *driver, const cfn_ha
     if (xfr->nbr_of_tx_bytes > 0)
     {
         status = HAL_I2C_Master_Transmit_IT(&port_hi2cs[port_id],
-                                            xfr->slave_address << 1,
+                                            xfr->slave_address << 1UL,
                                             (uint8_t *) xfr->tx_payload,
                                             (uint16_t) xfr->nbr_of_tx_bytes);
     }
     else if (xfr->nbr_of_rx_bytes > 0)
     {
         status = HAL_I2C_Master_Receive_IT(
-            &port_hi2cs[port_id], xfr->slave_address << 1, xfr->rx_payload, (uint16_t) xfr->nbr_of_rx_bytes);
+            &port_hi2cs[port_id], xfr->slave_address << 1UL, xfr->rx_payload, (uint16_t) xfr->nbr_of_rx_bytes);
     }
     else
     {
@@ -444,6 +467,31 @@ static cfn_hal_error_code_t port_i2c_xfr_irq_abort(cfn_hal_i2c_t *driver)
 {
     uint32_t port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     return cfn_hal_stm32_map_error(HAL_I2C_Master_Abort_IT(&port_hi2cs[port_id], 0));
+}
+
+static cfn_hal_error_code_t port_i2c_xfr_dma(cfn_hal_i2c_t *driver, const cfn_hal_i2c_transaction_t *xfr)
+{
+    uint32_t          port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    HAL_StatusTypeDef status  = HAL_OK;
+
+    if (xfr->nbr_of_tx_bytes > 0)
+    {
+        status = HAL_I2C_Master_Transmit_DMA(&port_hi2cs[port_id],
+                                             xfr->slave_address << 1UL,
+                                             (uint8_t *) xfr->tx_payload,
+                                             (uint16_t) xfr->nbr_of_tx_bytes);
+    }
+    else if (xfr->nbr_of_rx_bytes > 0)
+    {
+        status = HAL_I2C_Master_Receive_DMA(
+            &port_hi2cs[port_id], xfr->slave_address << 1UL, xfr->rx_payload, (uint16_t) xfr->nbr_of_rx_bytes);
+    }
+    else
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    return cfn_hal_stm32_map_error(status);
 }
 
 /* API --------------------------------------------------------------*/
@@ -468,7 +516,7 @@ static const cfn_hal_i2c_api_t I2C_API = {
     .xfr_polling = port_i2c_xfr_polling,
     .mem_read = port_i2c_mem_read,
     .mem_write = port_i2c_mem_write,
-    .xfr_dma = NULL};
+    .xfr_dma = port_i2c_xfr_dma};
 
 #endif /* HAL_I2C_MODULE_ENABLED */
 
@@ -478,6 +526,7 @@ cfn_hal_error_code_t cfn_hal_i2c_construct(cfn_hal_i2c_t              *driver,
                                            const cfn_hal_i2c_config_t *config,
                                            const cfn_hal_i2c_phy_t    *phy,
                                            struct cfn_hal_clock_s     *clock,
+                                           void                       *dependency,
                                            cfn_hal_i2c_callback_t      callback,
                                            void                       *user_arg)
 {
@@ -494,7 +543,7 @@ cfn_hal_error_code_t cfn_hal_i2c_construct(cfn_hal_i2c_t              *driver,
     }
 
     uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
-    cfn_hal_i2c_populate(driver, peripheral_id, clock, &I2C_API, phy, config, callback, user_arg);
+    cfn_hal_i2c_populate(driver, peripheral_id, clock, dependency, &I2C_API, phy, config, callback, user_arg);
 
     port_hi2cs[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -505,6 +554,7 @@ cfn_hal_error_code_t cfn_hal_i2c_construct(cfn_hal_i2c_t              *driver,
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
     CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(dependency);
     CFN_HAL_UNUSED(callback);
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
@@ -528,8 +578,7 @@ cfn_hal_error_code_t cfn_hal_i2c_destruct(cfn_hal_i2c_t *driver)
         }
     }
 
-    driver->config = NULL;
-    driver->phy    = NULL;
+    cfn_hal_i2c_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

@@ -32,68 +32,53 @@
 #include <string.h>
 
 /* Private Data -----------------------------------------------------*/
-
+#define FLASH_BASE_ADDR 0x08000000U
+#define FLASH_INVALID   0xFFFFFFFFU
+#define SECTOR_COUNT    (sizeof(SECTOR_BOUNDARIES) / sizeof(SECTOR_BOUNDARIES[0]))
 /* Internal Helpers -------------------------------------------------*/
+/**
+ * @brief STM32F4 Flash Sector Boundary Table.
+ * Represents the end address of each sector.
+ * Sectors 0-3: 16KB, Sector 4: 64KB, Sectors 5-11: 128KB.
+ */
+static const uint32_t SECTOR_BOUNDARIES[] = {
+    0x08004000U, // Sector 0 (16 KB)
+    0x08008000U, // Sector 1 (16 KB)
+    0x0800C000U, // Sector 2 (16 KB)
+    0x08010000U, // Sector 3 (16 KB)
+    0x08020000U, // Sector 4 (64 KB)
+    0x08040000U, // Sector 5 (128 KB)
+    0x08060000U, // Sector 6 (128 KB)
+    0x08080000U, // Sector 7 (128 KB)
+    0x080A0000U, // Sector 8 (128 KB)
+    0x080C0000U, // Sector 9 (128 KB)
+    0x080E0000U, // Sector 10 (128 KB)
+    0x08100000U  // Sector 11 (128 KB)
+};
+
+static const uint32_t PORT_MAP_SECTOR_SIZE[] = {
+    16UL * 1024UL,  16UL * 1024UL,  16UL * 1024UL,  16UL * 1024UL,  // 0-3
+    64UL * 1024UL,                                                  // 4
+    128UL * 1024UL, 128UL * 1024UL, 128UL * 1024UL, 128UL * 1024UL, // 5-8
+    128UL * 1024UL, 128UL * 1024UL, 128UL * 1024UL                  // 9-11
+};
 
 static uint32_t get_sector(uint32_t address)
 {
-    uint32_t sector = 0;
-
-    if ((address < 0x08004000) && (address >= 0x08000000))
+    if ((address < FLASH_BASE_ADDR) || (address >= SECTOR_BOUNDARIES[SECTOR_COUNT - 1U]))
     {
-        sector = FLASH_SECTOR_0;
-    }
-    else if ((address < 0x08008000) && (address >= 0x08004000))
-    {
-        sector = FLASH_SECTOR_1;
-    }
-    else if ((address < 0x0800C000) && (address >= 0x08008000))
-    {
-        sector = FLASH_SECTOR_2;
-    }
-    else if ((address < 0x08010000) && (address >= 0x0800C000))
-    {
-        sector = FLASH_SECTOR_3;
-    }
-    else if ((address < 0x08020000) && (address >= 0x08010000))
-    {
-        sector = FLASH_SECTOR_4;
-    }
-    else if ((address < 0x08040000) && (address >= 0x08020000))
-    {
-        sector = FLASH_SECTOR_5;
-    }
-    else if ((address < 0x08060000) && (address >= 0x08040000))
-    {
-        sector = FLASH_SECTOR_6;
-    }
-    else if ((address < 0x08080000) && (address >= 0x08060000))
-    {
-        sector = FLASH_SECTOR_7;
-    }
-    else if ((address < 0x080A0000) && (address >= 0x08080000))
-    {
-        sector = FLASH_SECTOR_8;
-    }
-    else if ((address < 0x080C0000) && (address >= 0x080A0000))
-    {
-        sector = FLASH_SECTOR_9;
-    }
-    else if ((address < 0x080E0000) && (address >= 0x080C0000))
-    {
-        sector = FLASH_SECTOR_10;
-    }
-    else if ((address < 0x08100000) && (address >= 0x080E0000))
-    {
-        sector = FLASH_SECTOR_11;
-    }
-    else
-    {
-        /* Address out of range or beyond 1MB bank */
-        sector = 0xFFFFFFFF;
+        return FLASH_INVALID;
     }
 
-    return sector;
+    for (uint32_t i = 0U; i < SECTOR_COUNT; ++i)
+    {
+        if (address < SECTOR_BOUNDARIES[i])
+        {
+            return i;
+        }
+    }
+
+    return FLASH_INVALID;
 }
 
 /* VMT Implementations ----------------------------------------------*/
@@ -231,20 +216,7 @@ static cfn_hal_error_code_t port_nvm_get_info(cfn_hal_nvm_t *driver, uint32_t ad
     info->total_size   = (*((uint16_t *) FLASHSIZE_BASE)) * 1024UL;
     info->page_size    = 1; /* Byte-programmable */
     info->write_cycles = 10000;
-
-    /* Sectors 0-3 are 16KB, Sector 4 is 64KB, Sectors 5-11 are 128KB */
-    if (sector <= FLASH_SECTOR_3)
-    {
-        info->sector_size = 16UL * 1024UL;
-    }
-    else if (sector == FLASH_SECTOR_4)
-    {
-        info->sector_size = 64UL * 1024UL;
-    }
-    else
-    {
-        info->sector_size = 128UL * 1024UL;
-    }
+    info->sector_size  = PORT_MAP_SECTOR_SIZE[sector];
 
     return CFN_HAL_ERROR_OK;
 }
@@ -277,6 +249,7 @@ cfn_hal_error_code_t cfn_hal_nvm_construct(cfn_hal_nvm_t              *driver,
                                            const cfn_hal_nvm_config_t *config,
                                            const cfn_hal_nvm_phy_t    *phy,
                                            struct cfn_hal_clock_s     *clock,
+                                           void                       *dependency,
                                            cfn_hal_nvm_callback_t      callback,
                                            void                       *user_arg)
 {
@@ -285,7 +258,7 @@ cfn_hal_error_code_t cfn_hal_nvm_construct(cfn_hal_nvm_t              *driver,
         return CFN_HAL_ERROR_BAD_PARAM;
     }
 
-    cfn_hal_nvm_populate(driver, 0, clock, &NVM_API, phy, config, callback, user_arg);
+    cfn_hal_nvm_populate(driver, 0, clock, dependency, &NVM_API, phy, config, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
 }
@@ -296,8 +269,6 @@ cfn_hal_error_code_t cfn_hal_nvm_destruct(cfn_hal_nvm_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    driver->config = NULL;
-    driver->phy    = NULL;
-
+    cfn_hal_nvm_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 }

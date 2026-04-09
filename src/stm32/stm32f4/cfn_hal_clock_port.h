@@ -102,6 +102,7 @@ typedef enum
     CFN_HAL_PORT_PERIPH_TIM12,
     CFN_HAL_PORT_PERIPH_TIM13,
     CFN_HAL_PORT_PERIPH_TIM14,
+    CFN_HAL_PORT_PERIPH_SDIO,
     CFN_HAL_PORT_PERIPH_MAX
 } cfn_hal_port_peripheral_id_t;
 

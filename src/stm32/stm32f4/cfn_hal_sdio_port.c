@@ -238,6 +238,7 @@ cfn_hal_error_code_t cfn_hal_sdio_construct(cfn_hal_sdio_t              *driver,
                                             const cfn_hal_sdio_config_t *config,
                                             const cfn_hal_sdio_phy_t    *phy,
                                             struct cfn_hal_clock_s      *clock,
+                                            void                        *dependency,
                                             cfn_hal_sdio_callback_t      callback,
                                             void                        *user_arg)
 {
@@ -254,7 +255,7 @@ cfn_hal_error_code_t cfn_hal_sdio_construct(cfn_hal_sdio_t              *driver,
 
     uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
 
-    cfn_hal_sdio_populate(driver, peripheral_id, clock, &SDIO_API, phy, config, callback, user_arg);
+    cfn_hal_sdio_populate(driver, peripheral_id, clock, dependency, &SDIO_API, phy, config, callback, user_arg);
 
     return CFN_HAL_ERROR_OK;
 #else
@@ -262,6 +263,7 @@ cfn_hal_error_code_t cfn_hal_sdio_construct(cfn_hal_sdio_t              *driver,
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
     CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(dependency);
     CFN_HAL_UNUSED(callback);
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
@@ -275,8 +277,7 @@ cfn_hal_error_code_t cfn_hal_sdio_destruct(cfn_hal_sdio_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    driver->config = NULL;
-    driver->phy    = NULL;
+    cfn_hal_sdio_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

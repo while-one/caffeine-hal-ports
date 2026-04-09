@@ -35,33 +35,24 @@ extern "C"
 #include "cfn_hal_timer.h"
 
 /* Functions prototypes ---------------------------------------------*/
-
-/**
- * @brief Construct the timer driver.
- *
- * @param driver Pointer to the peripheral driver instance.
- * @param config Pointer to the configuration structure.
- * @param phy Pointer to the physical mapping structure.
- * @param clock Pointer to the clock instance.
- * @param callback The callback function to register.
- * @param user_arg User-defined argument passed to the callback.
- * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
- */
-cfn_hal_error_code_t cfn_hal_timer_construct(cfn_hal_timer_t              *driver,
-                                             const cfn_hal_timer_config_t *config,
-                                             const cfn_hal_timer_phy_t    *phy,
-                                             struct cfn_hal_clock_s       *clock,
-                                             cfn_hal_timer_callback_t      callback,
-                                             void                         *user_arg);
-
-/**
- * @brief Destruct the timer driver.
- *
- * @param driver Pointer to the peripheral driver instance.
- * @return CFN_HAL_ERROR_OK on success, or a specific error code on failure.
- */
-cfn_hal_error_code_t cfn_hal_timer_destruct(cfn_hal_timer_t *driver);
-
+typedef enum
+{
+    CFN_HAL_TIMER_PORT_TIM1,
+    CFN_HAL_TIMER_PORT_TIM2,
+    CFN_HAL_TIMER_PORT_TIM3,
+    CFN_HAL_TIMER_PORT_TIM4,
+    CFN_HAL_TIMER_PORT_TIM5,
+    CFN_HAL_TIMER_PORT_TIM6,
+    CFN_HAL_TIMER_PORT_TIM7,
+    CFN_HAL_TIMER_PORT_TIM8,
+    CFN_HAL_TIMER_PORT_TIM9,
+    CFN_HAL_TIMER_PORT_TIM10,
+    CFN_HAL_TIMER_PORT_TIM11,
+    CFN_HAL_TIMER_PORT_TIM12,
+    CFN_HAL_TIMER_PORT_TIM13,
+    CFN_HAL_TIMER_PORT_TIM14,
+    CFN_HAL_TIMER_PORT_MAX
+} cfn_hal_timer_port_t;
 #ifdef __cplusplus
 }
 #endif

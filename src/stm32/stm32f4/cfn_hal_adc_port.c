@@ -213,7 +213,7 @@ static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint3
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     ADC_HandleTypeDef *hadc    = &port_hadcs[port_id];
 
-    if (event_mask & CFN_HAL_ADC_EVENT_EOC)
+    if (event_mask & (uint32_t) CFN_HAL_ADC_EVENT_EOC)
     {
         __HAL_ADC_ENABLE_IT(hadc, ADC_IT_EOC);
     }
@@ -227,7 +227,7 @@ static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     ADC_HandleTypeDef *hadc    = &port_hadcs[port_id];
 
-    if (event_mask & CFN_HAL_ADC_EVENT_EOC)
+    if (event_mask & (uint32_t) CFN_HAL_ADC_EVENT_EOC)
     {
         __HAL_ADC_DISABLE_IT(hadc, ADC_IT_EOC);
     }
@@ -244,7 +244,7 @@ static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t
 
     if (__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOC))
     {
-        mask |= CFN_HAL_ADC_EVENT_EOC;
+        mask |= (uint32_t) CFN_HAL_ADC_EVENT_EOC;
     }
 
     if (event_mask != NULL)
@@ -260,7 +260,7 @@ static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint3
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     ADC_HandleTypeDef *hadc    = &port_hadcs[port_id];
 
-    if (error_mask & CFN_HAL_ADC_ERROR_OVERRUN)
+    if (error_mask & (uint32_t) CFN_HAL_ADC_ERROR_OVERRUN)
     {
         __HAL_ADC_ENABLE_IT(hadc, ADC_IT_OVR);
     }
@@ -274,7 +274,7 @@ static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     ADC_HandleTypeDef *hadc    = &port_hadcs[port_id];
 
-    if (error_mask & CFN_HAL_ADC_ERROR_OVERRUN)
+    if (error_mask & (uint32_t) CFN_HAL_ADC_ERROR_OVERRUN)
     {
         __HAL_ADC_DISABLE_IT(hadc, ADC_IT_OVR);
     }
@@ -291,7 +291,7 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
     if (__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_OVR))
     {
-        mask |= CFN_HAL_ADC_ERROR_OVERRUN;
+        mask |= (uint32_t) CFN_HAL_ADC_ERROR_OVERRUN;
     }
 
     if (error_mask != NULL)
@@ -426,6 +426,7 @@ cfn_hal_error_code_t cfn_hal_adc_construct(cfn_hal_adc_t              *driver,
                                            const cfn_hal_adc_config_t *config,
                                            const cfn_hal_adc_phy_t    *phy,
                                            struct cfn_hal_clock_s     *clock,
+                                           void                       *dependency,
                                            cfn_hal_adc_callback_t      callback,
                                            void                       *user_arg)
 {
@@ -443,7 +444,7 @@ cfn_hal_error_code_t cfn_hal_adc_construct(cfn_hal_adc_t              *driver,
 
     uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
 
-    cfn_hal_adc_populate(driver, peripheral_id, clock, &ADC_API, phy, config, callback, user_arg);
+    cfn_hal_adc_populate(driver, peripheral_id, clock, dependency, &ADC_API, phy, config, callback, user_arg);
 
     port_hadcs[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
@@ -454,6 +455,7 @@ cfn_hal_error_code_t cfn_hal_adc_construct(cfn_hal_adc_t              *driver,
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
     CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(dependency);
     CFN_HAL_UNUSED(callback);
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
@@ -467,8 +469,7 @@ cfn_hal_error_code_t cfn_hal_adc_destruct(cfn_hal_adc_t *driver)
     {
         return CFN_HAL_ERROR_BAD_PARAM;
     }
-    driver->config = NULL;
-    driver->phy    = NULL;
+    cfn_hal_adc_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);

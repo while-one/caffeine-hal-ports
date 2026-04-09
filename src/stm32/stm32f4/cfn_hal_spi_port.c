@@ -27,6 +27,7 @@
 #include "cfn_hal_spi_port.h"
 #include "cfn_hal_clock.h"
 #include "cfn_hal_clock_port.h"
+#include "cfn_hal_dma_port.h"
 #include "cfn_hal_gpio.h"
 #include "cfn_hal_spi.h"
 #include "cfn_hal_stm32_error.h"
@@ -76,6 +77,19 @@ static const uint32_t PORT_MAP_PERIPHERAL_ID[CFN_HAL_SPI_PORT_MAX] = {
 #if defined(SPI6)
     [CFN_HAL_SPI_PORT_6] = CFN_HAL_PORT_PERIPH_SPI6,
 #endif
+};
+
+typedef struct
+{
+    uint32_t polarity;
+    uint32_t phase;
+} spi_format_map_t;
+
+static const spi_format_map_t PORT_MAP_FMT[] = {
+    [CFN_HAL_SPI_CONFIG_FMT_POL0_PHA0] = { SPI_POLARITY_LOW,  SPI_PHASE_1EDGE },
+    [CFN_HAL_SPI_CONFIG_FMT_POL0_PHA1] = { SPI_POLARITY_LOW,  SPI_PHASE_2EDGE },
+    [CFN_HAL_SPI_CONFIG_FMT_POL1_PHA0] = { SPI_POLARITY_HIGH, SPI_PHASE_1EDGE },
+    [CFN_HAL_SPI_CONFIG_FMT_POL1_PHA1] = { SPI_POLARITY_HIGH, SPI_PHASE_2EDGE },
 };
 
 static SPI_HandleTypeDef port_hspis[CFN_HAL_SPI_PORT_MAX];
@@ -128,6 +142,25 @@ static cfn_hal_error_code_t low_level_init(cfn_hal_spi_t *driver)
         (void) cfn_hal_gpio_init(driver->phy->sck->port);
     }
 
+    /* 3. DMA Dependency Linking */
+    if (driver->base.dependency != NULL)
+    {
+        cfn_hal_dma_t    **dma_deps = (cfn_hal_dma_t **) driver->base.dependency;
+        uint32_t           port_id  = (uint32_t) (uintptr_t) driver->phy->instance;
+        SPI_HandleTypeDef *hspi     = &port_hspis[port_id];
+
+        if (dma_deps[0] != NULL)
+        {
+            uint32_t tx_dma_port_id = (uint32_t) (uintptr_t) dma_deps[0]->phy->instance;
+            __HAL_LINKDMA(hspi, hdmatx, port_hdmas[tx_dma_port_id]);
+        }
+        if (dma_deps[1] != NULL)
+        {
+            uint32_t rx_dma_port_id = (uint32_t) (uintptr_t) dma_deps[1]->phy->instance;
+            __HAL_LINKDMA(hspi, hdmarx, port_hdmas[rx_dma_port_id]);
+        }
+    }
+
     return CFN_HAL_ERROR_OK;
 }
 
@@ -148,33 +181,12 @@ static cfn_hal_error_code_t port_base_init(cfn_hal_driver_t *base)
     hspi->Init.Mode            = SPI_MODE_MASTER;
     hspi->Init.Direction       = SPI_DIRECTION_2LINES;
     hspi->Init.DataSize        = (driver->config->data_size == 16) ? SPI_DATASIZE_16BIT : SPI_DATASIZE_8BIT;
+    hspi->Init.CLKPolarity     = PORT_MAP_FMT[driver->config->fmt].polarity;
+    hspi->Init.CLKPhase        = PORT_MAP_FMT[driver->config->fmt].phase;
 
-    switch (driver->config->fmt)
-    {
-        case CFN_HAL_SPI_CONFIG_FMT_POL0_PHA0:
-            hspi->Init.CLKPolarity = SPI_POLARITY_LOW;
-            hspi->Init.CLKPhase    = SPI_PHASE_1EDGE;
-            break;
-        case CFN_HAL_SPI_CONFIG_FMT_POL0_PHA1:
-            hspi->Init.CLKPolarity = SPI_POLARITY_LOW;
-            hspi->Init.CLKPhase    = SPI_PHASE_2EDGE;
-            break;
-        case CFN_HAL_SPI_CONFIG_FMT_POL1_PHA0:
-            hspi->Init.CLKPolarity = SPI_POLARITY_HIGH;
-            hspi->Init.CLKPhase    = SPI_PHASE_1EDGE;
-            break;
-        case CFN_HAL_SPI_CONFIG_FMT_POL1_PHA1:
-            hspi->Init.CLKPolarity = SPI_POLARITY_HIGH;
-            hspi->Init.CLKPhase    = SPI_PHASE_2EDGE;
-            break;
+    hspi->Init.NSS             = SPI_NSS_SOFT;
 
-        default:
-            return CFN_HAL_ERROR_BAD_PARAM;
-    }
-
-    hspi->Init.NSS       = SPI_NSS_SOFT;
-
-    uint32_t periph_freq = 0;
+    uint32_t periph_freq       = 0;
     (void) cfn_hal_clock_get_peripheral_freq(
         (cfn_hal_clock_t *) driver->base.clock_driver, driver->base.peripheral_id, &periph_freq);
 
@@ -246,11 +258,11 @@ static cfn_hal_error_code_t port_base_event_enable(cfn_hal_driver_t *base, uint3
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     SPI_HandleTypeDef *hspi    = &port_hspis[port_id];
 
-    if (event_mask & CFN_HAL_SPI_EVENT_TX_COMPLETE)
+    if (event_mask & (uint32_t) CFN_HAL_SPI_EVENT_TX_COMPLETE)
     {
         __HAL_SPI_ENABLE_IT(hspi, SPI_IT_TXE);
     }
-    if (event_mask & CFN_HAL_SPI_EVENT_RX_READY)
+    if (event_mask & (uint32_t) CFN_HAL_SPI_EVENT_RX_READY)
     {
         __HAL_SPI_ENABLE_IT(hspi, SPI_IT_RXNE);
     }
@@ -264,11 +276,11 @@ static cfn_hal_error_code_t port_base_event_disable(cfn_hal_driver_t *base, uint
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     SPI_HandleTypeDef *hspi    = &port_hspis[port_id];
 
-    if (event_mask & CFN_HAL_SPI_EVENT_TX_COMPLETE)
+    if (event_mask & (uint32_t) CFN_HAL_SPI_EVENT_TX_COMPLETE)
     {
         __HAL_SPI_DISABLE_IT(hspi, SPI_IT_TXE);
     }
-    if (event_mask & CFN_HAL_SPI_EVENT_RX_READY)
+    if (event_mask & (uint32_t) CFN_HAL_SPI_EVENT_RX_READY)
     {
         __HAL_SPI_DISABLE_IT(hspi, SPI_IT_RXNE);
     }
@@ -285,11 +297,11 @@ static cfn_hal_error_code_t port_base_event_get(cfn_hal_driver_t *base, uint32_t
 
     if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_TXE))
     {
-        mask |= CFN_HAL_SPI_EVENT_TX_COMPLETE;
+        mask |= (uint32_t) CFN_HAL_SPI_EVENT_TX_COMPLETE;
     }
     if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_RXNE))
     {
-        mask |= CFN_HAL_SPI_EVENT_RX_READY;
+        mask |= (uint32_t) CFN_HAL_SPI_EVENT_RX_READY;
     }
 
     if (event_mask != NULL)
@@ -305,7 +317,8 @@ static cfn_hal_error_code_t port_base_error_enable(cfn_hal_driver_t *base, uint3
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     SPI_HandleTypeDef *hspi    = &port_hspis[port_id];
 
-    if (error_mask & (CFN_HAL_SPI_ERROR_CRC | CFN_HAL_SPI_ERROR_FRAMING | CFN_HAL_SPI_ERROR_OVERRUN))
+    if (error_mask & ((uint32_t) CFN_HAL_SPI_ERROR_CRC | (uint32_t) CFN_HAL_SPI_ERROR_FRAMING |
+                      (uint32_t) CFN_HAL_SPI_ERROR_OVERRUN))
     {
         __HAL_SPI_ENABLE_IT(hspi, SPI_IT_ERR);
     }
@@ -319,7 +332,8 @@ static cfn_hal_error_code_t port_base_error_disable(cfn_hal_driver_t *base, uint
     uint32_t           port_id = (uint32_t) (uintptr_t) driver->phy->instance;
     SPI_HandleTypeDef *hspi    = &port_hspis[port_id];
 
-    if (error_mask & (CFN_HAL_SPI_ERROR_CRC | CFN_HAL_SPI_ERROR_FRAMING | CFN_HAL_SPI_ERROR_OVERRUN))
+    if (error_mask & ((uint32_t) CFN_HAL_SPI_ERROR_CRC | (uint32_t) CFN_HAL_SPI_ERROR_FRAMING |
+                      (uint32_t) CFN_HAL_SPI_ERROR_OVERRUN))
     {
         __HAL_SPI_DISABLE_IT(hspi, SPI_IT_ERR);
     }
@@ -336,15 +350,15 @@ static cfn_hal_error_code_t port_base_error_get(cfn_hal_driver_t *base, uint32_t
 
     if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_CRCERR))
     {
-        mask |= CFN_HAL_SPI_ERROR_CRC;
+        mask |= (uint32_t) CFN_HAL_SPI_ERROR_CRC;
     }
     if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_FRE))
     {
-        mask |= CFN_HAL_SPI_ERROR_FRAMING;
+        mask |= (uint32_t) CFN_HAL_SPI_ERROR_FRAMING;
     }
     if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_OVR))
     {
-        mask |= CFN_HAL_SPI_ERROR_OVERRUN;
+        mask |= (uint32_t) CFN_HAL_SPI_ERROR_OVERRUN;
     }
 
     if (error_mask != NULL)
@@ -391,7 +405,7 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
         if (driver->cb != NULL)
         {
             driver->cb(driver,
-                       CFN_HAL_SPI_EVENT_TX_COMPLETE | CFN_HAL_SPI_EVENT_RX_READY,
+                       (uint32_t) CFN_HAL_SPI_EVENT_TX_COMPLETE | (uint32_t) CFN_HAL_SPI_EVENT_RX_READY,
                        CFN_HAL_SPI_ERROR_NONE,
                        NULL,
                        0,
@@ -421,6 +435,9 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
 void SPI1_IRQHandler(void); // NOLINT(readability-identifier-naming)
 void SPI2_IRQHandler(void); // NOLINT(readability-identifier-naming)
 void SPI3_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void SPI4_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void SPI5_IRQHandler(void); // NOLINT(readability-identifier-naming)
+void SPI6_IRQHandler(void); // NOLINT(readability-identifier-naming)
 
 #if defined(SPI1)
 void SPI1_IRQHandler(void) // NOLINT(readability-identifier-naming)
@@ -440,6 +457,27 @@ void SPI2_IRQHandler(void) // NOLINT(readability-identifier-naming)
 void SPI3_IRQHandler(void) // NOLINT(readability-identifier-naming)
 {
     HAL_SPI_IRQHandler(&port_hspis[CFN_HAL_SPI_PORT_3]);
+}
+#endif
+
+#if defined(SPI4)
+void SPI4_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_SPI_IRQHandler(&port_hspis[CFN_HAL_SPI_PORT_4]);
+}
+#endif
+
+#if defined(SPI5)
+void SPI5_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_SPI_IRQHandler(&port_hspis[CFN_HAL_SPI_PORT_5]);
+}
+#endif
+
+#if defined(SPI6)
+void SPI6_IRQHandler(void) // NOLINT(readability-identifier-naming)
+{
+    HAL_SPI_IRQHandler(&port_hspis[CFN_HAL_SPI_PORT_6]);
 }
 #endif
 
@@ -507,6 +545,32 @@ static cfn_hal_error_code_t port_spi_xfr_irq_abort(cfn_hal_spi_t *driver)
     return cfn_hal_stm32_map_error(HAL_SPI_Abort_IT(&port_hspis[port_id]));
 }
 
+static cfn_hal_error_code_t port_spi_xfr_dma(cfn_hal_spi_t *driver, const cfn_hal_spi_transaction_t *xfr)
+{
+    uint32_t          port_id = (uint32_t) (uintptr_t) driver->phy->instance;
+    HAL_StatusTypeDef status;
+
+    if (xfr->tx_payload && xfr->rx_payload)
+    {
+        status = HAL_SPI_TransmitReceive_DMA(
+            &port_hspis[port_id], (uint8_t *) xfr->tx_payload, xfr->rx_payload, (uint16_t) xfr->nbr_of_bytes);
+    }
+    else if (xfr->tx_payload)
+    {
+        status = HAL_SPI_Transmit_DMA(&port_hspis[port_id], (uint8_t *) xfr->tx_payload, (uint16_t) xfr->nbr_of_bytes);
+    }
+    else if (xfr->rx_payload)
+    {
+        status = HAL_SPI_Receive_DMA(&port_hspis[port_id], xfr->rx_payload, (uint16_t) xfr->nbr_of_bytes);
+    }
+    else
+    {
+        return CFN_HAL_ERROR_BAD_PARAM;
+    }
+
+    return cfn_hal_stm32_map_error(status);
+}
+
 /* API --------------------------------------------------------------*/
 static const cfn_hal_spi_api_t SPI_API = {
     .base =
@@ -527,7 +591,7 @@ static const cfn_hal_spi_api_t SPI_API = {
     .xfr_irq = port_spi_xfr_irq,
     .xfr_irq_abort = port_spi_xfr_irq_abort,
     .xfr_polling = port_spi_xfr_polling,
-    .xfr_dma = NULL};
+    .xfr_dma = port_spi_xfr_dma};
 
 #endif /* HAL_SPI_MODULE_ENABLED */
 
@@ -537,6 +601,7 @@ cfn_hal_error_code_t cfn_hal_spi_construct(cfn_hal_spi_t              *driver,
                                            const cfn_hal_spi_config_t *config,
                                            const cfn_hal_spi_phy_t    *phy,
                                            struct cfn_hal_clock_s     *clock,
+                                           void                       *dependency,
                                            cfn_hal_spi_callback_t      callback,
                                            void                       *user_arg)
 {
@@ -558,18 +623,18 @@ cfn_hal_error_code_t cfn_hal_spi_construct(cfn_hal_spi_t              *driver,
 
     uint32_t peripheral_id = PORT_MAP_PERIPHERAL_ID[port_id];
 
-    cfn_hal_spi_populate(driver, peripheral_id, clock, &SPI_API, phy, config, callback, user_arg);
+    cfn_hal_spi_populate(driver, peripheral_id, clock, dependency, &SPI_API, phy, config, callback, user_arg);
 
     port_hspis[port_id].Instance = PORT_INSTANCES[port_id];
     port_drivers[port_id]        = driver;
 
     return CFN_HAL_ERROR_OK;
 #else
-    CFN_HAL_UNUSED(port_id);
     CFN_HAL_UNUSED(driver);
     CFN_HAL_UNUSED(config);
     CFN_HAL_UNUSED(phy);
     CFN_HAL_UNUSED(clock);
+    CFN_HAL_UNUSED(dependency);
     CFN_HAL_UNUSED(callback);
     CFN_HAL_UNUSED(user_arg);
     return CFN_HAL_ERROR_NOT_SUPPORTED;
@@ -590,8 +655,7 @@ cfn_hal_error_code_t cfn_hal_spi_destruct(cfn_hal_spi_t *driver)
         port_drivers[port_id] = NULL;
     }
 
-    driver->config = NULL;
-    driver->phy    = NULL;
+    cfn_hal_spi_populate(driver, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     return CFN_HAL_ERROR_OK;
 #else
     CFN_HAL_UNUSED(driver);
